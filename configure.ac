@@ -156,6 +156,7 @@ CFLAGS="$CFLAGS -Wall -Werror -std=gnu99 -include config.h -fvisibility=hidden $
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/GLX/Makefile
+                 src/x11glvnd/Makefile
                  src/GLdispatch/Makefile
                  src/util/glvnd_pthread/Makefile
                  src/util/trace/Makefile])

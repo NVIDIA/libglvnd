@@ -25,43 +25,28 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-lib_LTLIBRARIES = libGLX.la
+noinst_LTLIBRARIES = libx11glvnd_client.la
 
-UTIL_DIR = ../util
-TRACE_DIR = ../util/trace
-GLVND_PTHREAD_DIR = ../util/glvnd_pthread
-UTHASH_DIR = ../util/uthash/src
-GL_DISPATCH_DIR = ../GLdispatch
-X11GLVND_DIR = ../x11glvnd
+INCLUDES = \
+	-I$(top_srcdir)/include \
+	-I$(srcdir)/../util/uthash/src
 
-SUBDIRS = $(GL_DISPATCH_DIR) $(X11GLVND_DIR) $(TRACE_DIR) $(GLVND_PTHREAD_DIR)
+libx11glvnd_client_la_CFLAGS = $(X11_CFLAGS) $(INCLUDES)
 
-# Warning settings
-# Include paths
-libGLX_la_CFLAGS = -I$(UTHASH_DIR)
-libGLX_la_CFLAGS += -I$(UTIL_DIR)
-libGLX_la_CFLAGS += -I$(TRACE_DIR)
-libGLX_la_CFLAGS += -I$(GLVND_PTHREAD_DIR)
-libGLX_la_CFLAGS += -I$(GL_DISPATCH_DIR)
-libGLX_la_CFLAGS += -I$(top_builddir)/include
-libGLX_la_CFLAGS += -I$(X11GLVND_DIR)
+libx11glvnd_client_la_LIBADD = $(XEXT_LIBS)
 
-# Required library flags
-libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)
+libx11glvnd_client_la_SOURCES = \
+	x11glvndclient.c
 
-# Required libraries
-libGLX_la_LIBADD = -ldl
-libGLX_la_LIBADD += $(X11_LIBS)
-libGLX_la_LIBADD += $(XEXT_LIBS)
-libGLX_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
-libGLX_la_LIBADD += $(X11GLVND_DIR)/libx11glvnd_client.la
-libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
-libGLX_la_LIBADD += $(GLVND_PTHREAD_DIR)/libglvnd_pthread.la
+lib_LTLIBRARIES = libx11glvnd.la
 
-libGLX_la_LDFLAGS = -shared
+libx11glvnd_la_CFLAGS = \
+	$(XORG_CFLAGS)          \
+	$(X11_CFLAGS)           \
+	$(INCLUDES)
 
-libGLX_la_SOURCES = \
-	libglx.c \
-	libglxmapping.c \
-	libglxnoop.c \
-	libglxgldispatch.c
+libx11glvnd_la_LDFLAGS = \
+	-shared
+
+libx11glvnd_la_SOURCES = \
+	x11glvndserver.c

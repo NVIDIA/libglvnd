@@ -43,6 +43,7 @@
 #include "trace.h"
 
 #include "lkdhash.h"
+#include "x11glvnd.h"
 
 #define _GNU_SOURCE 1
 
@@ -424,7 +425,7 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
         }
 
         if (!vendor) {
-            queriedVendorName = NULL; // TODO: query X somehow for the name
+            queriedVendorName = XGLVQueryScreenVendorMapping(dpy, screen);
             vendor = __glXLookupVendorByName(queriedVendorName);
             Xfree(queriedVendorName);
         }
@@ -706,7 +707,7 @@ static int ScreenFromXID(Display *dpy, XID xid)
     if (pEntry) {
         screen = pEntry->screen;
     } else {
-        // TODO: somehow query X for the screen number
+        screen = XGLVQueryXIDScreenMapping(dpy, xid);
         AddScreenXIDMapping(xid, screen);
     }
 
