@@ -155,17 +155,85 @@ static Bool MakeContextCurrentInternal(Display *dpy,
                                        GLXContext context,
                                        const __GLXdispatchTableStatic **ppDispatch)
 {
+    __GLXAPIState *apiState;
+    __GLXvendorInfo *oldVendor, *newVendor;
+    Bool ret;
+    int screen;
+
     DBG_PRINTF(0, "dpy = %p, draw = %x, read = %x, context = %p\n",
                dpy, (unsigned)draw, (unsigned)read, context);
 
-    /* TODO: lose current on the old dispatch table + context */ 
+    apiState = __glXGetCurrentAPIState();
+    oldVendor = apiState->currentVendor;
+    screen = __glXScreenFromContext(context);
+    newVendor = __glXLookupVendorByScreen(dpy, screen);
 
-    /* TODO: Save the new dispatch table for use by caller */
+    if (oldVendor != newVendor) {
+        // Lose current on the old context before proceeding
+        if (oldVendor) {
+            const __GLXdispatchTableStatic *oldDispatch =
+                oldVendor->staticDispatch;
+            assert(oldDispatch);
+            ret = oldDispatch->glx14ep.makeCurrent(dpy,
+                                                   None,
+                                                   NULL);
+            if (!ret) {
+                return False;
+            }
+        }
+    }
+
+    /* Save the new dispatch table for use by caller */
+    assert(!newVendor || newVendor->staticDispatch);
+    *ppDispatch = newVendor ? newVendor->staticDispatch : NULL;
 
     if (!context) {
-        /* TODO lose current */
+        if (draw != None || read != None) {
+            return False;
+        }
+
+        /* Update the current display and drawable(s) in this apiState */
+        apiState->currentDisplay = dpy;
+        apiState->currentDraw = draw;
+        apiState->currentRead = read;
+        apiState->currentVendor = NULL;
+
+        /* Update the GLX dispatch table */
+        apiState->currentStaticDispatch = NULL;
+        apiState->currentDynDispatch = NULL;
+
+        /* TODO: Update the GL dispatch table */
+
+        /* TODO: Update the current context */
+        return True;
     } else {
-       /* TODO make current to new context */
+        /* Update the current display and drawable(s) in this apiState */
+        apiState->currentDisplay = dpy;
+        apiState->currentDraw = draw;
+        apiState->currentRead = read;
+        apiState->currentVendor = newVendor;
+
+        /* Update the GLX dispatch table */
+        apiState->currentStaticDispatch = *ppDispatch;
+        apiState->currentDynDispatch = newVendor->dynDispatch;
+
+        /* TODO: Update the GL dispatch table */
+
+        /* TODO: Update the current context */
+
+        /*
+         * XXX It is possible that these drawables were never seen by
+         * this libGLX.so instance before now.  Since the screen is
+         * known from the context, and the drawable must be on the
+         * same screen if MakeCurrent passed, then record the mapping
+         * of this drawable to the context's screen.
+         */
+        __glXAddScreenDrawableMapping(draw, screen);
+        __glXAddScreenDrawableMapping(read, screen);
+
+        /*
+         * TODO: Call into core GL dispatcher to set up the current state.
+         */
     }
 
     return True;
