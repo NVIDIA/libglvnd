@@ -243,7 +243,58 @@ PUBLIC Bool glXQueryExtension(Display *dpy, int *error_base, int *event_base)
 
 PUBLIC Bool glXQueryVersion(Display *dpy, int *major, int *minor)
 {
-    return False; // TODO
+    /*
+     * There isn't enough information to dispatch to a vendor's
+     * implementation, so handle the request here.
+     *
+     * Adapted from mesa's
+     *
+     * gallium/state_trackers/egl/x11/glxinit.c:QueryVersion()
+     *
+     * TODO: Mesa's GLX state tracker uses xcb-glx rather than Xlib to perform
+     * the query. Should we do the same here?
+     */
+    xGLXQueryVersionReq *req;
+    xGLXQueryVersionReply reply;
+
+    int extMajor, extEvent, extError;
+    Bool ret;
+
+    ret = XQueryExtension(dpy, GLX_EXTENSION_NAME, &extMajor, &extEvent, &extError);
+
+    if (ret == False) {
+        /* No extension! */
+        return False;
+    }
+
+    LockDisplay(dpy);
+    GetReq(GLXQueryVersion, req);
+    req->reqType = extMajor;
+    req->glxCode = X_GLXQueryVersion;
+    req->majorVersion = GLX_MAJOR_VERSION;
+    req->minorVersion = GLX_MINOR_VERSION;
+
+    ret = _XReply(dpy, (xReply *)&reply, 0, False);
+    UnlockDisplay(dpy);
+    SyncHandle();
+
+    if (!ret) {
+        return False;
+    }
+
+    if (reply.majorVersion != GLX_MAJOR_VERSION) {
+        /* Server does not support same major as client */
+        return False;
+    }
+
+    if (major) {
+        *major = reply.majorVersion;
+    }
+    if (minor) {
+        *minor = reply.minorVersion;
+    }
+
+    return True;
 }
 
 
