@@ -36,12 +36,21 @@ TESTS_ENVIRONMENT = \
 TESTS = \
 	init_test_env.sh \
 	testglxgetprocaddress.sh \
+	testglxmcbasic.sh \
+	testglxmcloop.sh \
+	testglxmcthreads.sh \
+	testglxmclate.sh \
 	fini_test_env.sh
 
 check_PROGRAMS = \
-	testglxgetprocaddress
+	testglxgetprocaddress \
+	testglxmakecurrent
 
 X11GLVND_DIR = $(top_builddir)/src/x11glvnd
+
+testglxmakecurrent_SOURCES = \
+	testglxmakecurrent.c \
+	test_utils.c
 
 # Disable annoying "unused" errors
 AM_CFLAGS =                                  \
@@ -54,3 +63,9 @@ AM_CFLAGS =                                  \
 
 
 testglxgetprocaddress_LDADD = $(top_builddir)/src/GLX/libGLX.la
+
+testglxmakecurrent_LDADD = -lX11
+testglxmakecurrent_LDADD += $(top_builddir)/src/GLX/libGLX.la
+testglxmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
+testglxmakecurrent_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+testglxmakecurrent_LDADD += $(top_builddir)/src/util/glvnd_pthread/libglvnd_pthread.la
