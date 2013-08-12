@@ -50,6 +50,7 @@
 
 #include "u_current.h"
 #include "u_thread.h"
+#include <assert.h>
 
 #ifndef MAPI_MODE_UTIL
 
@@ -68,6 +69,8 @@ extern void (*__glapi_noop_table[])(void);
 
 /**
  * \name Current dispatch and current context control variables
+ *
+ * TODO: rewrite this section
  *
  * Depending on whether or not multithreading is support, and the type of
  * support available, several variables are used to store the current context
@@ -99,22 +102,23 @@ extern void (*__glapi_noop_table[])(void);
 /*@{*/
 #if defined(GLX_USE_TLS)
 
-__thread struct mapi_table *u_current_table
+__thread void *u_current[U_CURRENT_NUM_ENTRIES]
     __attribute__((tls_model("initial-exec")))
-    = (struct mapi_table *) table_noop_array;
-
-__thread void *u_current_user
-    __attribute__((tls_model("initial-exec")));
+    = {
+        (void *) table_noop_array,
+        NULL
+      };
 
 #else
 
-struct mapi_table *u_current_table =
-   (struct mapi_table *) table_noop_array;
-void *u_current_user;
+void *u_current[U_CURRENT_NUM_ENTRIES]
+    = {
+        (void *) table_noop_array,
+        NULL
+      };
 
 #ifdef THREADS
-struct u_tsd u_current_table_tsd;
-static struct u_tsd u_current_user_tsd;
+struct u_tsd u_current_tsd[U_CURRENT_NUM_ENTRIES];
 static int ThreadSafe;
 #endif /* THREADS */
 
@@ -126,8 +130,10 @@ void
 u_current_destroy(void)
 {
 #if defined(THREADS) && defined(_WIN32)
-   u_tsd_destroy(&u_current_table_tsd);
-   u_tsd_destroy(&u_current_user_tsd);
+    int i;
+    for (i = 0; i < U_CURRENT_NUM_ENTRIES; i++) {
+        u_tsd_destroy(&u_current_tsd[i]);
+    }
 #endif
 }
 
@@ -137,8 +143,10 @@ u_current_destroy(void)
 static void
 u_current_init_tsd(void)
 {
-   u_tsd_init(&u_current_table_tsd);
-   u_tsd_init(&u_current_user_tsd);
+    int i;
+    for (i = 0; i < U_CURRENT_NUM_ENTRIES; i++) {
+        u_tsd_init(&u_current_tsd[i]);
+    }
 }
 
 /**
@@ -196,12 +204,12 @@ u_current_set_user(const void *ptr)
    u_current_init();
 
 #if defined(GLX_USE_TLS)
-   u_current_user = (void *) ptr;
+   u_current[U_CURRENT_USER0] = (void *) ptr;
 #elif defined(THREADS)
-   u_tsd_set(&u_current_user_tsd, (void *) ptr);
-   u_current_user = (ThreadSafe) ? NULL : (void *) ptr;
+   u_tsd_set(&u_current_tsd[U_CURRENT_USER0], (void *) ptr);
+   u_current[U_CURRENT_USER0] = (ThreadSafe) ? NULL : (void *) ptr;
 #else
-   u_current_user = (void *) ptr;
+   u_current[U_CURRENT_USER0] = (void *) ptr;
 #endif
 }
 
@@ -214,13 +222,13 @@ void *
 u_current_get_user_internal(void)
 {
 #if defined(GLX_USE_TLS)
-   return u_current_user;
+   return u_current[U_CURRENT_USER0];
 #elif defined(THREADS)
    return (ThreadSafe)
-      ? u_tsd_get(&u_current_user_tsd)
-      : u_current_user;
+      ? u_tsd_get(&u_current_tsd[U_CURRENT_USER0])
+      : u_current[U_CURRENT_USER0];
 #else
-   return u_current_user;
+   return u_current[U_CURRENT_USER0];
 #endif
 }
 
@@ -240,13 +248,69 @@ u_current_set(const struct mapi_table *tbl)
       tbl = (const struct mapi_table *) table_noop_array;
 
 #if defined(GLX_USE_TLS)
-   u_current_table = (struct mapi_table *) tbl;
+   u_current[U_CURRENT_TABLE] = (void *) tbl;
 #elif defined(THREADS)
-   u_tsd_set(&u_current_table_tsd, (void *) tbl);
-   u_current_table = (ThreadSafe) ? NULL : (void *) tbl;
+   u_tsd_set(&u_current_tsd[U_CURRENT_TABLE], (void *) tbl);
+   u_current[U_CURRENT_TABLE] = (ThreadSafe) ? NULL : (void *) tbl;
 #else
-   u_current_table = (struct mapi_table *) tbl;
+   u_current[U_CURRENT_TABLE] = (void *) tbl;
 #endif
+}
+
+void
+u_current_set_index(void *p, int index)
+{
+    switch (index) {
+        case U_CURRENT_TABLE:
+            u_current_set((struct mapi_table *)p);
+            break;
+        case U_CURRENT_USER0:
+            u_current_set_user(p);
+            break;
+        case U_CURRENT_USER1:
+        case U_CURRENT_USER2:
+        case U_CURRENT_USER3:
+#if defined(GLX_USE_TLS)
+            u_current[index] = p;
+#elif defined(THREADS)
+            u_tsd_set(&u_current_tsd[index], p);
+            u_current[index] = (ThreadSafe) ? NULL : p;
+#else
+            u_current[index] = p;
+#endif
+            break;
+        default:
+            assert(!"Missing or invalid index!");
+            break;
+    }
+}
+
+void *
+u_current_get_index(int index)
+{
+    switch (index) {
+        case U_CURRENT_TABLE:
+            return (void *)u_current_get();
+        case U_CURRENT_USER0:
+            return (void *)u_current_get_user();
+        case U_CURRENT_USER1:
+        case U_CURRENT_USER2:
+        case U_CURRENT_USER3:
+#if defined(GLX_USE_TLS)
+            return u_current[index];
+#elif defined(THREADS)
+            if (u_current[index]) {
+                return u_current[index];
+            }
+            return (ThreadSafe) ? u_tsd_get(&u_current_tsd[index]) :
+                u_current[index];
+#else
+            return u_current[index];
+#endif
+        default:
+            assert(!"Missing or invalid index!");
+            return NULL;
+    }
 }
 
 /**
@@ -256,11 +320,11 @@ struct mapi_table *
 u_current_get_internal(void)
 {
 #if defined(GLX_USE_TLS)
-   return u_current_table;
+   return (struct mapi_table *)u_current[U_CURRENT_TABLE];
 #elif defined(THREADS)
    return (struct mapi_table *) ((ThreadSafe) ?
-         u_tsd_get(&u_current_table_tsd) : (void *) u_current_table);
+         u_tsd_get(&u_current_tsd[U_CURRENT_TABLE]) : u_current[U_CURRENT_TABLE]);
 #else
-   return u_current_table;
+   return (struct mapi_table *)u_current[U_CURRENT_TABLE];
 #endif
 }

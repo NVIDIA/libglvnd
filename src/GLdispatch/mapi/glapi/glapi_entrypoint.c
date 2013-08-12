@@ -139,9 +139,9 @@ init_glapi_relocs( void )
 #if defined(HAVE_PTHREAD) || defined(GLX_USE_TLS)
     static const unsigned int template[] = {
 #ifdef GLX_USE_TLS
-	0x05000000, /* sethi %hi(_glapi_tls_Dispatch), %g2 */
+	0x05000000, /* sethi %hi(_glapi_tls_Current), %g2 */
 	0x8730e00a, /* srl %g3, 10, %g3 */
-	0x8410a000, /* or %g2, %lo(_glapi_tls_Dispatch), %g2 */
+	0x8410a000, /* or %g2, %lo(_glapi_tls_Current), %g2 */
 #ifdef __arch64__
 	0xc259c002, /* ldx [%g7 + %g2], %g1 */
 	0xc2584003, /* ldx [%g1 + %g3], %g1 */
@@ -153,17 +153,17 @@ init_glapi_relocs( void )
 	0x01000000, /* nop  */
 #else
 #ifdef __arch64__
-	0x03000000, /* 64-bit 0x00 --> sethi %hh(_glapi_Dispatch), %g1 */
-	0x05000000, /* 64-bit 0x04 --> sethi %lm(_glapi_Dispatch), %g2 */
-	0x82106000, /* 64-bit 0x08 --> or %g1, %hm(_glapi_Dispatch), %g1 */
+	0x03000000, /* 64-bit 0x00 --> sethi %hh(_glapi_Current), %g1 */
+	0x05000000, /* 64-bit 0x04 --> sethi %lm(_glapi_Current), %g2 */
+	0x82106000, /* 64-bit 0x08 --> or %g1, %hm(_glapi_Current), %g1 */
 	0x8730e00a, /* 64-bit 0x0c --> srl %g3, 10, %g3 */
 	0x83287020, /* 64-bit 0x10 --> sllx %g1, 32, %g1 */
 	0x82004002, /* 64-bit 0x14 --> add %g1, %g2, %g1 */
-	0xc2586000, /* 64-bit 0x18 --> ldx [%g1 + %lo(_glapi_Dispatch)], %g1 */
+	0xc2586000, /* 64-bit 0x18 --> ldx [%g1 + %lo(_glapi_Current)], %g1 */
 #else
-	0x03000000, /* 32-bit 0x00 --> sethi %hi(_glapi_Dispatch), %g1 */
+	0x03000000, /* 32-bit 0x00 --> sethi %hi(_glapi_Current), %g1 */
 	0x8730e00a, /* 32-bit 0x04 --> srl %g3, 10, %g3 */
-	0xc2006000, /* 32-bit 0x08 --> ld [%g1 + %lo(_glapi_Dispatch)], %g1 */
+	0xc2006000, /* 32-bit 0x08 --> ld [%g1 + %lo(_glapi_Current)], %g1 */
 #endif
 	0x80a06000, /*             --> cmp %g1, 0 */
 	0x02800005, /*             --> be +4*5 */
@@ -197,7 +197,8 @@ init_glapi_relocs( void )
 #else
     extern unsigned int __glapi_sparc_pthread_stub;
     unsigned int *code = &__glapi_sparc_pthread_stub;
-    unsigned long dispatch = (unsigned long) &_glapi_Dispatch;
+    unsigned long dispatch =
+        (unsigned long) &_glapi_Current[GLAPI_CURRENT_DISPATCH];
     unsigned long call_dest = (unsigned long ) &_glapi_get_dispatch;
     int idx;
 #endif

@@ -39,8 +39,7 @@
 
 #ifdef GLX_USE_TLS
 /* not used, but defined for compatibility */
-const struct _glapi_table *_glapi_Dispatch;
-const void *_glapi_Context;
+const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 #endif /* GLX_USE_TLS */
 
 void
@@ -65,6 +64,18 @@ void
 _glapi_set_dispatch(struct _glapi_table *dispatch)
 {
    u_current_set((const struct mapi_table *) dispatch);
+}
+
+void
+_glapi_set_current(void *p, int index)
+{
+    u_current_set_index(p, index);
+}
+
+void *
+_glapi_get_current(int index)
+{
+    return u_current_get_index(index);
 }
 
 /**

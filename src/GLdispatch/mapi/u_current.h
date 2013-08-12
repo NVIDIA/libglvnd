@@ -9,18 +9,25 @@
 /* ugly renames to match glapi.h */
 #define mapi_table _glapi_table
 
+enum {
+    U_CURRENT_TABLE = GLAPI_CURRENT_DISPATCH,
+    U_CURRENT_USER0 = GLAPI_CURRENT_CONTEXT,
+    U_CURRENT_USER1 = GLAPI_CURRENT_USER1,
+    U_CURRENT_USER2 = GLAPI_CURRENT_USER2,
+    U_CURRENT_USER3 = GLAPI_CURRENT_USER3,
+    U_CURRENT_NUM_ENTRIES = GLAPI_NUM_CURRENT_ENTRIES
+};
+
 #ifdef GLX_USE_TLS
-#define u_current_table _glapi_tls_Dispatch
-#define u_current_user _glapi_tls_Context
+#define u_current _glapi_tls_Current
 #else
-#define u_current_table _glapi_Dispatch
-#define u_current_user _glapi_Context
+#define u_current _glapi_Current
 #endif
 
 #define u_current_get_internal _glapi_get_dispatch
 #define u_current_get_user_internal _glapi_get_context
 
-#define u_current_table_tsd _gl_DispatchTSD
+#define u_current_tsd _gl_CurrentTSD
 
 #else /* MAPI_MODE_UTIL || MAPI_MODE_GLAPI || MAPI_MODE_BRIDGE */
 
@@ -28,18 +35,23 @@
 
 struct mapi_table;
 
+enum {
+    U_CURRENT_TABLE = 0,
+    U_CURRENT_USER0,
+    U_CURRENT_USER1,
+    U_CURRENT_USER2,
+    U_CURRENT_USER3,
+    U_CURRENT_NUM_ENTRIES
+};
+
 #ifdef GLX_USE_TLS
 
-extern __thread struct mapi_table *u_current_table
-    __attribute__((tls_model("initial-exec")));
-
-extern __thread void *u_current_user
+extern __thread void *u_current[U_CURRENT_NUM_ENTRIES]
     __attribute__((tls_model("initial-exec")));
 
 #else /* GLX_USE_TLS */
 
-extern struct mapi_table *u_current_table;
-extern void *u_current_user;
+extern void *u_current[U_CURRENT_NUM_ENTRIES];
 
 #endif /* GLX_USE_TLS */
 
@@ -54,6 +66,12 @@ u_current_destroy(void);
 void
 u_current_set(const struct mapi_table *tbl);
 
+void
+u_current_set_index(void *p, int index);
+
+void *
+u_current_get_index(int index);
+
 struct mapi_table *
 u_current_get_internal(void);
 
@@ -67,10 +85,10 @@ static INLINE const struct mapi_table *
 u_current_get(void)
 {
 #ifdef GLX_USE_TLS
-   return u_current_table;
+   return u_current[U_CURRENT_TABLE];
 #else
-   return (likely(u_current_table) ?
-         u_current_table : u_current_get_internal());
+   return (likely(u_current[U_CURRENT_TABLE]) ?
+         u_current[U_CURRENT_TABLE] : u_current_get_internal());
 #endif
 }
 
@@ -78,9 +96,10 @@ static INLINE const void *
 u_current_get_user(void)
 {
 #ifdef GLX_USE_TLS
-   return u_current_user;
+   return u_current[U_CURRENT_USER0];
 #else
-   return likely(u_current_user) ? u_current_user : u_current_get_user_internal();
+   return likely(u_current[U_CURRENT_USER0]) ?
+       u_current[U_CURRENT_USER0] : u_current_get_user_internal();
 #endif
 }
 

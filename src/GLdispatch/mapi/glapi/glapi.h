@@ -75,45 +75,58 @@ extern "C" {
 #define _glapi_get_dispatch _mglapi_get_dispatch
 #define _glapi_set_context _mglapi_set_context
 #define _glapi_get_context _mglapi_get_context
-#define _glapi_Dispatch _mglapi_Dispatch
-#define _glapi_Context _mglapi_Context
+#define _glapi_set_current _mglapi_set_current
+#define _glapi_get_current _mglapi_get_current
+#define _glapi_Current _mglapi_Current
 #endif
 
 typedef void (*_glapi_proc)(void);
 struct _glapi_table;
 
+enum {
+    GLAPI_CURRENT_DISPATCH = 0, /* This MUST be the first entry! */
+    GLAPI_CURRENT_CONTEXT,
+    GLAPI_CURRENT_USER1,
+    GLAPI_CURRENT_USER2,
+    GLAPI_CURRENT_USER3,
+    GLAPI_NUM_CURRENT_ENTRIES
+};
+
 
 #if defined (GLX_USE_TLS)
 
-_GLAPI_EXPORT extern __thread struct _glapi_table * _glapi_tls_Dispatch
+_GLAPI_EXPORT extern __thread void *
+    _glapi_tls_Current[GLAPI_NUM_CURRENT_ENTRIES]
     __attribute__((tls_model("initial-exec")));
 
-_GLAPI_EXPORT extern __thread void * _glapi_tls_Context
-    __attribute__((tls_model("initial-exec")));
+_GLAPI_EXPORT extern const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 
-_GLAPI_EXPORT extern const struct _glapi_table *_glapi_Dispatch;
-_GLAPI_EXPORT extern const void *_glapi_Context;
-
-# define GET_DISPATCH() _glapi_tls_Dispatch
-# define GET_CURRENT_CONTEXT(C)  struct gl_context *C = (struct gl_context *) _glapi_tls_Context
+# define GET_DISPATCH() ((struct _glapi_table *) \
+    _glapi_tls_Current[GLAPI_CURRENT_DISPATCH])
+# define GET_CURRENT_CONTEXT(C)  struct gl_context *C = (struct gl_context *) \
+    _glapi_tls_Current[GLAPI_CURRENT_CONTEXT]
 
 #else
 
-_GLAPI_EXPORT extern struct _glapi_table *_glapi_Dispatch;
-_GLAPI_EXPORT extern void *_glapi_Context;
+_GLAPI_EXPORT extern void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 
 # ifdef THREADS
 
 #  define GET_DISPATCH() \
-     (likely(_glapi_Dispatch) ? _glapi_Dispatch : _glapi_get_dispatch())
+     (likely(_glapi_Current[GLAPI_CURRENT_DISPATCH]) ? \
+     (struct _glapi_table *)_glapi_Current[GLAPI_CURRENT_DISPATCH] : \
+      _glapi_get_dispatch())
 
 #  define GET_CURRENT_CONTEXT(C)  struct gl_context *C = (struct gl_context *) \
-     (likely(_glapi_Context) ? _glapi_Context : _glapi_get_context())
+     (likely(_glapi_Current[GLAPI_CURRENT_CONTEXT]) ? \
+      _glapi_Current[GLAPI_CURRENT_CONTEXT] : _glapi_get_context())
 
 # else
 
-#  define GET_DISPATCH() _glapi_Dispatch
-#  define GET_CURRENT_CONTEXT(C)  struct gl_context *C = (struct gl_context *) _glapi_Context
+#  define GET_DISPATCH() ((struct _glapi_table *) \
+    _glapi_Current[GLAPI_CURRENT_DISPATCH])
+#  define GET_CURRENT_CONTEXT(C)  struct gl_context *C = \
+    (struct gl_context *) _glapi_Current[GLAPI_CURRENT_CONTEXT]
 
 # endif
 
@@ -138,6 +151,12 @@ _glapi_get_context(void);
 
 _GLAPI_EXPORT void
 _glapi_set_dispatch(struct _glapi_table *dispatch);
+
+_GLAPI_EXPORT void
+_glapi_set_current(void *p, int index);
+
+_GLAPI_EXPORT void *
+_glapi_get_current(int index);
 
 
 _GLAPI_EXPORT struct _glapi_table *

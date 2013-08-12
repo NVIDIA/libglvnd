@@ -30,7 +30,7 @@
 #include "u_macros.h"
 
 /* define macros for use by assembly dispatchers */
-#define ENTRY_CURRENT_TABLE U_STRINGIFY(u_current_table)
+#define ENTRY_CURRENT_TABLE U_STRINGIFY(u_current)
 
 /* in bridge mode, mapi is a user of glapi */
 #ifdef MAPI_MODE_BRIDGE

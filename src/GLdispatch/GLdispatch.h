@@ -34,18 +34,6 @@
 #include "compiler.h"
 #include "glvnd_pthread.h"
 
-// HACK: temporary functions which will be used until this new generic TLS
-// interface is actually implemented in GLAPI
-static inline void _glapi_set_current(void *ptr, int index)
-{
-}
-
-static inline void *_glapi_get_current(int index)
-{
-    return NULL;
-}
-
-
 /*!
  * \defgroup gldispatch core GL/GLES dispatch and TLS module
  *
@@ -62,6 +50,8 @@ static inline void *_glapi_get_current(int index)
  */
 #define CURRENT_CONTEXT     1  // GLAPI_CURRENT_CONTEXT
 #define CURRENT_API_STATE   2  // GLAPI_CURRENT_USER1
+
+PUBLIC void *_glapi_get_current(int index);
 
 typedef void (*__GLdispatchProc)(void);
 typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
