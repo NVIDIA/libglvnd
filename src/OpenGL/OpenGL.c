@@ -31,4 +31,7 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 
-// TODO: define GL stubs here
+#define noop_warn(...)
+#define MAPI_TMP_NOOP_FUNCTIONS
+# include "glapitemp.h"
+

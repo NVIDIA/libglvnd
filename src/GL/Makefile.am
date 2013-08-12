@@ -28,7 +28,17 @@
 lib_LTLIBRARIES = libGL.la
 
 libGL_la_SOURCES = \
-	GL.c
+	GL.c           \
+	glapitemp.h
+
+BUILT_SOURCES = glapitemp.h
+
+TOP = $(top_srcdir)
+GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
+include $(GLAPI)/gen/glapi_gen.mk
+
+glapitemp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
+	$(call glapi_gen_mapi,$<,noop-gl)
 
 libGL_la_CFLAGS = \
 	-I$(top_builddir)/include

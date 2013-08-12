@@ -36,4 +36,7 @@
 #define NOOP_FUNC(func) glX ## func
 #include "../GLX/libglxnoopdefs.h"
 
-// Define OpenGL core functions TODO
+// Define OpenGL core functions
+#define noop_warn(...)
+#define MAPI_TMP_NOOP_FUNCTIONS
+#include "glapitemp.h"
