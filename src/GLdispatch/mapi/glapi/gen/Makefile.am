@@ -28,7 +28,8 @@ MESA_GLAPI_OUTPUTS = \
 	$(MESA_GLAPI_DIR)/glprocs.h \
 	$(MESA_GLAPI_DIR)/glapitemp.h \
 	$(MESA_GLAPI_DIR)/glapitable.h \
-	$(MESA_GLAPI_DIR)/glapi_gentable.c
+	$(MESA_GLAPI_DIR)/glapi_gentable.c \
+	$(MESA_GLAPI_DIR)/glapi_inittable.c
 
 MESA_GLAPI_ASM_OUTPUTS =
 if HAVE_X86_ASM
@@ -70,7 +71,8 @@ XORG_GLAPI_OUTPUTS = \
 	$(XORG_GLAPI_DIR)/glprocs.h \
 	$(XORG_GLAPI_DIR)/glapitable.h \
 	$(XORG_GLAPI_DIR)/dispatch.h \
-	$(XORG_GLAPI_DIR)/glapi_gentable.c
+	$(XORG_GLAPI_DIR)/glapi_gentable.c \
+	$(XORG_GLAPI_DIR)/glapi_inittable.c
 
 XORG_OUTPUTS = \
 	$(XORG_GLAPI_OUTPUTS) \
@@ -195,6 +197,9 @@ $(MESA_GLAPI_DIR)/glapitable.h: gl_table.py $(COMMON)
 	$(PYTHON_GEN) $< -f $(srcdir)/gl_and_es_API.xml > $@
 
 $(MESA_GLAPI_DIR)/glapi_gentable.c: gl_gentable.py $(COMMON)
+	$(PYTHON_GEN) $< -f $(srcdir)/gl_and_es_API.xml > $@
+
+$(MESA_GLAPI_DIR)/glapi_inittable.c: gl_inittable.py $(COMMON)
 	$(PYTHON_GEN) $< -f $(srcdir)/gl_and_es_API.xml > $@
 
 ######################################################################

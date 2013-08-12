@@ -35,6 +35,16 @@ $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_dispatch_script) \
 	-f $(1) > $@
 endef
 
+glapi_gen_initdispatch_script := $(top_srcdir)/$(MAPI_PREFIX)/glapi/gen/gl_inittable.py
+glapi_gen_initdispatch_deps := $(glapi_gen_common_deps)
+
+# $(1): path to an XML file
+define glapi_gen_initdispatch
+@mkdir -p $(dir $@)
+$(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_initdispatch_script) \
+	-f $(1) > $@
+endef
+
 glapi_gen_remap_script := $(top_srcdir)/$(MAPI_PREFIX)/glapi/gen/remap_helper.py
 glapi_gen_remap_deps := $(glapi_gen_common_deps)
 

@@ -353,8 +353,10 @@ static struct _glapi_table
     CheckDispatchLocked();
 
     if (table) {
-        // TODO: call into glapi to initialize the table using our
-        // getProcAddress callback
+        _glapi_init_table_from_callback(table,
+                                        entries,
+                                        getProcAddress,
+                                        vendorData);
     }
 
     return table;
