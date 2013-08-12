@@ -69,6 +69,17 @@ typedef struct __GLXvendorScreenHashRec {
 static DEFINE_INITIALIZED_LKDHASH(__GLXvendorScreenHash, __glXVendorScreenHash);
 
 /*
+ * __glXVendorNameHash is a hash table mapping a vendor name to vendor info.
+ */
+typedef struct __GLXvendorNameHashRec {
+    const char *name;
+    __GLXvendorInfo *vendor;
+    UT_hash_handle hh;
+} __GLXvendorNameHash;
+
+static DEFINE_INITIALIZED_LKDHASH(__GLXvendorNameHash, __glXVendorNameHash);
+
+/*
  * This function queries each loaded vendor to determine if there is
  * a vendor-implemented dispatch function. The dispatch function
  * uses the vendor <-> API library ABI to determine the screen given
@@ -77,11 +88,161 @@ static DEFINE_INITIALIZED_LKDHASH(__GLXvendorScreenHash, __glXVendorScreenHash);
  */
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
 {
-    return NULL; // TODO;
+    __GLXextFuncPtr addr = NULL;
+    __GLXvendorNameHash *pEntry, *tmp;
+
+    /*
+     * XXX for full correctness, we should probably load vendors
+     * on all screens up-front before doing this. However, that
+     * might be bad for performance?
+     */
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+    HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
+        // See if the current vendor supports this GLX entry point
+        addr = pEntry->vendor->staticDispatch->
+            glxvc.getDispatchAddress(procName);
+        if (addr) {
+            // TODO Allocate the new dispatch index.
+            break;
+        }
+    }
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+
+    return addr;
+}
+
+static __GLXapiExports glxExportsTable = {
+    .getDynDispatch = __glXGetDynDispatch,
+    .fetchDispatchEntry = NULL,
+
+    /* We use the real function since __glXGetCurrentContext is inline */
+    .getCurrentContext = glXGetCurrentContext,
+
+    /* GL dispatch management TODO */
+    .getCurrentGLDispatch = NULL,
+    .getTopLevelDispatch = NULL,
+    .createGLDispatch = NULL,
+    .getGLDispatchOffset = NULL,
+    .makeGLDispatchCurrent = NULL,
+    .destroyGLDispatch = NULL
+};
+
+static char *ConstructVendorLibraryFilename(const char *vendorName)
+{
+    char *filename;
+    int ret;
+
+    ret = asprintf(&filename, "libGLX_%s.so.0", vendorName);
+
+    if (ret < 0) {
+        return NULL;
+    }
+
+    return filename;
 }
 
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 {
+    __GLXvendorNameHash *pEntry = NULL;
+    char *filename;
+    void *dlhandle = NULL;
+    __PFNGLXMAINPROC glxMainProc;
+    const __GLXdispatchTableStatic *dispatch;
+    __GLXvendorInfo *vendor = NULL;
+    Bool locked = False;
+
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+    HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
+
+    if (pEntry) {
+        vendor = pEntry->vendor;
+    }
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+
+    if (!pEntry) {
+        LKDHASH_WRLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+        locked = True;
+        // Do another lookup to check uniqueness
+        HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
+        if (!pEntry) {
+            // Previously unseen vendor. dlopen() the new vendor and add it to the
+            // hash table.
+            pEntry = calloc(1, sizeof(*pEntry));
+            if (!pEntry) {
+                goto fail;
+            }
+
+            filename = ConstructVendorLibraryFilename(vendorName);
+            dlhandle = dlopen(filename, RTLD_LAZY);
+            free(filename);
+            if (!dlhandle) {
+                goto fail;
+            }
+
+            glxMainProc = dlsym(dlhandle, __GLX_MAIN_PROTO_NAME);
+            if (!glxMainProc) {
+                goto fail;
+            }
+
+            dispatch = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
+                                      &glxExportsTable,
+                                      vendorName);
+            if (!dispatch) {
+                goto fail;
+            }
+
+            vendor = pEntry->vendor
+                = calloc(1, sizeof(__GLXvendorInfo));
+            if (!vendor) {
+                goto fail;
+            }
+
+            pEntry->name = vendor->name = strdup(vendorName);
+            if (!vendor->name) {
+                goto fail;
+            }
+            vendor->dlhandle = dlhandle;
+            vendor->staticDispatch = dispatch;
+
+            /* TODO: create a core GL dispatch table */
+            vendor->glDispatch = NULL;
+
+            if (!vendor->glDispatch) {
+                goto fail;
+            }
+
+            /* TODO: create a dynamic GLX dispatch table */
+            vendor->dynDispatch = NULL;
+
+            HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendorName,
+                            strlen(vendorName), pEntry);
+        } else {
+            /* Some other thread added a vendor */
+            vendor = pEntry->vendor;
+        }
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+    }
+
+    return vendor;
+
+fail:
+    if (locked) {
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+    }
+    if (dlhandle) {
+        dlclose(dlhandle);
+    }
+    if (vendor) {
+        free(vendor->name);
+        if (vendor->glDispatch) {
+            // TODO: free the table
+        }
+        free(vendor->dynDispatch);
+    }
+    if (pEntry) {
+        free(pEntry->vendor);
+    }
+    free(pEntry);
     return NULL;
 }
 
