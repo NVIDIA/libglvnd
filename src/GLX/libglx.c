@@ -41,7 +41,7 @@
 #include "trace.h"
 #include "GL/glxproto.h"
 
-#include "uthash.h"
+#include "lkdhash.h"
 
 /* current version numbers */
 #define GLX_MAJOR_VERSION 1
@@ -715,7 +715,7 @@ typedef struct {
     UT_hash_handle hh;
 } __GLXprocAddressHash;
 
-static __GLXprocAddressHash *__glXProcAddressHash = NULL;
+static DEFINE_INITIALIZED_LKDHASH(__GLXprocAddressHash, __glXProcAddressHash);
 
 #define LOCAL_FUNC_TABLE_ENTRY(func) \
     { (GLubyte *)#func, (__GLXextFuncPtr)(func) },
@@ -773,7 +773,7 @@ void cacheInitializeOnce(void)
         LOCAL_FUNC_TABLE_ENTRY(glXWaitX)
     };
 
-    /* TODO: take write lock */
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXProcAddressHash);
 
     // Initialize the hash table with our locally-exported functions
 
@@ -786,10 +786,10 @@ void cacheInitializeOnce(void)
         pEntry->procName =
             (GLubyte *)strdup((const char *)localFuncTable[i].procName);
         pEntry->addr = localFuncTable[i].addr;
-        HASH_ADD_KEYPTR(hh, __glXProcAddressHash, pEntry->procName,
+        HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
                         strlen((const char *)pEntry->procName), pEntry);
     }
-    /* TODO: unlock */
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXProcAddressHash);
 
 }
 
@@ -804,10 +804,10 @@ static __GLXextFuncPtr getCachedProcAddress(const GLubyte *procName)
 
     __glXPthreadFuncs.once(&cacheInitializeOnceControl, cacheInitializeOnce);
 
-    /* TODO: take read lock */
-    HASH_FIND(hh, __glXProcAddressHash, procName,
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+    HASH_FIND(hh, _LH(__glXProcAddressHash), procName,
               strlen((const char *)procName), pEntry);
-    /* TODO: unlock */
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXProcAddressHash);
 
     if (pEntry) {
         return pEntry->addr;
@@ -828,11 +828,11 @@ static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
     pEntry->procName = (GLubyte *)strdup((const char *)procName);
     pEntry->addr = addr;
 
-    /* TODO: take write lock */
-    HASH_ADD_KEYPTR(hh, __glXProcAddressHash, pEntry->procName,
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+    HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
                     strlen((const char*)pEntry->procName),
                     pEntry);
-    /* TODO: unlock */
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXProcAddressHash);
 }
 
 PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)

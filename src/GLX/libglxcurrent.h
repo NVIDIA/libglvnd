@@ -37,6 +37,7 @@
 #include "libglxabipriv.h"
 #include "libglxmapping.h"
 #include "libglxnoop.h"
+#include "uthash.h"
 
 /*
  * Define current API library state here. An API state is per-thread, per-winsys
@@ -54,6 +55,7 @@ typedef struct __GLXAPIStateRec {
     const __GLXdispatchTableStatic *currentStaticDispatch;
     __GLXdispatchTableDynamic *currentDynDispatch;
     __GLXvendorInfo *currentVendor;
+    UT_hash_handle hh;
 } __GLXAPIState;
 
 /*!
