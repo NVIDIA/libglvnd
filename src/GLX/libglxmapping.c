@@ -37,6 +37,7 @@
 #endif
 
 #include "libglxmapping.h"
+#include "libglxgldispatch.h"
 #include "libglxnoop.h"
 #include "libglxthread.h"
 #include "trace.h"
@@ -248,13 +249,13 @@ static __GLXapiExports glxExportsTable = {
     /* We use the real function since __glXGetCurrentContext is inline */
     .getCurrentContext = glXGetCurrentContext,
 
-    /* GL dispatch management TODO */
-    .getCurrentGLDispatch = NULL,
-    .getTopLevelDispatch = NULL,
-    .createGLDispatch = NULL,
-    .getGLDispatchOffset = NULL,
-    .makeGLDispatchCurrent = NULL,
-    .destroyGLDispatch = NULL
+    /* GL dispatch management */
+    .getCurrentGLDispatch = __glXGetCurrentGLDispatch,
+    .getTopLevelDispatch = __glXGetTopLevelDispatch,
+    .createGLDispatch = __glXCreateGLDispatch,
+    .getGLDispatchOffset = __glXGetGLDispatchOffset,
+    .makeGLDispatchCurrent = __glXMakeGLDispatchCurrent,
+    .destroyGLDispatch = __glXDestroyGLDispatch
 };
 
 static char *ConstructVendorLibraryFilename(const char *vendorName)
@@ -335,12 +336,8 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             vendor->dlhandle = dlhandle;
             vendor->staticDispatch = dispatch;
 
-            vendor->glDispatch = __glDispatchCreateTable(
-                dispatch->glxvc.getProcAddress,
-                dispatch->glxvc.getDispatchProto,
-                dispatch->glxvc.destroyDispatchData,
-                NULL
-            );
+            vendor->glDispatch = (__GLdispatchTable *)
+                __glXCreateGLDispatch(&dispatch->glxvc, NULL);
             if (!vendor->glDispatch) {
                 goto fail;
             }
