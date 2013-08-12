@@ -42,13 +42,15 @@ TESTS = \
 	testglxmclate.sh \
 	testglxmcoldlink.sh \
 	testglxgetclientstr.sh \
+	testglxqueryversion.sh \
 	fini_test_env.sh
 
 check_PROGRAMS = \
 	testglxgetprocaddress \
 	testglxmakecurrent \
 	testglxmakecurrent_oldlink \
-	testglxgetclientstr
+	testglxgetclientstr \
+	testglxqueryversion
 
 X11GLVND_DIR = $(top_builddir)/src/x11glvnd
 
@@ -91,3 +93,8 @@ testglxgetclientstr_LDADD = -lX11
 testglxgetclientstr_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxgetclientstr_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testglxgetclientstr_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+
+testglxqueryversion_LDADD = -lX11
+testglxqueryversion_LDADD += $(top_builddir)/src/GLX/libGLX.la
+testglxqueryversion_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
+testglxqueryversion_LDADD += $(top_builddir)/src/util/trace/libtrace.la
