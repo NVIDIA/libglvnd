@@ -48,6 +48,48 @@
 #include <stdio.h>
 
 /*
+ * Hash table containing a mapping from dispatch table index entries to
+ * entry point names. This is used in  __glXFetchDispatchEntry() to query
+ * the appropriate vendor in the case where the entry hasn't been seen before
+ * by this vendor.
+ */
+typedef struct __GLXdispatchIndexHashRec {
+    int index;
+    GLubyte *procName;
+    UT_hash_handle hh;
+} __GLXdispatchIndexHash;
+
+static DEFINE_INITIALIZED_LKDHASH(__GLXdispatchIndexHash, __glXDispatchIndexHash);
+
+/*
+ * Monotonically-increasing number describing both the virtual "size" of the
+ * dynamic dispatch table and the next unused index. Must be accessed holding
+ * the __glXDispatchIndexHash lock.
+ */
+static int __glXNextUnusedHashIndex;
+
+typedef struct __GLXdispatchFuncHashRec {
+    int index;
+    __GLXextFuncPtr addr;
+    UT_hash_handle hh;
+} __GLXdispatchFuncHash;
+
+typedef struct __GLXdispatchTableDynamicRec {
+    /*
+     * Hash table containing the dynamic dispatch funcs. This is used instead of
+     * a flat array to avoid sparse array usage. XXX might be more performant to
+     * use an array, though?
+     */
+    DEFINE_LKDHASH(__GLXdispatchFuncHash, hash);
+
+    /*
+     * Pointer to the vendor library info, used by __glXFetchDispatchEntry()
+     */
+     __GLXvendorInfo *vendor;
+} __GLXdispatchTableDynamic;
+
+/****************************************************************************/
+/*
  * __glXVendorScreenHash is a hash table which maps a Display+screen to a vendor.
  * Look up this mapping from the X server once, the first time a unique
  * Display+screen pair is seen.
@@ -79,6 +121,30 @@ typedef struct __GLXvendorNameHashRec {
 
 static DEFINE_INITIALIZED_LKDHASH(__GLXvendorNameHash, __glXVendorNameHash);
 
+static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
+                                    const GLubyte *procName)
+{
+    __GLXdispatchIndexHash *pEntry = malloc(sizeof(*pEntry));
+    if (!pEntry) {
+        return GL_FALSE;
+    }
+
+    pEntry->procName = (GLubyte *)strdup((const char *)procName);
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+    pEntry->index = __glXNextUnusedHashIndex++;
+
+    // Notify the vendor this is the index which should be used
+    vendor->staticDispatch->
+        glxvc.setDispatchIndex(procName, pEntry->index);
+
+    HASH_ADD_INT(_LH(__glXDispatchIndexHash),
+                 index, pEntry);
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+
+    return GL_TRUE;
+}
+
 /*
  * This function queries each loaded vendor to determine if there is
  * a vendor-implemented dispatch function. The dispatch function
@@ -102,7 +168,10 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
         addr = pEntry->vendor->staticDispatch->
             glxvc.getDispatchAddress(procName);
         if (addr) {
-            // TODO Allocate the new dispatch index.
+            // Allocate the new dispatch index.
+            if (!AllocDispatchIndex(pEntry->vendor, procName)) {
+                addr = NULL;
+            }
             break;
         }
     }
@@ -111,9 +180,72 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
     return addr;
 }
 
+__GLXextFuncPtr __glXFetchDispatchEntry(__GLXdispatchTableDynamic *dynDispatch,
+                                        int index)
+{
+    __GLXextFuncPtr addr = NULL;
+    __GLXdispatchFuncHash *pEntry;
+    GLubyte *procName = NULL;
+
+    LKDHASH_RDLOCK(__glXPthreadFuncs, dynDispatch->hash);
+
+    HASH_FIND_INT(_LH(dynDispatch->hash), &index, pEntry);
+
+    if (pEntry) {
+        // This can be NULL, which indicates the vendor does not implement this
+        // entry. Vendor library provided dispatch functions are expected to
+        // default to a no-op in case dispatching fails.
+        addr = pEntry->addr;
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, dynDispatch->hash);
+
+    if (!pEntry) {
+        // Not seen before by this vendor: query the vendor for the right
+        // address to use.
+
+        __GLXdispatchIndexHash *pdiEntry;
+
+        // First retrieve the procname of this index
+        LKDHASH_RDLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+        HASH_FIND_INT(_LH(__glXDispatchIndexHash), &index, pdiEntry);
+        procName = pdiEntry->procName;
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+
+        // This should have a valid entry point associated with it.
+        assert(procName);
+
+        if (procName) {
+            // Get the real address
+            addr = dynDispatch->vendor->staticDispatch->
+                glxvc.getProcAddress(procName, NULL);
+        }
+
+        LKDHASH_WRLOCK(__glXPthreadFuncs, dynDispatch->hash);
+        HASH_FIND_INT(_LH(dynDispatch->hash), &index, pEntry);
+        if (!pEntry) {
+            pEntry = malloc(sizeof(*pEntry));
+            if (!pEntry) {
+                // Uh-oh!
+                assert(pEntry);
+                return NULL;
+            }
+            pEntry->index = index;
+            pEntry->addr = addr;
+
+            HASH_ADD_INT(_LH(dynDispatch->hash), index, pEntry);
+        } else {
+            addr = pEntry->addr;
+        }
+        LKDHASH_UNLOCK(__glXPthreadFuncs, dynDispatch->hash);
+    }
+
+    return addr;
+}
+
 static __GLXapiExports glxExportsTable = {
     .getDynDispatch = __glXGetDynDispatch,
-    .fetchDispatchEntry = NULL,
+    .fetchDispatchEntry = __glXFetchDispatchEntry,
 
     /* We use the real function since __glXGetCurrentContext is inline */
     .getCurrentContext = glXGetCurrentContext,
@@ -148,6 +280,7 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
     void *dlhandle = NULL;
     __PFNGLXMAINPROC glxMainProc;
     const __GLXdispatchTableStatic *dispatch;
+    __GLXdispatchTableDynamic *dynDispatch;
     __GLXvendorInfo *vendor = NULL;
     Bool locked = False;
 
@@ -211,8 +344,15 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
 
-            /* TODO: create a dynamic GLX dispatch table */
-            vendor->dynDispatch = NULL;
+            dynDispatch = vendor->dynDispatch
+                = malloc(sizeof(__GLXdispatchTableDynamic));
+            if (!dynDispatch) {
+                goto fail;
+            }
+
+            /* Initialize the dynamic dispatch table */
+            LKDHASH_INIT(__glXPthreadFuncs, dynDispatch->hash);
+            dynDispatch->vendor = vendor;
 
             HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendorName,
                             strlen(vendorName), pEntry);
