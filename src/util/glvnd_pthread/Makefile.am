@@ -25,30 +25,11 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-lib_LTLIBRARIES = libGLX.la
+# libglvnd_pthread.la: Convenience library for wrapping pthreads
 
-UTIL_DIR = ../util
-TRACE_DIR = ../util/trace
+noinst_LTLIBRARIES = libglvnd_pthread.la
 
-SUBDIRS = $(TRACE_DIR) $(GLVND_PTHREAD_DIR)
-
-# Warning settings
-# Include paths
-libGLX_la_CFLAGS = -I$(UTIL_DIR)
-libGLX_la_CFLAGS += -I$(TRACE_DIR)
-libGLX_la_CFLAGS += -I$(GLVND_PTHREAD_DIR)
-libGLX_la_CFLAGS += -I$(top_builddir)/include
-
-# Required library flags
-libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)
-
-# Required libraries
-libGLX_la_LIBADD = -ldl
-libGLX_la_LIBADD += $(X11_LIBS)
-libGLX_la_LIBADD += $(XEXT_LIBS)
-libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
-
-libGLX_la_LDFLAGS = -shared
-
-libGLX_la_SOURCES = \
-	libglx.c
+libglvnd_pthread_la_LIBADD = -ldl
+libglvnd_pthread_la_CFLAGS = -I../trace/
+libglvnd_pthread_la_SOURCES = \
+	glvnd_pthread.c
