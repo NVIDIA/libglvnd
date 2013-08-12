@@ -284,7 +284,41 @@ PUBLIC void glXWaitX(void)
 
 PUBLIC const char *glXGetClientString(Display *dpy, int name)
 {
-    return NULL;
+    int num_screens = XScreenCount(dpy);
+    int screen;
+    size_t n = CLIENT_STRING_BUFFER_SIZE - 1;
+    int index = name - 1;
+
+    static struct {
+        int initialized;
+        char string[CLIENT_STRING_BUFFER_SIZE];
+    } clientStringData[GLX_CLIENT_STRING_LAST_ATTRIB];
+
+    /* TODO lock */
+
+    if (clientStringData[index].initialized) {
+        /* TODO unlock */
+        return clientStringData[index].string;
+    }
+
+    for (screen = 0; (screen < num_screens) && (n > 0); screen++) {
+        const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+
+        const char *screenClientString = pDispatch->glx14ep.getClientString(dpy,
+                                                                            name);
+        if (!screenClientString) {
+            // Error!
+            return NULL;
+        }
+        strncat(clientStringData[index].string, screenClientString, n);
+        n = CLIENT_STRING_BUFFER_SIZE -
+            (1 + strlen(clientStringData[index].string));
+    }
+
+    clientStringData[index].initialized = 1;
+
+    /* TODO unlock */
+    return clientStringData[index].string;
 }
 
 
