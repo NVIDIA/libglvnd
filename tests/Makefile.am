@@ -35,7 +35,11 @@ TESTS_ENVIRONMENT = \
 
 TESTS = \
 	init_test_env.sh \
+	testglxgetprocaddress.sh \
 	fini_test_env.sh
+
+check_PROGRAMS = \
+	testglxgetprocaddress
 
 X11GLVND_DIR = $(top_builddir)/src/x11glvnd
 
@@ -48,3 +52,5 @@ AM_CFLAGS =                                  \
 	-I$(top_builddir)/src/util/trace         \
 	-I$(top_builddir)/src/util/glvnd_pthread
 
+
+testglxgetprocaddress_LDADD = $(top_builddir)/src/GLX/libGLX.la
