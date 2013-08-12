@@ -41,9 +41,32 @@
 #include "libglxthread.h"
 #include "trace.h"
 
+#include "lkdhash.h"
+
 #define _GNU_SOURCE 1
 #include <assert.h>
 #include <stdio.h>
+
+/*
+ * __glXVendorScreenHash is a hash table which maps a Display+screen to a vendor.
+ * Look up this mapping from the X server once, the first time a unique
+ * Display+screen pair is seen.
+ */
+typedef struct {
+    Display *dpy;
+    int screen;
+} __GLXvendorScreenHashKey;
+
+
+typedef struct __GLXvendorScreenHashRec {
+    __GLXvendorScreenHashKey key;
+    __GLXvendorInfo *vendor;
+    // XXX for performance reasons we may want to stash the dispatch tables here
+    // as well
+    UT_hash_handle hh;
+} __GLXvendorScreenHash;
+
+static DEFINE_INITIALIZED_LKDHASH(__GLXvendorScreenHash, __glXVendorScreenHash);
 
 /*
  * This function queries each loaded vendor to determine if there is
@@ -64,7 +87,80 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 
 __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
 {
-    return NULL; // TODO
+    __GLXvendorInfo *vendor = NULL;
+    __GLXvendorScreenHash *pEntry = NULL;
+    __GLXvendorScreenHashKey key;
+
+    if (screen < 0) {
+        return NULL;
+    }
+
+    memset(&key, 0, sizeof(key));
+
+    key.dpy = dpy;
+    key.screen = screen;
+
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXVendorScreenHash);
+
+    HASH_FIND(hh, _LH(__glXVendorScreenHash), &key,
+              sizeof(key), pEntry);
+    if (pEntry) {
+        vendor = pEntry->vendor;
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorScreenHash);
+
+    if (!pEntry) {
+        /*
+         * If we have specified a vendor library, use that. Otherwise,
+         * try to lookup the vendor based on the current screen.
+         */
+        const char *preloadedVendorName = getenv("__GLX_VENDOR_LIBRARY_NAME");
+        char *queriedVendorName;
+
+        assert(!vendor);
+
+        if (preloadedVendorName) {
+            vendor = __glXLookupVendorByName(preloadedVendorName);
+        }
+
+        if (!vendor) {
+            queriedVendorName = NULL; // TODO: query X somehow for the name
+            vendor = __glXLookupVendorByName(queriedVendorName);
+            Xfree(queriedVendorName);
+        }
+
+        if (!vendor) {
+            assert(!"Missing vendor library!");
+        }
+
+        LKDHASH_WRLOCK(__glXPthreadFuncs, __glXVendorScreenHash);
+
+        HASH_FIND(hh, _LH(__glXVendorScreenHash), &key, sizeof(key), pEntry);
+
+        if (!pEntry) {
+            pEntry = malloc(sizeof(*pEntry));
+            if (!pEntry) {
+                return NULL;
+            }
+
+            pEntry->key.dpy = dpy;
+            pEntry->key.screen = screen;
+            pEntry->vendor = vendor;
+            HASH_ADD(hh, _LH(__glXVendorScreenHash), key,
+                     sizeof(__GLXvendorScreenHashKey), pEntry);
+        } else {
+            /* Some other thread already added a vendor */
+            vendor = pEntry->vendor;
+        }
+
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorScreenHash);
+    }
+
+    DBG_PRINTF(10, "Found vendor \"%s\" for screen %d\n",
+               vendor->name, screen);
+
+    return vendor;
 }
 
 const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int screen)
