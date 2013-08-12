@@ -28,8 +28,46 @@
  */
 
 #include <X11/Xlib.h>
+#include <X11/Xlibint.h>
+#include <X11/Xproto.h>
+#include <X11/extensions/Xext.h>
+#include <X11/extensions/extutil.h>
 
 #include "x11glvnd.h"
+#include "x11glvndproto.h"
+
+const char *xglv_ext_name = XGLV_EXTENSION_NAME;
+static XExtensionInfo *xglv_ext_info = NULL;
+
+static /* const */ XExtensionHooks xglv_ext_hooks = {
+    NULL,                               /* create_gc */
+    NULL,                               /* copy_gc */
+    NULL,                               /* flush_gc */
+    NULL,                               /* free_gc */
+    NULL,                               /* create_font */
+    NULL,                               /* free_font */
+    NULL,                               /* close_display */
+    NULL,                               /* wire_to_event */
+    NULL,                               /* event_to_wire */
+    NULL,                               /* error */
+    NULL,                               /* error_string */
+};
+
+
+XEXT_GENERATE_FIND_DISPLAY(find_display, xglv_ext_info,
+                           (char *)xglv_ext_name,
+                           &xglv_ext_hooks,
+                           XGLV_NUM_EVENTS, NULL);
+
+#define CHECK_EXTENSION(dpy, i, val)                \
+    do {                                            \
+        if (!XextHasExtension(i)) {                 \
+            XMissingExtension(dpy, xglv_ext_name);  \
+            UnlockDisplay(dpy);                     \
+            return val;                             \
+        }                                           \
+   } while (0)
+
 
 /*
  * Returns the screen associated with this XID, or -1 if there was an error.
@@ -39,8 +77,30 @@ int XGLVQueryXIDScreenMapping(
     XID xid
 )
 {
-    /* TODO */
-    return -1;
+    XExtDisplayInfo *info = find_display(dpy);
+    xglvQueryXIDScreenMappingReq *req;
+    xglvQueryXIDScreenMappingReply rep;
+
+    LockDisplay(dpy);
+
+    CHECK_EXTENSION(dpy, info, -1);
+
+    GetReq(glvQueryXIDScreenMapping, req);
+
+    req->reqType = info->codes->major_opcode;
+    req->glvndReqType = X_glvQueryXIDScreenMapping;
+    req->xid = xid;
+
+    if (!_XReply(dpy, (xReply*)&rep, 0, xTrue)) {
+        UnlockDisplay(dpy);
+        SyncHandle();
+        return -1;
+    }
+
+    UnlockDisplay(dpy);
+    SyncHandle();
+
+    return rep.screen;
 }
 
 /*
@@ -52,6 +112,43 @@ char *XGLVQueryScreenVendorMapping(
     int screen
 )
 {
-    return NULL;
+    XExtDisplayInfo *info = find_display(dpy);
+    xglvQueryScreenVendorMappingReq *req;
+    xglvQueryScreenVendorMappingReply rep;
+    size_t length, nbytes, slop;
+    char *buf;
+
+    LockDisplay(dpy);
+
+    CHECK_EXTENSION(dpy, info, NULL);
+
+    GetReq(glvQueryScreenVendorMapping, req);
+    req->reqType = info->codes->major_opcode;
+    req->glvndReqType = X_glvQueryScreenVendorMapping;
+    req->screen = screen;
+
+    if (!_XReply(dpy, (xReply*)&rep, 0, xFalse)) {
+        UnlockDisplay(dpy);
+        SyncHandle();
+        return NULL;
+    }
+
+    length = rep.length;
+    nbytes = rep.n;
+    slop = nbytes & 3;
+    buf = (char *)Xmalloc(nbytes);
+    if (!buf) {
+        _XEatData(dpy, length);
+    } else {
+        _XRead(dpy, (char *)buf, nbytes);
+        if (slop) {
+            _XEatData(dpy, 4-slop);
+        }
+    }
+
+    UnlockDisplay(dpy);
+    SyncHandle();
+
+    return buf;
 }
 

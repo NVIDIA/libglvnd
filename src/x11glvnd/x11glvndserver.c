@@ -53,6 +53,13 @@ typedef struct XGLVScreenPrivRec {
 
 DevPrivateKeyRec glvXGLVScreenPrivKey;
 
+#define XGLV_SET_SCREEN_PRIVATE(pScreen, priv) \
+    dixSetPrivate(&(pScreen)->devPrivates, &glvXGLVScreenPrivKey, priv)
+#define XGLV_SCREEN_PRIVATE(pScreen) \
+    ((XGLVScreenPriv *)dixLookupPrivate(&(pScreen)->devPrivates, &glvXGLVScreenPrivKey));
+#define XGLV_INIT_PRIVATE_SPACE() \
+    dixRegisterPrivateKey(&glvXGLVScreenPrivKey, PRIVATE_SCREEN, 0)
+
 /* Dispatch information */
 typedef int ProcVectorFunc(ClientPtr);
 typedef ProcVectorFunc *ProcVectorFuncPtr;
@@ -125,19 +132,112 @@ static void *glvSetup(void *module, void *opts, int *errmaj, int *errmin)
     return (pointer)1;
 }
 
+typedef struct DrawableTypeRec {
+    RESTYPE rtype;
+    struct glvnd_list entry;
+} XGLVDrawableType;
+
+struct glvnd_list xglvDrawableTypes;
+
+int LookupXIDScreenMapping(ClientPtr client, XID xid)
+{
+    DrawablePtr pDraw;
+    Status status;
+    XGLVDrawableType *drawType;
+
+    glvnd_list_for_each_entry(drawType, &xglvDrawableTypes, entry) {
+        pDraw = NULL;
+        status = dixLookupResourceByType((void **)&pDraw, xid,
+                                        RT_WINDOW, client,
+                                        BadDrawable);
+        if (status == Success) {
+            break;
+        }
+    }
+
+    if (pDraw) {
+        return pDraw->pScreen->myNum;
+    } else {
+        return -1;
+    }
+}
+
 /*
  * Hook for GLX drivers to register their GLX drawable types.
  */
 PUBLIC void _XGLVRegisterGLXDrawableType(RESTYPE rtype)
 {
-    // TODO
+    XGLVDrawableType *drawType = malloc(sizeof(*drawType));
+
+    drawType->rtype = rtype;
+    glvnd_list_add(&drawType->entry, &xglvDrawableTypes);
 }
 
 enum {
     OPTION_GL_VENDOR,
 };
 
+static char *GetVendorForThisScreen(ScreenPtr pScreen)
+{
+    ScrnInfoPtr pScrnInfo = xf86Screens[pScreen->myNum];
+    const char *str;
+    OptionInfoRec options[2];
 
+    options[0].token = OPTION_GL_VENDOR;
+    options[0].name = XGLV_X_CONFIG_OPTION_NAME;
+    options[0].type = OPTV_STRING;
+    memset(&options[0].value, 0, sizeof(options[0].value));
+    options[0].found = False;
+
+    /* Fill a blank entry to the table */
+    options[1].token = -1;
+    options[1].name = NULL;
+    options[1].type = OPTV_NONE;
+    memset(&options[1].value, 0, sizeof(options[1].value));
+    options[1].found = False;
+
+    if (!pScrnInfo->options) {
+        xf86CollectOptions(pScrnInfo, NULL);
+    }
+
+    xf86ProcessOptions(pScreen->myNum,
+                       pScrnInfo->options,
+                       options);
+
+    str = xf86GetOptValString(options, OPTION_GL_VENDOR);
+    if (!str) {
+        // Fall back to the driver name if no explicit option specified
+        str = pScrnInfo->name;
+    }
+    if (!str) {
+        str = "unknown";
+    }
+
+    return strdup(str);
+}
+
+static Bool xglvScreenInit(ScreenPtr pScreen)
+{
+    XGLVScreenPriv *pScreenPriv;
+
+    pScreenPriv = malloc(sizeof(XGLVScreenPriv));
+
+    if (!pScreenPriv) {
+        return False;
+    }
+
+    // Get the vendor library for this screen
+    pScreenPriv->vendorLib = GetVendorForThisScreen(pScreen);
+
+    if (!pScreenPriv->vendorLib) {
+        free(pScreenPriv);
+        return False;
+    }
+
+    XGLV_SET_SCREEN_PRIVATE(pScreen, pScreenPriv);
+
+    return True;
+}
 
 // TODO: make sense to do this instead?
 //
@@ -149,12 +249,68 @@ enum {
 
 static int ProcGLVQueryXIDScreenMapping(ClientPtr client)
 {
-   return BadImplementation;
+    xglvQueryXIDScreenMappingReply rep;
+    REQUEST(xglvQueryXIDScreenMappingReq);
+    int scrnum;
+
+    REQUEST_SIZE_MATCH(*stuff);
+
+    scrnum = LookupXIDScreenMapping(client, stuff->xid);
+    if (scrnum < 0) {
+        return BadValue;
+    }
+
+    // Write the reply
+    GLVND_REPLY_HEADER(rep, 0);
+    rep.screen = scrnum;
+
+    WriteToClient(client, sz_xglvQueryXIDScreenMappingReply, (char *)&rep);
+    return client->noClientException;
 }
 
 static int ProcGLVQueryScreenVendorMapping(ClientPtr client)
 {
-    return BadImplementation;
+    xglvQueryScreenVendorMappingReply rep;
+    REQUEST(xglvQueryScreenVendorMappingReq);
+    const char *vendor;
+    size_t n, length;
+    char *buf;
+    ScreenPtr pScreen;
+    XGLVScreenPriv *pScreenPriv;
+
+    REQUEST_SIZE_MATCH(*stuff);
+
+    if ((stuff->screen >= screenInfo.numScreens) ||
+        (stuff->screen < 0)) {
+        return BadValue;
+    }
+
+    pScreen = screenInfo.screens[stuff->screen];
+    pScreenPriv = XGLV_SCREEN_PRIVATE(pScreen);
+    vendor = pScreenPriv->vendorLib;
+
+    if (!vendor) {
+        return BadValue;
+    }
+
+    n = strlen(vendor) + 1;
+    length = GLVND_PAD(n) >> 2;
+    buf = malloc(length << 2);
+    if (!buf) {
+        return BadAlloc;
+    }
+    strncpy(buf, vendor, n);
+
+    // Write the reply
+    GLVND_REPLY_HEADER(rep, length);
+    rep.n = n;
+
+    WriteToClient(client, sz_xglvQueryScreenVendorMappingReply, (char *)&rep);
+    WriteToClient(client, (int)(length << 2), buf);
+
+    free(buf);
+
+    return client->noClientException;
 }
 
 static int ProcGLVDispatch(ClientPtr client)
@@ -186,6 +342,8 @@ static void GLVExtensionInit(void)
 {
     ExtensionEntry *extEntry;
     char ext_name[] = XGLV_EXTENSION_NAME;
+    size_t i;
+    XGLVDrawableType *drawType;
 
     if ((extEntry = AddExtension(ext_name,
                                  XGLV_NUM_EVENTS,
@@ -198,6 +356,15 @@ static void GLVExtensionInit(void)
         // do stuff with extEntry?
     }
 
-    // TODO: do the screen -> vendor mappings now
+    XGLV_INIT_PRIVATE_SPACE();
+
+    for (i = 0; i < screenInfo.numScreens; i++) {
+        xglvScreenInit(screenInfo.screens[i]);
+    }
+
+    glvnd_list_init(&xglvDrawableTypes);
+    drawType = malloc(sizeof(*drawType));
+    drawType->rtype = RT_WINDOW;
+    glvnd_list_add(&drawType->entry, &xglvDrawableTypes);
 }
 
