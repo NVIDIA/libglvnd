@@ -148,9 +148,76 @@ PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
     return pDispatch->glx14ep.isDirect(dpy, context);
 }
 
+
+static Bool MakeContextCurrentInternal(Display *dpy,
+                                       GLXDrawable draw,
+                                       GLXDrawable read,
+                                       GLXContext context,
+                                       const __GLXdispatchTableStatic **ppDispatch)
+{
+    DBG_PRINTF(0, "dpy = %p, draw = %x, read = %x, context = %p\n",
+               dpy, (unsigned)draw, (unsigned)read, context);
+
+    /* TODO: lose current on the old dispatch table + context */ 
+
+    /* TODO: Save the new dispatch table for use by caller */
+
+    if (!context) {
+        /* TODO lose current */
+    } else {
+       /* TODO make current to new context */
+    }
+
+    return True;
+}
+
+static void SaveCurrentValues(GLXDrawable *pDraw,
+                              GLXDrawable *pRead,
+                              GLXContext *pContext)
+{
+    *pDraw = glXGetCurrentDrawable();
+    *pRead = glXGetCurrentReadDrawable();
+    *pContext = glXGetCurrentContext();
+}
+
 PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext context)
 {
-    return False;
+    const __GLXdispatchTableStatic *pDispatch;
+    Bool ret;
+    GLXDrawable oldDraw, oldRead;
+    GLXContext oldContext;
+
+    SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
+
+    ret = MakeContextCurrentInternal(dpy,
+                                     drawable,
+                                     drawable,
+                                     context,
+                                     &pDispatch);
+    if (ret) {
+        assert(!context || pDispatch);
+        if (pDispatch) {
+            ret = pDispatch->glx14ep.makeCurrent(dpy, drawable, context);
+            if (!ret) {
+                // Restore the original current values
+                ret = MakeContextCurrentInternal(dpy,
+                                                 oldDraw,
+                                                 oldRead,
+                                                 oldContext,
+                                                 &pDispatch);
+                assert(ret);
+                if (pDispatch) {
+                    ret = pDispatch->glx14ep.makeContextCurrent(dpy,
+                                                                oldDraw,
+                                                                oldRead,
+                                                                oldContext);
+                    assert(ret);
+                }
+            }
+        }
+    }
+
+    return ret;
 }
 
 
@@ -408,7 +475,45 @@ PUBLIC XVisualInfo *glXGetVisualFromFBConfig(Display *dpy, GLXFBConfig config)
 PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
                            GLXDrawable read, GLXContext context)
 {
-    return False;
+    const __GLXdispatchTableStatic *pDispatch;
+    Bool ret;
+    GLXDrawable oldDraw, oldRead;
+    GLXContext oldContext;
+
+    SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
+
+    ret = MakeContextCurrentInternal(dpy,
+                                     draw,
+                                     read,
+                                     context,
+                                     &pDispatch);
+    if (ret) {
+        assert(!context || pDispatch);
+        if (pDispatch) {
+            ret = pDispatch->glx14ep.makeContextCurrent(dpy,
+                                                        draw,
+                                                        read,
+                                                        context);
+            if (!ret) {
+                // Restore the original current values
+                ret = MakeContextCurrentInternal(dpy,
+                                                 oldDraw,
+                                                 oldRead,
+                                                 oldContext,
+                                                 &pDispatch);
+                assert(ret);
+                if (pDispatch) {
+                    ret = pDispatch->glx14ep.makeContextCurrent(dpy,
+                                                                oldDraw,
+                                                                oldRead,
+                                                                oldContext);
+                    assert(ret);
+                }
+            }
+        }
+    }
+
+    return ret;
 }
 
 
