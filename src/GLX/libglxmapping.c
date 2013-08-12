@@ -418,21 +418,93 @@ int __glXScreenFromFBConfig(GLXFBConfig config)
 
 
 /****************************************************************************/
+/*
+ * __glXScreenXIDMappingHash is a hash table which maps XIDs to screens.
+ */
+
+
+typedef struct {
+    XID xid;
+    int screen;
+    UT_hash_handle hh;
+} __GLXscreenXIDMappingHash;
+
+
+static DEFINE_INITIALIZED_LKDHASH(__GLXscreenXIDMappingHash, __glXScreenXIDMappingHash);
+
 static void AddScreenXIDMapping(XID xid, int screen)
 {
-    // TODO
+    __GLXscreenXIDMappingHash *pEntry = NULL;
+
+    if (xid == None) {
+        return;
+    }
+
+    if (screen < 0) {
+        return;
+    }
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+
+    HASH_FIND(hh, _LH(__glXScreenXIDMappingHash), &xid, sizeof(xid), pEntry);
+
+    if (pEntry == NULL) {
+        pEntry = malloc(sizeof(*pEntry));
+        pEntry->xid = xid;
+        pEntry->screen = screen;
+        HASH_ADD(hh, _LH(__glXScreenXIDMappingHash), xid, sizeof(xid), pEntry);
+    } else {
+        pEntry->screen = screen;
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
 }
 
 
 static void RemoveScreenXIDMapping(XID xid, int screen)
 {
-    // TODO
+    __GLXscreenXIDMappingHash *pEntry;
+
+    if (xid == None) {
+        return;
+    }
+
+    if (screen < 0) {
+        return;
+    }
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+
+    HASH_FIND(hh, _LH(__glXScreenXIDMappingHash), &xid, sizeof(xid), pEntry);
+
+    if (pEntry != NULL) {
+        HASH_DELETE(hh, _LH(__glXScreenXIDMappingHash), pEntry);
+        free(pEntry);
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
 }
 
 
 static int ScreenFromXID(Display *dpy, XID xid)
 {
-    return -1; // TODO
+    __GLXscreenXIDMappingHash *pEntry;
+    int screen = -1;
+
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+
+    HASH_FIND(hh, _LH(__glXScreenXIDMappingHash), &xid, sizeof(xid), pEntry);
+
+    if (pEntry) {
+        screen = pEntry->screen;
+    } else {
+        // TODO: somehow query X for the screen number
+        AddScreenXIDMapping(xid, screen);
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+
+    return screen;
 }
 
 
