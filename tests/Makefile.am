@@ -40,17 +40,32 @@ TESTS = \
 	testglxmcloop.sh \
 	testglxmcthreads.sh \
 	testglxmclate.sh \
+	testglxmcoldlink.sh \
 	fini_test_env.sh
 
 check_PROGRAMS = \
 	testglxgetprocaddress \
-	testglxmakecurrent
+	testglxmakecurrent \
+	testglxmakecurrent_oldlink
 
 X11GLVND_DIR = $(top_builddir)/src/x11glvnd
 
-testglxmakecurrent_SOURCES = \
+# The *_oldlink variant tests that linking against legacy libGL.so works
+
+TESTGLXMAKECURRENT_SOURCES_COMMON = \
 	testglxmakecurrent.c \
 	test_utils.c
+
+testglxmakecurrent_SOURCES = \
+	$(TESTGLXMAKECURRENT_SOURCES_COMMON)
+
+testglxmakecurrent_oldlink_SOURCES = \
+	$(TESTGLXMAKECURRENT_SOURCES_COMMON)
+
+testglxmakecurrent_oldlink_LDADD = -lX11
+testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
+testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/glvnd_pthread/libglvnd_pthread.la
 
 # Disable annoying "unused" errors
 AM_CFLAGS =                                  \
