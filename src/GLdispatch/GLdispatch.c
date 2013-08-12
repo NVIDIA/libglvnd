@@ -37,6 +37,48 @@
 
 static GLVNDPthreadFuncs *pthreadFuncs;
 
+typedef struct __GLdispatchProcEntryRec {
+    char *procName;
+
+    // Cached offset of this dispatch entry, retrieved from
+    // _glapi_add_dispatch()
+    int offset;
+
+    // The generation in which this dispatch entry was defined.
+    // Used to determine whether a given dispatch table needs to
+    // be fixed up with the right function address at this offset.
+    int generation;
+
+    // List handle
+    struct glvnd_list entry;
+} __GLdispatchProcEntry;
+
+/*
+ * List of new dispatch procs which need to be given prototypes at make current
+ * time. Accesses to this need to be protected by the dispatch lock.
+ */
+static struct glvnd_list newProcList;
+
+/*
+ * List of valid extension procs which have been assigned prototypes. At make
+ * current time, if the new context's generation is out-of-date, we iterate
+ * through this list and fix up the new context with entrypoints with a greater
+ * generation number. Accesses to this need to be protected by the dispatch
+ * lock.
+ */
+static struct glvnd_list extProcList;
+
+/*
+ * Monotonically increasing integer describing the most up-to-date "generation"
+ * of the dispatch table. Used to determine if a given table needs fixup.
+ * Accesses to this need to be protected by the dispatch lock.
+ *
+ * Note: wrapping is theoretically an issue here, but shouldn't happen in
+ * practice as it requires calling GetProcAddress() on 2^31-1 unique functions.
+ * We'll run out of dispatch stubs long before then.
+ */
+static int latestGeneration;
+
 /*
  * The dispatch lock. This should be taken around any code that manipulates the
  * above global variables or makes calls to _glapi_add_dispatch() or
@@ -64,13 +106,62 @@ static inline void UnlockDispatch(void)
 void __glDispatchInit(GLVNDPthreadFuncs *funcs)
 {
     pthreadFuncs = funcs;
-    // TODO: Call into GLAPI to see if we are multithreaded
+    // Call into GLAPI to see if we are multithreaded
     // TODO: fix GLAPI to use the pthread funcs provided here?
+    _glapi_check_multithread();
 
+    LockDispatch();
+    glvnd_list_init(&newProcList);
+    glvnd_list_init(&extProcList);
+    UnlockDispatch();
+}
+
+static void DispatchCurrentRef(__GLdispatchTable *dispatch)
+{
+    CheckDispatchLocked();
+    // TODO Add dispatch tables to our global tracker
+}
+
+static void DispatchCurrentUnref(__GLdispatchTable *dispatch)
+{
+    CheckDispatchLocked();
+    // TODO Remove dispatch tables from our global tracker
+}
+
+/*
+ * Fix up a dispatch table. Calls to this function must be protected by the
+ * dispatch lock.
+ */
+static void FixupDispatchTable(__GLdispatchTable *dispatch)
+{
+    DBG_PRINTF(20, "dispatch=%p\n", dispatch);
+    CheckDispatchLocked();
+
+    /*
+     * TODO: For each proc in the newProcList, request a dispatch prototype from
+     * the vendor library and plug it into glapi. If we succeed, move the proc
+     * from the newProcList to the extProcList, and do some cleanup.
+     */
+
+    /*
+     * TODO: For each proc in the extProcList, compare its gen# against that of
+     * the context. If greater, then fix up the dispatch table to contain
+     * the right entrypoint.
+     */
+
+    dispatch->generation = latestGeneration;
+}
+
+static __GLdispatchProcEntry *FindProcInList(const char *procName,
+                                             struct glvnd_list *list)
+{
+    /* TODO */
+    return NULL;
 }
 
 PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
 {
+    GLint offset;
     _glapi_proc addr;
 
     /*
@@ -79,15 +170,37 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
      */
     LockDispatch();
 
-    /* TODO: get the addr from glapi */
-    addr = NULL;
+    addr = _glapi_get_proc_address(procName);
 
     DBG_PRINTF(20, "addr=%p\n", addr);
     if (addr) {
         /*
-         * TODO: fixup dispatch tables to contain the right vendor entrypoints
-         * for this proc.
+         * Newly-generated entrypoints receive a temporary dispatch offset of
+         * -1 until they are given a real offset later by _glapi_add_dispatch().
+         * If this entrypoint hasn't already been added to the newProcList,
+         * do so now, and fix up tables accordingly. Any procs landed in the
+         * extProcList should already have a valid offset assigned to them,
+         * and hence we don't need to search that list as well.
          */
+        offset = _glapi_get_proc_offset(procName);
+        if ((offset == -1) &&
+            !FindProcInList(procName, &newProcList)) {
+            __GLdispatchProcEntry *pEntry = malloc(sizeof(*pEntry));
+            pEntry->procName = strdup(procName);
+            pEntry->offset = -1; // To be assigned later
+
+            /*
+             * Bump the latestGeneration, then assign it to this proc.
+             */
+            pEntry->generation = ++latestGeneration;
+
+            glvnd_list_add(&pEntry->entry, &newProcList);
+
+            /*
+             * TODO: Fixup any current dispatch tables to contain the right
+             * pointer to this proc.
+             */
+        }
     }
     UnlockDispatch();
 
@@ -98,13 +211,21 @@ PUBLIC void __glDispatchSetEntry(__GLdispatchTable *dispatch,
                                  GLint offset,
                                  __GLdispatchProc addr)
 {
-    /* TODO: set the dispatch table proc at <offset> to <addr> */
+    void **tbl;
+
+    LockDispatch();
+    if (dispatch) {
+        tbl = (void **)dispatch->table;
+        if (tbl) {
+            tbl[offset] = addr;
+        }
+    }
+    UnlockDispatch();
 }
 
 GLint __glDispatchGetOffset(const char *procName)
 {
-    /* TODO: get the offset from glapi */
-    return -1;
+    return _glapi_get_proc_offset(procName);
 }
 
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback getProcAddress,
@@ -113,6 +234,10 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback get
                                                   void *vendorData)
 {
     __GLdispatchTable *dispatch = malloc(sizeof(__GLdispatchTable));
+
+    dispatch->generation = 0;
+    dispatch->currentThreads = 0;
+    dispatch->table = NULL;
 
     dispatch->getProcAddress = getProcAddress;
     dispatch->getDispatchProto = getDispatchProto;
@@ -126,37 +251,79 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback get
 PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch)
 {
     // NOTE this assumes the table is not current!
+    // TODO: delete the global lists
     // TODO: this is currently unused...
     LockDispatch();
+    dispatch->destroyVendorData(dispatch->vendorData);
+    free(dispatch->table);
     free(dispatch);
     UnlockDispatch();
 }
 
+static struct _glapi_table
+*CreateGLAPITable(__GLgetProcAddressCallback getProcAddress,
+                  void *vendorData)
+{
+    size_t entries = _glapi_get_dispatch_table_size();
+    struct _glapi_table *table = (struct _glapi_table *)
+        calloc(1, entries * sizeof(void *));
+
+    CheckDispatchLocked();
+
+    if (table) {
+        // TODO: call into glapi to initialize the table using our
+        // getProcAddress callback
+    }
+
+    return table;
+}
+
 PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState)
 {
+    __GLdispatchAPIState *curApiState = (__GLdispatchAPIState *)
+        _glapi_get_current(CURRENT_API_STATE);
+    __GLdispatchTable *dispatch = apiState->dispatch;
+    __GLdispatchTable *curDispatch = curApiState ? curApiState->dispatch : NULL;
+
     // We need to fix up the dispatch table if it hasn't been
     // initialized, or there are new dynamic entries which were
     // added since the last time make current was called.
     LockDispatch();
     DBG_PRINTF(20, "dispatch=%p\n", dispatch);
 
-    /*
-     * TODO: fixup the dispatch table if necessary
-     */
+    if (!dispatch->table ||
+        (dispatch->generation < latestGeneration)) {
+
+        // Lazily create the dispatch table if we haven't already
+        if (!dispatch->table) {
+            dispatch->table = CreateGLAPITable(dispatch->getProcAddress,
+                                               dispatch->vendorData);
+        }
+
+        FixupDispatchTable(dispatch);
+    }
+
+    if (curDispatch != dispatch) {
+        if (curDispatch) {
+            DispatchCurrentUnref(curDispatch);
+        }
+        DispatchCurrentRef(dispatch);
+    }
 
     /*
-     * TODO: track this dispatch table in our global list of current tables
+     * Set the current __GLdispatchTable and _glapi_table in TLS
+     * we have to keep the dispatch lock until the _glapi_table
+     * is set.
+     * XXX: this would be cleaner if this used
+     * _glapi_set_current(dispatch->table, CURRENT_DISPATCH)
      */
+    _glapi_set_dispatch(dispatch->table);
 
-    /*
-     * TODO: Set the current __GLdispatchTable and _glapi_table in TLS
-     */
+    DBG_PRINTF(20, "done\n");
     UnlockDispatch();
 
-    /*
-     * TODO: Set other current state in TLS
-     */
-
+    _glapi_set_current(apiState->context, CURRENT_CONTEXT);
+    _glapi_set_current(apiState, CURRENT_API_STATE);
 }
 
 PUBLIC void __glDispatchLoseCurrent(void)
@@ -168,13 +335,11 @@ PUBLIC void __glDispatchLoseCurrent(void)
 
     if (curApiState) {
         LockDispatch();
-        /*
-         * TODO: remove the dispatch table from our global list
-         */
+        DispatchCurrentUnref(curApiState->dispatch);
         UnlockDispatch();
     }
 
-    /*
-     * TODO: set TLS entries to NULL
-     */
+    _glapi_set_current(NULL, CURRENT_API_STATE);
+    _glapi_set_current(NULL, CURRENT_CONTEXT);
+    _glapi_set_dispatch(NULL);
 }

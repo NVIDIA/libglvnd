@@ -39,6 +39,12 @@
  * and updating dispatch tables.
  */
 typedef struct __GLdispatchTableRec {
+    /*! Number of threads this dispatch is current on */
+    int currentThreads;
+
+    /*! Generation number for tracking whether this needs fixup */
+    int generation;
+
     /*! Saved vendor library callbacks */
     __GLgetProcAddressCallback getProcAddress;
     __GLgetDispatchProtoCallback getDispatchProto;
@@ -46,6 +52,9 @@ typedef struct __GLdispatchTableRec {
 
     /*! A pointer to vendor-specific data */
     void *vendorData;
+
+    /*! The real dispatch table */
+    struct _glapi_table *table;
 
     /*! List handle */
     struct glvnd_list entry;

@@ -40,4 +40,5 @@ libGLdispatch_la_LDFLAGS = -shared
 libGLdispatch_la_SOURCES = \
 	GLdispatch.c
 
-libGLdispatch_la_LIBADD = ../util/trace/libtrace.la
+libGLdispatch_la_LIBADD = mapi/vnd-glapi/libglapi.la
+libGLdispatch_la_LIBADD += ../util/trace/libtrace.la
