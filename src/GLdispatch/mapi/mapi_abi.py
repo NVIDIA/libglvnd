@@ -495,14 +495,14 @@ class ABIPrinter(object):
 
         return ',\n'.join(stubs)
 
-    def c_noop_functions(self, prefix, warn_prefix):
+    def c_noop_functions(self, prefix, warn_prefix, keywords):
         """Return the noop functions."""
         noops = []
         for ent in self.entries:
             if ent.alias:
                 continue
 
-            proto = self._c_decl(ent, prefix, False, 'static')
+            proto = self._c_decl(ent, prefix, False, keywords)
 
             stmt1 = self.indent;
             space = ''
@@ -592,12 +592,20 @@ class ABIPrinter(object):
             print '#undef MAPI_TMP_TABLE'
             print '#endif /* MAPI_TMP_TABLE */'
 
+        if self.lib_need_noop_functions:
+            print '#ifdef MAPI_TMP_NOOP_FUNCTIONS'
+            print
+            print self.c_noop_functions(self.prefix_noop, self.prefix_warn, '')
+            print
+            print '#endif /* MAPI_TMP_NOOP_FUNCTIONS */'
+
         if self.lib_need_noop_array:
             print
             print '#ifdef MAPI_TMP_NOOP_ARRAY'
             print '#ifdef DEBUG'
             print
-            print self.c_noop_functions(self.prefix_noop, self.prefix_warn)
+            print self.c_noop_functions(self.prefix_noop, self.prefix_warn,
+                                        'static')
             print
             print 'const mapi_func table_%s_array[] = {' % (self.prefix_noop)
             print self.c_noop_initializer(self.prefix_noop, False)
@@ -699,6 +707,7 @@ class GLAPIPrinter(ABIPrinter):
         self.api_attrs = ''
 
         self.lib_need_table_size = False
+        self.lib_need_noop_functions = False
         self.lib_need_noop_array = False
         self.lib_need_stubs = False
         self.lib_need_all_entries = False
@@ -814,6 +823,13 @@ class VendorNeutralGLAPIPrinter(SharedGLAPIPrinter):
         super(VendorNeutralGLAPIPrinter, self)._override_for_api(ent)
         ent.hidden = False
 
+class NoopGLPrinter(GLAPIPrinter):
+    def __init__(self, entries):
+        super(NoopGLPrinter, self).__init__(entries)
+        self.lib_need_noop_functions = True
+        self.lib_need_non_hidden_entries = False
+        self.prefix_noop = 'gl'
+
 class VGAPIPrinter(ABIPrinter):
     """OpenVG API Printer"""
 
@@ -833,7 +849,7 @@ class VGAPIPrinter(ABIPrinter):
 
 def parse_args():
     printers = ['vgapi', 'glapi', 'es1api', 'es2api', 'shared-glapi',
-                'vnd-glapi']
+                'vnd-glapi', 'noop-gl']
     modes = ['lib', 'app']
 
     parser = OptionParser(usage='usage: %prog [options] <filename>')
@@ -858,6 +874,7 @@ def main():
         'es2api': ES2APIPrinter,
         'shared-glapi': SharedGLAPIPrinter,
         'vnd-glapi' : VendorNeutralGLAPIPrinter,
+        'noop-gl' : NoopGLPrinter,
     }
 
     filename, options = parse_args()
