@@ -29,7 +29,10 @@ lib_LTLIBRARIES = libGLdispatch.la
 
 SUBDIRS = ../util/trace
 
-libGLdispatch_la_CFLAGS  = -I../util/glvnd_pthread
+libGLdispatch_la_CFLAGS =  -Imapi/glapi
+libGLdispatch_la_CFLAGS += -I../util/trace
+libGLdispatch_la_CFLAGS += -I../util/glvnd_pthread
+libGLdispatch_la_CFLAGS += -Imapi
 libGLdispatch_la_CFLAGS += -I$(top_builddir)/include
 
 libGLdispatch_la_LDFLAGS = -shared

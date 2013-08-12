@@ -34,6 +34,18 @@
 #include "compiler.h"
 #include "glvnd_pthread.h"
 
+// HACK: temporary functions which will be used until this new generic TLS
+// interface is actually implemented in GLAPI
+static inline void _glapi_set_current(void *ptr, int index)
+{
+}
+
+static inline void *_glapi_get_current(int index)
+{
+    return NULL;
+}
+
+
 /*!
  * \defgroup gldispatch core GL/GLES dispatch and TLS module
  *
@@ -43,6 +55,13 @@
  * up the dispatch table at make current time to point to the appropriate vendor
  * library entrypoints.
  */
+
+/*
+ * XXX: Kludge to export the get current function directly from glapi for
+ * performance reasons.
+ */
+#define CURRENT_CONTEXT     1  // GLAPI_CURRENT_CONTEXT
+#define CURRENT_API_STATE   2  // GLAPI_CURRENT_USER1
 
 typedef void (*__GLdispatchProc)(void);
 typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
@@ -150,10 +169,12 @@ PUBLIC void __glDispatchLoseCurrent(void);
  * This gets the current (opaque) API state pointer. If the pointer is
  * NULL, no context is current, otherwise the contents of the pointer depends on
  * which client API owns the context (EGL or GLX).
+ *
+ * This currently just hijacks _glapi_{set,get}_context() for this purpose.
  */
 static inline __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void)
 {
-    return NULL; /* TODO */
+    return _glapi_get_current(CURRENT_API_STATE);
 }
 
 /*!
@@ -163,7 +184,7 @@ static inline __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void)
  */
 static inline void *__glDispatchGetCurrentContext(void)
 {
-    return NULL;
+    return _glapi_get_current(CURRENT_CONTEXT);
 }
 
 /*!
