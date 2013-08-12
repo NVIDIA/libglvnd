@@ -286,6 +286,21 @@ static void dummy_glEnd (void)
     // TODO
 }
 
+#define GL_PROC_ENTRY(x) { (void *)dummy_gl ## x, "gl" #x }
+
+/*
+ * Note we only fill in real implementations for a few core GL functions.
+ * The rest will dispatch to the NOP stub.
+ */
+static struct {
+    void *addr;
+    const char *name;
+} procAddresses[] = {
+    GL_PROC_ENTRY(Begin),
+    GL_PROC_ENTRY(End),
+    GL_PROC_ENTRY(Vertex3fv),
+};
+
 
 static void dummyNopStub (void)
 {
@@ -295,6 +310,13 @@ static void dummyNopStub (void)
 // XXX non-entry point ABI functions
 static void         *dummyGetProcAddress         (const GLubyte *procName, void *data)
 {
+    int i;
+    for (i = 0; i < ARRAY_LEN(procAddresses); i++) {
+        if (!strcmp(procAddresses[i].name, (const char *)procName)) {
+            return procAddresses[i].addr;
+        }
+    }
+
     return (void *)dummyNopStub;
 }
 
