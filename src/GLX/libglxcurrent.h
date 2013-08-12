@@ -36,6 +36,7 @@
 #include "libglxabipriv.h"
 #include "libglxmapping.h"
 #include "libglxnoop.h"
+#include "GLdispatch.h"
 #include "uthash.h"
 
 /*

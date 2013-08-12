@@ -25,40 +25,16 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-lib_LTLIBRARIES = libGLX.la
+lib_LTLIBRARIES = libGLdispatch.la
 
-UTIL_DIR = ../util
-TRACE_DIR = ../util/trace
-GLVND_PTHREAD_DIR = ../util/glvnd_pthread
-UTHASH_DIR = ../util/uthash/src
-GL_DISPATCH_DIR = ../GLdispatch
+SUBDIRS = ../util/trace
 
-SUBDIRS = $(GL_DISPATCH_DIR) $(TRACE_DIR) $(GLVND_PTHREAD_DIR)
+libGLdispatch_la_CFLAGS  = -I../util/glvnd_pthread
+libGLdispatch_la_CFLAGS += -I$(top_builddir)/include
 
-# Warning settings
-# Include paths
-libGLX_la_CFLAGS = -I$(UTHASH_DIR)
-libGLX_la_CFLAGS += -I$(UTIL_DIR)
-libGLX_la_CFLAGS += -I$(TRACE_DIR)
-libGLX_la_CFLAGS += -I$(GLVND_PTHREAD_DIR)
-libGLX_la_CFLAGS += -I$(GL_DISPATCH_DIR)
-libGLX_la_CFLAGS += -I$(top_builddir)/include
+libGLdispatch_la_LDFLAGS = -shared
 
-# Required library flags
-libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)
+libGLdispatch_la_SOURCES = \
+	GLdispatch.c
 
-# Required libraries
-libGLX_la_LIBADD = -ldl
-libGLX_la_LIBADD += $(X11_LIBS)
-libGLX_la_LIBADD += $(XEXT_LIBS)
-libGLX_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
-libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
-libGLX_la_LIBADD += $(GLVND_PTHREAD_DIR)/libglvnd_pthread.la
-
-libGLX_la_LDFLAGS = -shared
-
-libGLX_la_SOURCES = \
-	libglx.c \
-	libglxmapping.c \
-	libglxnoop.c \
-	libglxgldispatch.c
+libGLdispatch_la_LIBADD = ../util/trace/libtrace.la
