@@ -31,6 +31,7 @@
 #define __LIB_GLX_MAPPING_H
 
 #include "libglxabipriv.h"
+#include "GLdispatch.h"
 
 /*!
  * Structure containing relevant per-vendor information.
@@ -40,7 +41,7 @@ typedef struct __GLXvendorInfoRec {
     void *dlhandle; //< shared library handle
     const __GLXdispatchTableStatic *staticDispatch; //< static GLX dispatch table
     __GLXdispatchTableDynamic *dynDispatch; //< dynamic GLX dispatch table
-    void *glDispatch; //< TODO: GL dispatch table
+    __GLdispatchTable *glDispatch; //< GL dispatch table
 } __GLXvendorInfo;
 
 /*!
@@ -52,7 +53,7 @@ const __GLXdispatchTableStatic * __glXGetStaticDispatch(Display *dpy,
                                                         const int screen);
 __GLXdispatchTableDynamic *__glXGetDynDispatch(Display *dpy,
                                                const int screen);
-void *__glXGetGLDispatch(Display *dpy, const int screen);
+__GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
 
 /*!
  * Various functions to manage mappings used to determine the screen

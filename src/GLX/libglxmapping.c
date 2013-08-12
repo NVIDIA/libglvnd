@@ -44,8 +44,6 @@
 #include "lkdhash.h"
 
 #define _GNU_SOURCE 1
-#include <assert.h>
-#include <stdio.h>
 
 /*
  * Hash table containing a mapping from dispatch table index entries to
@@ -337,9 +335,12 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             vendor->dlhandle = dlhandle;
             vendor->staticDispatch = dispatch;
 
-            /* TODO: create a core GL dispatch table */
-            vendor->glDispatch = NULL;
-
+            vendor->glDispatch = __glDispatchCreateTable(
+                dispatch->glxvc.getProcAddress,
+                dispatch->glxvc.getDispatchProto,
+                dispatch->glxvc.destroyDispatchData,
+                NULL
+            );
             if (!vendor->glDispatch) {
                 goto fail;
             }
@@ -375,7 +376,7 @@ fail:
     if (vendor) {
         free(vendor->name);
         if (vendor->glDispatch) {
-            // TODO: free the table
+            __glDispatchDestroyTable(vendor->glDispatch);
         }
         free(vendor->dynDispatch);
     }
@@ -476,7 +477,7 @@ const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int s
     }
 }
 
-void *__glXGetGLDispatch(Display *dpy, const int screen)
+__GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen)
 {
     __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 

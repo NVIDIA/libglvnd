@@ -153,11 +153,55 @@ PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
     return pDispatch->glx14ep.isDirect(dpy, context);
 }
 
+static DEFINE_INITIALIZED_LKDHASH(__GLXAPIState, __glXAPIStateHash);
+
+/* NOTE this assumes the __glXAPIStateHash lock is taken! */
+static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
+{
+    __GLXAPIState *apiState = calloc(1, sizeof(*apiState));
+
+    assert(apiState);
+
+    apiState->glas.tag = GLDISPATCH_API_GLX;
+    apiState->glas.id = malloc(sizeof(glvnd_thread_t));
+    *((glvnd_thread_t *)apiState->glas.id) = tid;
+
+    HASH_ADD_KEYPTR(hh, _LH(__glXAPIStateHash), apiState->glas.id,
+                    sizeof(glvnd_thread_t), apiState);
+
+    return apiState;
+}
+
+/* NOTE this assumes the __glXAPIStateHash lock is taken! */
+static __GLXAPIState *LookupAPIState(glvnd_thread_t tid)
+{
+    __GLXAPIState *apiState;
+
+    HASH_FIND(hh, _LH(__glXAPIStateHash), &tid,
+              sizeof(glvnd_thread_t), apiState);
+
+    return apiState;
+}
 
 __GLXAPIState *__glXGetAPIState(glvnd_thread_t tid)
 {
-    /* TODO: implement me */
-    return NULL;
+    __GLXAPIState *apiState;
+
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXAPIStateHash);
+
+    apiState = LookupAPIState(tid);
+    if (!apiState) {
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXAPIStateHash);
+        LKDHASH_WRLOCK(__glXPthreadFuncs, __glXAPIStateHash);
+        apiState = LookupAPIState(tid);
+        if (!apiState) {
+            apiState = CreateAPIState(tid);
+        }
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXAPIStateHash);
+
+    return apiState;
 }
 
 static Bool MakeContextCurrentInternal(Display *dpy,
@@ -203,6 +247,8 @@ static Bool MakeContextCurrentInternal(Display *dpy,
             return False;
         }
 
+        __glDispatchLoseCurrent();
+
         /* Update the current display and drawable(s) in this apiState */
         apiState->currentDisplay = dpy;
         apiState->currentDraw = draw;
@@ -213,9 +259,11 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         apiState->currentStaticDispatch = NULL;
         apiState->currentDynDispatch = NULL;
 
-        /* TODO: Update the GL dispatch table */
+        /* Update the GL dispatch table */
+        apiState->glas.dispatch = NULL;
 
-        /* TODO: Update the current context */
+        /* Update the current context */
+        apiState->glas.context = NULL;
         return True;
     } else {
         /* Update the current display and drawable(s) in this apiState */
@@ -228,9 +276,13 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         apiState->currentStaticDispatch = *ppDispatch;
         apiState->currentDynDispatch = newVendor->dynDispatch;
 
-        /* TODO: Update the GL dispatch table */
+        /* Update the GL dispatch table */
+        apiState->glas.dispatch = newVendor->glDispatch;
 
-        /* TODO: Update the current context */
+        DBG_PRINTF(0, "GL dispatch = %p\n", apiState->glas.dispatch);
+
+        /* Update the current context */
+        apiState->glas.context = context;
 
         /*
          * XXX It is possible that these drawables were never seen by
@@ -243,8 +295,9 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         __glXAddScreenDrawableMapping(read, screen);
 
         /*
-         * TODO: Call into core GL dispatcher to set up the current state.
+         * Call into GLdispatch to set up the current state.
          */
+        __glDispatchMakeCurrent(&apiState->glas);
     }
 
     return True;
@@ -859,9 +912,11 @@ PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
     }
 
     /*
-     * TODO: If *that* doesn't work, request a NOP stub from the core
-     * dispatcher.
+     * If *that* doesn't work, request a NOP stub from GLdispatch.  This should
+     * always succeed if the function name begins with "gl".
      */
+    addr = __glDispatchGetProcAddress((const char *)procName);
+    assert(addr || procName[0] != 'g' || procName[1] != 'l');
 
     /* Store the resulting proc address. */
 done:
@@ -878,6 +933,9 @@ void __attribute__ ((constructor)) __glXInit(void)
 
     /* Initialize pthreads imports */
     glvndSetupPthreads(RTLD_DEFAULT, &__glXPthreadFuncs);
+
+    /* Initialize GLdispatch */
+    __glDispatchInit(&__glXPthreadFuncs);
 
     {
         /*

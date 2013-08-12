@@ -32,7 +32,6 @@
 
 #include <pthread.h>
 
-#include "compiler.h"
 #include "libglxthread.h"
 #include "libglxabipriv.h"
 #include "libglxmapping.h"
@@ -47,7 +46,7 @@
  * (depending on whether GLX has a context current at the time).
  */
 typedef struct __GLXAPIStateRec {
-    /* TODO: insert a winsys-neutral API state handle here */
+    __GLdispatchAPIState glas; /* Must be the first entry! */
 
     Display *currentDisplay;
     GLXDrawable currentDraw;
@@ -70,8 +69,16 @@ __GLXAPIState *__glXGetAPIState(glvnd_thread_t tid);
  */
 static inline __GLXAPIState *__glXGetCurrentAPIState(void)
 {
-    /* TODO: check TLS */
-    return __glXGetAPIState(__glXPthreadFuncs.self());
+    __GLdispatchAPIState *glas = __glDispatchGetCurrentAPIState();
+    __GLXAPIState *state;
+    if (unlikely(!glas ||
+                 (glas->tag != GLDISPATCH_API_GLX))) {
+        state = __glXGetAPIState(__glXPthreadFuncs.self());
+    } else {
+        state = (__GLXAPIState *)(glas);
+    }
+
+    return state;
 }
 
 /*!
@@ -101,8 +108,7 @@ __GLXdispatchTableDynamic *__glXGetCurrentDynDispatch(void);
  */
 static inline GLXContext __glXGetCurrentContext(void)
 {
-    /* TODO: check TLS */
-    return NULL;
+    return (GLXContext)__glDispatchGetCurrentContext();
 }
 
 #endif // !defined(__LIB_GLX_TLS)
