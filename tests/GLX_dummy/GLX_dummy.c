@@ -38,17 +38,43 @@
 #include "GLX_dummy.h"
 #include "libglxabi.h"
 #include "utils_misc.h"
+#include "trace.h"
 #include "compiler.h"
 
 
 static char *thisVendorName;
 static __GLXapiExports apiExports;
 
+/*
+ * Dummy context structure.
+ */
+typedef struct __GLXcontextRec {
+    GLint beginHit;
+    GLint vertex3fvHit;
+    GLint endHit;
+} __GLXcontext;
+
 static XVisualInfo*  dummyChooseVisual          (Display *dpy,
                                                  int screen,
                                                  int *attrib_list)
 {
-    return NULL;
+    XVisualInfo *ret_visual;
+    XVisualInfo matched_visual;
+
+    // XXX Just get a visual which can be used to open a window.
+    // Ignore the attribs; we're not going to be doing
+    // any actual rendering in this test.
+    if (XMatchVisualInfo(dpy, screen,
+                         DefaultDepth(dpy, screen),
+                         TrueColor,
+                         &matched_visual) == 0) {
+        return NULL;
+    }
+
+    ret_visual = malloc(sizeof(XVisualInfo));
+    memcpy(ret_visual, &matched_visual, sizeof(XVisualInfo));
+
+    return ret_visual;
 }
 
 static void          dummyCopyContext           (Display *dpy,
@@ -64,7 +90,11 @@ static GLXContext    dummyCreateContext         (Display *dpy,
                                                  GLXContext share_list,
                                                  Bool direct)
 {
-    return NULL;
+    __GLXcontext *context = malloc(sizeof(*context));
+    context->beginHit = 0;
+    context->vertex3fvHit = 0;
+    context->endHit = 0;
+    return context;
 }
 
 static GLXPixmap     dummyCreateGLXPixmap       (Display *dpy,
@@ -139,10 +169,37 @@ static const char*   dummyQueryServerString     (Display *dpy,
     return NULL;
 }
 
+/*
+ * Macro magic to construct a long extension string
+ */
+#define EXT_STR0 "GLX_bogusextensionstring "
+#define EXT_STR1 EXT_STR0 EXT_STR0
+#define EXT_STR2 EXT_STR1 EXT_STR1
+#define EXT_STR3 EXT_STR2 EXT_STR2
+#define EXT_STR4 EXT_STR3 EXT_STR3
+#define LONG_EXT_STR EXT_STR4 EXT_STR4
+
+
 static const char*   dummyGetClientString     (Display *dpy,
                                                int name)
 {
-    return NULL;
+    /* Used for client string unit test */
+    static const char glxVendor[] = "testlib";
+    static const char glxVersion[] = "0.0 GLX_makecurrent";
+
+    /* Use a reallly long extension string to test bounds-checking */
+    static const char glxExtensions[] = LONG_EXT_STR;
+
+    switch (name) {
+    case GLX_VENDOR:
+        return glxVendor;
+    case GLX_VERSION:
+        return glxVersion;
+    case GLX_EXTENSIONS:
+        return glxExtensions;
+    default:
+        return NULL;
+    }
 }
 
 static const char*   dummyQueryExtensionsString (Display *dpy,
@@ -273,25 +330,56 @@ static void          dummySelectEvent           (Display *dpy,
  */
 static void dummy_glBegin (void)
 {
-    // TODO
+    GLXContext ctx = apiExports.getCurrentContext();
+    assert(ctx);
+
+    ctx->beginHit++;
 }
 
 static void dummy_glVertex3fv(GLfloat *v)
 {
-    // TODO
+    GLXContext ctx = apiExports.getCurrentContext();
+    assert(ctx);
+
+    ctx->vertex3fvHit++;
 }
 
 static void dummy_glEnd (void)
 {
-    // TODO
+    GLXContext ctx = apiExports.getCurrentContext();
+    assert(ctx);
+
+    ctx->endHit++;
 }
 
 static void dummy_glMakeCurrentTestResults(GLint req,
                                         GLboolean *saw,
                                         void **ret)
 {
+    GLXContext ctx = apiExports.getCurrentContext();
+    assert(ctx);
+
     *saw = GL_TRUE;
-    *ret = NULL;
+    switch (req) {
+    case GL_MC_FUNCTION_COUNTS:
+        {
+            GLint *data = (GLint *)malloc(3 * sizeof(GLint));
+            data[0] = ctx->beginHit;
+            data[1] = ctx->vertex3fvHit;
+            data[2] = ctx->endHit;
+            *ret = (void *)data;
+        }
+        break;
+    case GL_MC_VENDOR_STRING:
+        {
+            *ret = thisVendorName ? strdup(thisVendorName) : NULL;
+        }
+        break;
+    case GL_MC_LAST_REQ:
+    default:
+        *ret = NULL;
+        break;
+    }
 }
 
 static void dummyExampleExtensionFunction(Display *dpy, int screen, int *retval)
