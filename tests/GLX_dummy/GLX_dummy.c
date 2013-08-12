@@ -294,7 +294,40 @@ static void dummy_glMakeCurrentTestResults(GLint req,
     *ret = NULL;
 }
 
+static void dummyExampleExtensionFunction(Display *dpy, int screen, int *retval)
+{
+    // Indicate that we've called the real function, and not a dispatch stub
+    *retval = 1;
+}
+
+typedef void (*ExampleExtensionFunctionPtr)(Display *dpy,
+                                            int screen,
+                                            int *retval);
+
+static int dummyExampleExtensionFunctionIndex = -1;
+
+static void dispatch_glXExampleExtensionFunction(Display *dpy,
+                                                int screen,
+                                                int *retval)
+{
+    __GLXdispatchTableDynamic *dynDispatch;
+    ExampleExtensionFunctionPtr func;
+    const int index = dummyExampleExtensionFunctionIndex;
+
+    dynDispatch = apiExports.getDynDispatch(dpy, screen);
+    if (!dynDispatch) {
+        return;
+    }
+
+    func = (ExampleExtensionFunctionPtr)
+        apiExports.fetchDispatchEntry(dynDispatch, index);
+    if (func) {
+        func(dpy, screen, retval);
+    }
+}
+
 #define GL_PROC_ENTRY(x) { (void *)dummy_gl ## x, "gl" #x }
+#define GLX_PROC_ENTRY(x) { (void *)dummy ## x, "glX" #x }
 
 /*
  * Note we only fill in real implementations for a few core GL functions.
@@ -308,6 +341,7 @@ static struct {
     GL_PROC_ENTRY(End),
     GL_PROC_ENTRY(Vertex3fv),
     GL_PROC_ENTRY(MakeCurrentTestResults),
+    GLX_PROC_ENTRY(ExampleExtensionFunction)
 };
 
 
@@ -336,12 +370,18 @@ static void dummyDestroyDispatchData(void *data)
 
 static void         *dummyGetDispatchAddress     (const GLubyte *procName)
 {
+    if (!strcmp((const char *)procName, "glXExampleExtensionFunction")) {
+        return dispatch_glXExampleExtensionFunction;
+    }
     return NULL;
 }
 
 static void         dummySetDispatchIndex      (const GLubyte *procName, int index)
 {
     // nop
+    if (!strcmp((const char *)procName, "glXExampleExtensionFunction")) {
+        dummyExampleExtensionFunctionIndex = index;
+    }
 }
 
 static GLboolean    dummyGetDispatchProto   (const GLubyte *procName,
