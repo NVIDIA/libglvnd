@@ -1,0 +1,3 @@
+This vendor library contains the bare minimum needed to create a GLX drawable
+and make current to it. It does *not* implement any rendering. This is used by
+various subtests in the suite.
