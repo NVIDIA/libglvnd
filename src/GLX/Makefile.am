@@ -29,6 +29,7 @@ lib_LTLIBRARIES = libGLX.la
 
 UTIL_DIR = ../util
 TRACE_DIR = ../util/trace
+GLVND_PTHREAD_DIR = ../util/glvnd_pthread
 
 SUBDIRS = $(TRACE_DIR) $(GLVND_PTHREAD_DIR)
 
@@ -47,6 +48,7 @@ libGLX_la_LIBADD = -ldl
 libGLX_la_LIBADD += $(X11_LIBS)
 libGLX_la_LIBADD += $(XEXT_LIBS)
 libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
+libGLX_la_LIBADD += $(GLVND_PTHREAD_DIR)/libglvnd_pthread.la
 
 libGLX_la_LDFLAGS = -shared
 

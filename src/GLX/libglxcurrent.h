@@ -30,7 +30,10 @@
 #if !defined(__LIB_GLX_TLS)
 #define __LIB_GLX_TLS
 
+#include <pthread.h>
+
 #include "compiler.h"
+#include "libglxthread.h"
 #include "libglxabipriv.h"
 #include "libglxmapping.h"
 
@@ -53,13 +56,19 @@ typedef struct __GLXAPIStateRec {
 } __GLXAPIState;
 
 /*!
+ * This is a fallback function in the case where the API library is not in
+ * TLS, to look up the API state given the current thread id.
+ */
+__GLXAPIState *__glXGetAPIState(glvnd_thread_t tid);
+
+/*!
  * This attempts to pull the current API state from TLS, and falls back to
  * __glXGetAPIState() if that fails.
  */
 static inline __GLXAPIState *__glXGetCurrentAPIState(void)
 {
     /* TODO: check TLS */
-    return NULL;
+    return __glXGetAPIState(__glXPthreadFuncs.self());
 }
 
 /*!

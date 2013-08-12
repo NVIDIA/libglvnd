@@ -33,6 +33,7 @@
 #include <dlfcn.h>
 #include <string.h>
 
+#include "libglxthread.h"
 #include "libglxabipriv.h"
 #include "libglxmapping.h"
 #include "libglxcurrent.h"
@@ -45,6 +46,8 @@
 #define GLX_MINOR_VERSION 4
 
 #define GLX_EXTENSION_NAME "GLX"
+
+GLVNDPthreadFuncs __glXPthreadFuncs;
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
 {
@@ -148,6 +151,12 @@ PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
     return pDispatch->glx14ep.isDirect(dpy, context);
 }
 
+
+__GLXAPIState *__glXGetAPIState(glvnd_thread_t tid)
+{
+    /* TODO: implement me */
+    return NULL;
+}
 
 static Bool MakeContextCurrentInternal(Display *dpy,
                                        GLXDrawable draw,
@@ -408,15 +417,16 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
     size_t n = CLIENT_STRING_BUFFER_SIZE - 1;
     int index = name - 1;
 
+    glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
     static struct {
         int initialized;
         char string[CLIENT_STRING_BUFFER_SIZE];
     } clientStringData[GLX_CLIENT_STRING_LAST_ATTRIB];
 
-    /* TODO lock */
+    __glXPthreadFuncs.mutex_lock(&clientStringLock);
 
     if (clientStringData[index].initialized) {
-        /* TODO unlock */
+        __glXPthreadFuncs.mutex_unlock(&clientStringLock);
         return clientStringData[index].string;
     }
 
@@ -436,7 +446,7 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
 
     clientStringData[index].initialized = 1;
 
-    /* TODO unlock */
+    __glXPthreadFuncs.mutex_unlock(&clientStringLock);
     return clientStringData[index].string;
 }
 
@@ -757,16 +767,19 @@ done:
 void __attribute__ ((constructor)) __glXInit(void)
 {
 
-    /* TODO Initialize pthreads imports */
+    /* Initialize pthreads imports */
+    glvndSetupPthreads(RTLD_DEFAULT, &__glXPthreadFuncs);
 
-    /*
-     * Check if we need to pre-load any vendors specified via environment
-     * variable.
-     */
-    const char *preloadedVendor = getenv("__GLX_VENDOR_LIBRARY_NAME");
+    {
+        /*
+         * Check if we need to pre-load any vendors specified via environment
+         * variable.
+         */
+        const char *preloadedVendor = getenv("__GLX_VENDOR_LIBRARY_NAME");
 
-    if (preloadedVendor) {
-        __glXLookupVendorByName(preloadedVendor);
+        if (preloadedVendor) {
+            __glXLookupVendorByName(preloadedVendor);
+        }
     }
 
     DBG_PRINTF(0, "Loading GLX...\n");
