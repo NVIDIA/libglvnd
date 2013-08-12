@@ -32,7 +32,7 @@
 
 /*
  * Header with templates for generating noop functions. This is sourced by
- * libglxnoop.c.
+ * libglxnoop.c and the libGL filter library code.
  */
 
 #include "libglxabipriv.h"
