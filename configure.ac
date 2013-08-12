@@ -173,5 +173,6 @@ AC_CONFIG_FILES([Makefile
                  src/GLdispatch/mapi/vnd-glapi/Makefile
                  src/util/glvnd_pthread/Makefile
                  src/util/trace/Makefile
-                 tests/Makefile])
+                 tests/Makefile
+                 tests/GLX_dummy/Makefile])
 AC_OUTPUT
