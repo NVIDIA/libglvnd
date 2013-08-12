@@ -40,6 +40,7 @@
 #include <xf86.h>
 
 #include "x11glvnd.h"
+#include "x11glvndproto.h"
 #include "x11glvndserver.h"
 #include "glvnd_list.h"
 
@@ -55,6 +56,19 @@ DevPrivateKeyRec glvXGLVScreenPrivKey;
 /* Dispatch information */
 typedef int ProcVectorFunc(ClientPtr);
 typedef ProcVectorFunc *ProcVectorFuncPtr;
+
+#define PROC_VECTOR_ENTRY(foo) [X_glv ## foo] = ProcGLV ## foo
+#define PROC_PROTO(foo) static int ProcGLV ## foo (ClientPtr client)
+
+PROC_PROTO(QueryXIDScreenMapping);
+PROC_PROTO(QueryScreenVendorMapping);
+
+static ProcVectorFuncPtr glvProcVector[X_glvLastRequest] = {
+    PROC_VECTOR_ENTRY(QueryXIDScreenMapping),
+    PROC_VECTOR_ENTRY(QueryScreenVendorMapping),
+};
+
+#undef PROC_VECTOR_ENTRY
 
 static void GLVExtensionInit(void);
 
@@ -124,9 +138,38 @@ enum {
 };
 
 
-static int ProcGLVDispatch(ClientPtr client)
+
+// TODO: make sense to do this instead?
+//
+//static int ProcGLVQueryXIDVendorMapping(ClientPtr client)
+//{
+//    // TODO: char *XGLVQueryXIDVendorMapping(XID xid)
+//    // Returns the name of the vendor library for this XID
+//}
+
+static int ProcGLVQueryXIDScreenMapping(ClientPtr client)
+{
+   return BadImplementation;
+}
+
+static int ProcGLVQueryScreenVendorMapping(ClientPtr client)
 {
     return BadImplementation;
+}
+
+static int ProcGLVDispatch(ClientPtr client)
+{
+    REQUEST(xReq);
+
+    if (stuff->data >= X_glvLastRequest) {
+        return BadRequest;
+    }
+
+    if (!glvProcVector[stuff->data]) {
+        return BadImplementation;
+    }
+
+    return glvProcVector[stuff->data](client);
 }
 
 static int SProcGLVDispatch(ClientPtr client)
@@ -145,8 +188,8 @@ static void GLVExtensionInit(void)
     char ext_name[] = XGLV_EXTENSION_NAME;
 
     if ((extEntry = AddExtension(ext_name,
-                                 0,
-                                 0,
+                                 XGLV_NUM_EVENTS,
+                                 XGLV_NUM_ERRORS,
                                  ProcGLVDispatch,
                                  SProcGLVDispatch,
                                  GLVReset,
