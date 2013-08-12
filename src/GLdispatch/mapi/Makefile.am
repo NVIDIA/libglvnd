@@ -21,6 +21,10 @@
 
 SUBDIRS = glapi/gen
 
+if HAVE_VND_GLAPI
+SUBDIRS += vnd-glapi
+endif
+
 if HAVE_SHARED_GLAPI
 SUBDIRS += shared-glapi
 endif

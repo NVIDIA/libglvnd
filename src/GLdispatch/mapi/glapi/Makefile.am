@@ -20,15 +20,16 @@
 # IN THE SOFTWARE.
 
 TOP = $(top_srcdir)
+
 include Makefile.sources
 include ../Makefile.sources
 
 AM_CPPFLAGS = \
-        $(DEFINES) \
+	$(DEFINES) \
 	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src/mapi \
-        -I$(top_builddir)/src/mapi \
-	-I$(top_srcdir)/src/mesa
+	-I$(top_srcdir)/$(MAPI_PREFIX) \
+	-I$(top_builddir)/$(MAPI_PREFIX) \
+	-I$(top_srcdir)/$(MAPI_MESA_PREFIX)
 
 if HAVE_X86_ASM
 GLAPI_ASM_SOURCES = $(X86_API)

@@ -806,6 +806,14 @@ typedef int GLclampx;
 
         return header
 
+class VendorNeutralGLAPIPrinter(SharedGLAPIPrinter):
+    def __init__(self, entries):
+        super(VendorNeutralGLAPIPrinter, self).__init__(entries)
+        self.prefix_lib = 'gl'
+    def _override_for_api(self, ent):
+        super(VendorNeutralGLAPIPrinter, self)._override_for_api(ent)
+        ent.hidden = False
+
 class VGAPIPrinter(ABIPrinter):
     """OpenVG API Printer"""
 
@@ -824,7 +832,8 @@ class VGAPIPrinter(ABIPrinter):
         self.prefix_warn = 'vg'
 
 def parse_args():
-    printers = ['vgapi', 'glapi', 'es1api', 'es2api', 'shared-glapi']
+    printers = ['vgapi', 'glapi', 'es1api', 'es2api', 'shared-glapi',
+                'vnd-glapi']
     modes = ['lib', 'app']
 
     parser = OptionParser(usage='usage: %prog [options] <filename>')
@@ -848,6 +857,7 @@ def main():
         'es1api': ES1APIPrinter,
         'es2api': ES2APIPrinter,
         'shared-glapi': SharedGLAPIPrinter,
+        'vnd-glapi' : VendorNeutralGLAPIPrinter,
     }
 
     filename, options = parse_args()

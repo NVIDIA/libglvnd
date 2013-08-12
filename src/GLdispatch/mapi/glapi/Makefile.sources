@@ -1,4 +1,4 @@
-# src/mapi/glapi/Makefile.sources
+# mapi/glapi/Makefile.sources
 
 GLAPI_SOURCES = \
 	glapi_dispatch.c \

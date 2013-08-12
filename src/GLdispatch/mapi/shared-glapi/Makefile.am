@@ -1,8 +1,8 @@
 # Used by OpenGL ES or when --enable-shared-glapi is specified
 
 TOP = $(top_srcdir)
-GLAPI = $(top_srcdir)/src/mapi/glapi
-include $(top_srcdir)/src/mapi/Makefile.sources
+GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
+include $(srcdir)/../Makefile.sources
 
 lib_LTLIBRARIES = libglapi.la
 libglapi_la_SOURCES = $(MAPI_GLAPI_FILES)
@@ -17,12 +17,12 @@ BUILT_SOURCES = glapi_mapi_tmp.h
 CLEANFILES = $(BUILT_SOURCES)
 
 AM_CFLAGS = $(PTHREAD_CFLAGS)
-AM_CPPFLAGS =							\
+AM_CPPFLAGS =						\
 	$(DEFINES)						\
-	-I$(top_srcdir)/include					\
-	-I$(top_srcdir)/src/mapi				\
-	-I$(top_builddir)/src/mapi                              \
-	-DMAPI_MODE_GLAPI					\
+	-I$(top_srcdir)/include			\
+	-I$(top_srcdir)/$(MAPI_PREFIX)		\
+	-I$(top_builddir)/$(MAPI_PREFIX)	\
+	-DMAPI_MODE_GLAPI				\
 	-DMAPI_ABI_HEADER=\"shared-glapi/glapi_mapi_tmp.h\"
 
 all-local: libglapi.la

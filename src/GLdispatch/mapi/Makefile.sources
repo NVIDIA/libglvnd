@@ -1,4 +1,4 @@
-# src/mapi/Makefile.sources
+# mapi/Makefile.sources
 #
 # mapi may be used in several ways
 #
@@ -15,22 +15,22 @@
 #    this mode, compile MAPI_BRIDGE_FILES with MAPI_MODE_BRIDGE defined.
 
 MAPI_UTIL_FILES = \
-	$(TOP)/src/mapi/u_current.c \
-	$(TOP)/src/mapi/u_execmem.c
+	$(TOP)/$(MAPI_PREFIX)/u_current.c \
+	$(TOP)/$(MAPI_PREFIX)/u_execmem.c
 
 MAPI_FILES = \
-	$(TOP)/src/mapi/entry.c \
-	$(TOP)/src/mapi/mapi.c \
-	$(TOP)/src/mapi/stub.c \
-	$(TOP)/src/mapi/table.c \
+	$(TOP)/$(MAPI_PREFIX)/entry.c \
+	$(TOP)/$(MAPI_PREFIX)/mapi.c \
+	$(TOP)/$(MAPI_PREFIX)/stub.c \
+	$(TOP)/$(MAPI_PREFIX)/table.c \
 	$(MAPI_UTIL_FILES)
 
 MAPI_GLAPI_FILES = \
-	$(TOP)/src/mapi/entry.c \
-	$(TOP)/src/mapi/mapi_glapi.c \
-	$(TOP)/src/mapi/stub.c \
-	$(TOP)/src/mapi/table.c \
+	$(TOP)/$(MAPI_PREFIX)/entry.c \
+	$(TOP)/$(MAPI_PREFIX)/mapi_glapi.c \
+	$(TOP)/$(MAPI_PREFIX)/stub.c \
+	$(TOP)/$(MAPI_PREFIX)/table.c \
 	$(MAPI_UTIL_FILES)
 
 MAPI_BRIDGE_FILES = \
-	$(TOP)/src/mapi/entry.c
+	$(TOP)/$(MAPI_PREFIX)/entry.c

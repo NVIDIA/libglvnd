@@ -27,7 +27,7 @@
 
 lib_LTLIBRARIES = libGLdispatch.la
 
-SUBDIRS = ../util/trace
+SUBDIRS = mapi/vnd-glapi ../util/trace
 
 libGLdispatch_la_CFLAGS =  -Imapi/glapi
 libGLdispatch_la_CFLAGS += -I../util/trace

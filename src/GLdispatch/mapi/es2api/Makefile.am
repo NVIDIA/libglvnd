@@ -22,7 +22,7 @@
 AM_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src/mapi \
+	-I$(top_srcdir)/$(MAPI_PREFIX) \
 	-DMAPI_MODE_BRIDGE \
 	-DMAPI_ABI_HEADER=\"glapi_mapi_tmp.h\"
 
