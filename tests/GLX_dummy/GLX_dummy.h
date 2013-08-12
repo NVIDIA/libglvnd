@@ -33,8 +33,52 @@
 #include <GL/gl.h>
 
 /*
- * TODO: Will contain definition of the fake GL extension functions exported by
- * the GLX_makecurrent vendor library used in the testglxmakecurrent test.
+ * Contains definition of the fake GL extension functions exported by the
+ * GLX_makecurrent vendor library used in the testglxmakecurrent test.
  */
+
+enum {
+
+    /*
+     * Returns an array of 3 GLint values containing, respectively,
+     * the number of times glBegin(), glVertex3fv(), and glEnd() were called
+     * by this thread.
+     */
+    GL_MC_FUNCTION_COUNTS,
+
+    /*
+     * Returns a NULL-terminated string describing the name of this vendor.
+     */
+    GL_MC_VENDOR_STRING,
+
+    /*
+     * Last request. Always returns NULL.
+     */
+    GL_MC_LAST_REQ
+} GLmakeCurrentTestRequest;
+
+/*
+ * glMakeCurrentTestResults(): perform queries on vendor library state.
+ *
+ * This explicitly is designed to not return anything, in case a bug causes the
+ * API library to dispatch this to a no-op stub. If this function returned a
+ * value and dispatched to a no-op, the return value would be bogus and hard to
+ * debug.  To detect this issue, clients should initialize *saw to GL_FALSE
+ * before passing it to this function. Similarly, *ret should be initialized to
+ * NULL prior to passing it to this function.
+ *
+ * \param [in] req The request to perform. Must be a valid
+ * GLmakeCurrentTestRequest enum
+ * \param [out] saw Expected to point to a GLboolean initialied to GL_FALSE.
+ * *saw is set to GL_TRUE if we dispatched to the vendor function.
+ * \param [out] ret Expected to point to a (void*) initialized to NULL. *ret is
+ * set to NULL if there was an error, or a pointer to request-specific data
+ * otherwise. The pointer may be passed into free(3).
+ */
+typedef void (*PFNGLMAKECURRENTTESTRESULTSPROC)(
+    GLint req,
+    GLboolean *saw,
+    void **ret
+);
 
 #endif

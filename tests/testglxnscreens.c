@@ -48,6 +48,7 @@
 #include "glvnd_pthread.h"
 #include "test_utils.h"
 
+// For glMakeCurrentTestResults()
 #include "GLX_dummy/GLX_dummy.h"
 
 #define FAILIF(cond, ...) do {      \
@@ -57,6 +58,8 @@
         goto cleanup;               \
     }                               \
 } while (0)
+
+PFNGLMAKECURRENTTESTRESULTSPROC pMakeCurrentTestResults;
 
 typedef struct MakeCurrentScreenThreadArgsRec {
     int iterations;
@@ -139,6 +142,12 @@ void *MakeCurrentScreenThread(void *arg)
     int firstScreen, numScreens;
     char *vendor;
 
+    struct {
+        GLint req;
+        GLboolean saw;
+        void *ret;
+    } makeCurrentTestResultsParams;
+
     t = (MakeCurrentScreenThreadArgs *)arg;
     wi = t->wi;
     ctxs = t->ctxs;
@@ -154,10 +163,20 @@ void *MakeCurrentScreenThread(void *arg)
                                           ctxs[screen]),
                    "Failed to make current!\n");
 
-            // TODO: Make a call to glMakeCurrentTestResults() to get the vendor
+            // Make a call to glMakeCurrentTestResults() to get the vendor
             // string.
+            makeCurrentTestResultsParams.req = GL_MC_VENDOR_STRING;
+            makeCurrentTestResultsParams.saw = GL_FALSE;
+            makeCurrentTestResultsParams.ret = NULL;
 
-            vendor = strdup("VendorString");
+            pMakeCurrentTestResults(makeCurrentTestResultsParams.req,
+                                    &makeCurrentTestResultsParams.saw,
+                                    &makeCurrentTestResultsParams.ret);
+
+            FAILIF(!makeCurrentTestResultsParams.saw, "Failed to dispatch!\n");
+            FAILIF(!makeCurrentTestResultsParams.ret, "No vendor string!\n");
+
+            vendor = (char *)makeCurrentTestResultsParams.ret;
 
             DBG_PRINTF(0, "Screen %d has vendor \"%s\"\n", screen, vendor);
 
@@ -238,7 +257,9 @@ int main(int argc, char **argv)
         vendorNames[initScreen] = XGLVQueryScreenVendorMapping(dpy, initScreen);
     }
 
-    // TODO: getprocaddress glMakeCurrentTestResults() function
+    pMakeCurrentTestResults = (PFNGLMAKECURRENTTESTRESULTSPROC)
+        glXGetProcAddress((GLubyte *)"glMakeCurrentTestResults");
+    FAILIF(!pMakeCurrentTestResults, "Could not get glMakeCurrentTestResults!\n");
 
     if (t.threads == 1) {
         ret = (int)!!MakeCurrentScreenThread((void *)&tArgs[0]);

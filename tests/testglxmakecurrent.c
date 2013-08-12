@@ -43,6 +43,7 @@
 #include "test_utils.h"
 #include "glvnd_pthread.h"
 
+// For glMakeCurrentTestResults()
 #include "GLX_dummy/GLX_dummy.h"
 
 typedef struct TestOptionsRec {
@@ -113,14 +114,35 @@ void init_options(int argc, char **argv, TestOptions *t)
 
 }
 
+static PFNGLMAKECURRENTTESTRESULTSPROC GetMakeCurrentTestResults(void)
+{
+    int i;
+    PFNGLMAKECURRENTTESTRESULTSPROC proc = NULL, old_proc = NULL;
+    // Call this multiple times to verify address caching works correctly.
+    for (i = 0; i < 3; i++) {
+        proc = (PFNGLMAKECURRENTTESTRESULTSPROC)
+            glXGetProcAddress((GLubyte *)"glMakeCurrentTestResults");
+        assert((i == 0) || (proc == old_proc));
+        old_proc = proc;
+    }
+    return proc;
+}
+
 void *MakeCurrentThread(void *arg)
 {
     struct window_info wi;
+    PFNGLMAKECURRENTTESTRESULTSPROC pMakeCurrentTestResults = NULL;
     GLXContext ctx = NULL;
     const GLfloat v[] = { 0, 0, 0 };
+    struct {
+        GLint req;
+        GLboolean saw;
+        void *ret;
+    } makeCurrentTestResultsParams;
     GLint BeginCount = 0;
     GLint EndCount = 0;
     GLint Vertex3fvCount = 0;
+    GLint *vendorCounts;
     int i;
     intptr_t ret = GL_FALSE;
     const TestOptions *t = (const TestOptions *)arg;
@@ -137,7 +159,14 @@ void *MakeCurrentThread(void *arg)
 
     // Test the robustness of GetProcAddress() by calling this separately for
     // each thread.
-    // TODO: retrieve the vendor library's test results function
+    if (!t->late) {
+        pMakeCurrentTestResults = GetMakeCurrentTestResults();
+
+        if (!pMakeCurrentTestResults) {
+            printError("Failed to get glMakeCurrentTestResults() function!\n");
+            goto fail;
+        }
+    }
 
     if (!testUtilsCreateWindow(dpy, &wi, 0)) {
         printError("Failed to create window!\n");
@@ -160,7 +189,12 @@ void *MakeCurrentThread(void *arg)
         }
 
         if (t->late) {
-            // TODO: retrieve the vendor library's test results function
+            pMakeCurrentTestResults = GetMakeCurrentTestResults();
+
+            if (!pMakeCurrentTestResults) {
+                printError("Failed to get glMakeCurrentTestResults() function!\n");
+                goto fail;
+            }
         }
 
         glBegin(GL_TRIANGLES); BeginCount++;
@@ -169,8 +203,35 @@ void *MakeCurrentThread(void *arg)
         glVertex3fv(v); Vertex3fvCount++;
         glEnd(); EndCount++;
 
-        // TODO: Make a call to glMakeCurrentTestResults() to get the function
-        // counts. Compare them against the counts seen here.
+        // Make a call to glMakeCurrentTestResults() to get the function counts.
+        makeCurrentTestResultsParams.req = GL_MC_FUNCTION_COUNTS;
+        makeCurrentTestResultsParams.saw = GL_FALSE;
+        makeCurrentTestResultsParams.ret = NULL;
+
+        pMakeCurrentTestResults(makeCurrentTestResultsParams.req,
+                                &makeCurrentTestResultsParams.saw,
+                                &makeCurrentTestResultsParams.ret);
+
+        if (!makeCurrentTestResultsParams.saw) {
+            printError("Failed to dispatch glMakeCurrentTestResults()!\n");
+            goto fail;
+        }
+
+        if (!makeCurrentTestResultsParams.ret) {
+            printError("Internal glMakeCurrentTestResults() error!\n");
+            goto fail;
+        }
+
+        // Verify we have the right function counts
+        vendorCounts = (GLint *)makeCurrentTestResultsParams.ret;
+
+        if ((vendorCounts[0] != BeginCount) ||
+            (vendorCounts[1] != Vertex3fvCount) ||
+            (vendorCounts[2] != EndCount)) {
+            printError("Mismatch of reported function call counts "
+                       "between the application and vendor library!\n");
+            goto fail;
+        }
 
         if (!glXMakeContextCurrent(dpy, None, None, NULL)) {
             printError("Failed to lose current!\n");
@@ -183,8 +244,21 @@ void *MakeCurrentThread(void *arg)
         glVertex3fv(NULL);
         glEnd();
 
-        // TODO: Similarly the call to the dynamic function
-        // glMakeCurrentTestResults() should be a no-op.
+        // Similarly the call to the dynamic function glMakeCurrentTestResults()
+        // should be a no-op.
+        makeCurrentTestResultsParams.req = GL_MC_FUNCTION_COUNTS;
+        makeCurrentTestResultsParams.saw = GL_FALSE;
+        makeCurrentTestResultsParams.ret = NULL;
+
+        pMakeCurrentTestResults(makeCurrentTestResultsParams.req,
+                                &makeCurrentTestResultsParams.saw,
+                                &makeCurrentTestResultsParams.ret);
+
+        if (makeCurrentTestResultsParams.saw) {
+            printError("Dynamic function glMakeCurrentTestResults() dispatched "
+                       "to vendor library even though no context was current!\n");
+            goto fail;
+        }
 
     }
 
