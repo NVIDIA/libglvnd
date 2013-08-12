@@ -35,6 +35,12 @@
 #include "GLdispatch.h"
 #include "GLdispatchPrivate.h"
 
+/*
+ * Global current dispatch table list. We need this to fix up all current
+ * dispatch tables whenever GetProcAddress() is called on a new function.
+ * Accesses to this need to be protected by the dispatch lock.
+ */
+static struct glvnd_list currentDispatchList;
 static GLVNDPthreadFuncs *pthreadFuncs;
 
 typedef struct __GLdispatchProcEntryRec {
@@ -113,19 +119,27 @@ void __glDispatchInit(GLVNDPthreadFuncs *funcs)
     LockDispatch();
     glvnd_list_init(&newProcList);
     glvnd_list_init(&extProcList);
+    glvnd_list_init(&currentDispatchList);
     UnlockDispatch();
 }
 
 static void DispatchCurrentRef(__GLdispatchTable *dispatch)
 {
     CheckDispatchLocked();
-    // TODO Add dispatch tables to our global tracker
+    dispatch->currentThreads++;
+    if (dispatch->currentThreads == 1) {
+        glvnd_list_add(&dispatch->entry, &currentDispatchList);
+    }
 }
 
 static void DispatchCurrentUnref(__GLdispatchTable *dispatch)
 {
     CheckDispatchLocked();
-    // TODO Remove dispatch tables from our global tracker
+    dispatch->currentThreads--;
+    if (dispatch->currentThreads == 0) {
+        glvnd_list_del(&dispatch->entry);
+    }
+    assert(dispatch->currentThreads >= 0);
 }
 
 /*
@@ -185,6 +199,7 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
         offset = _glapi_get_proc_offset(procName);
         if ((offset == -1) &&
             !FindProcInList(procName, &newProcList)) {
+            __GLdispatchTable *curDispatch;
             __GLdispatchProcEntry *pEntry = malloc(sizeof(*pEntry));
             pEntry->procName = strdup(procName);
             pEntry->offset = -1; // To be assigned later
@@ -197,9 +212,12 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
             glvnd_list_add(&pEntry->entry, &newProcList);
 
             /*
-             * TODO: Fixup any current dispatch tables to contain the right
-             * pointer to this proc.
+             * Fixup any current dispatch tables to contain the right pointer
+             * to this proc.
              */
+            glvnd_list_for_each_entry(curDispatch, &currentDispatchList, entry) {
+                FixupDispatchTable(curDispatch);
+            }
         }
     }
     UnlockDispatch();
