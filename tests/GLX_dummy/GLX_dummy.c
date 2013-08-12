@@ -286,6 +286,14 @@ static void dummy_glEnd (void)
     // TODO
 }
 
+static void dummy_glMakeCurrentTestResults(GLint req,
+                                        GLboolean *saw,
+                                        void **ret)
+{
+    *saw = GL_TRUE;
+    *ret = NULL;
+}
+
 #define GL_PROC_ENTRY(x) { (void *)dummy_gl ## x, "gl" #x }
 
 /*
@@ -299,6 +307,7 @@ static struct {
     GL_PROC_ENTRY(Begin),
     GL_PROC_ENTRY(End),
     GL_PROC_ENTRY(Vertex3fv),
+    GL_PROC_ENTRY(MakeCurrentTestResults),
 };
 
 
@@ -339,6 +348,16 @@ static GLboolean    dummyGetDispatchProto   (const GLubyte *procName,
                                           char ***function_names,
                                           char **parameter_signature)
 {
+    // We only export one extension function here
+    // TODO: Maybe a good idea to test a bunch of different protos?
+    if (!strcmp((const char *)procName, "glMakeCurrentTestResults")) {
+        *function_names = malloc(2 * sizeof(char *));
+        (*function_names)[0] = strdup("glMakeCurrentTestResults");
+        (*function_names)[1] = NULL;
+        *parameter_signature = strdup("ipp");
+        return GL_TRUE;
+    }
+
     return GL_FALSE;
 }
 
