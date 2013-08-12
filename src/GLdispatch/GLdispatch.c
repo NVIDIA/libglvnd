@@ -123,6 +123,11 @@ void __glDispatchInit(GLVNDPthreadFuncs *funcs)
     UnlockDispatch();
 }
 
+static void noop_func(void)
+{
+    // nop
+}
+
 static void DispatchCurrentRef(__GLdispatchTable *dispatch)
 {
     CheckDispatchLocked();
@@ -151,17 +156,66 @@ static void FixupDispatchTable(__GLdispatchTable *dispatch)
     DBG_PRINTF(20, "dispatch=%p\n", dispatch);
     CheckDispatchLocked();
 
-    /*
-     * TODO: For each proc in the newProcList, request a dispatch prototype from
-     * the vendor library and plug it into glapi. If we succeed, move the proc
-     * from the newProcList to the extProcList, and do some cleanup.
-     */
+    __GLdispatchProcEntry *curProc, *tmpProc;
+
+    char **function_name, **function_names, *parameter_signature;
+
+    void *procAddr;
+    void **tbl = (void **)dispatch->table;
 
     /*
-     * TODO: For each proc in the extProcList, compare its gen# against that of
+     * For each proc in the newProcList, request a dispatch prototype from the
+     * vendor library and plug it into glapi. If we succeed, move the proc
+     * from the newProcList to the extProcList, and do some cleanup.
+     */
+    glvnd_list_for_each_entry_safe(curProc, tmpProc, &newProcList, entry) {
+
+        DBG_PRINTF(20, "newProc procName=%s\n", curProc->procName);
+        if ((*dispatch->getDispatchProto)((const GLubyte *)curProc->procName,
+                                          &function_names,
+                                          &parameter_signature)) {
+
+            curProc->offset =
+                _glapi_add_dispatch((const char * const *)function_names,
+                                    (const char *)parameter_signature);
+            DBG_PRINTF(20, "newProc offset=%d\n", curProc->offset);
+
+            assert(curProc->offset != -1);
+
+            glvnd_list_del(&curProc->entry);
+            glvnd_list_add(&curProc->entry, &extProcList);
+
+            for (function_name = function_names;
+                 *function_name; function_name++) {
+                free(*function_name);
+            }
+
+            free(function_names);
+            free(parameter_signature);
+        }
+    }
+
+    /*
+     * For each proc in the extProcList, compare its gen# against that of
      * the context. If greater, then fix up the dispatch table to contain
      * the right entrypoint.
+     * XXX optimization: could we assume that the list is sorted by generation
+     * number and hence early out once we reach gen# <= the context's?
      */
+    glvnd_list_for_each_entry(curProc, &extProcList, entry) {
+        if (curProc->generation > dispatch->generation) {
+            assert(curProc->offset != -1);
+            assert(curProc->procName);
+
+            procAddr = (void*)(*dispatch->getProcAddress)(
+                (const GLubyte *)curProc->procName,
+                dispatch->vendorData);
+
+            tbl[curProc->offset] = procAddr ? procAddr : (void *)noop_func;
+            DBG_PRINTF(20, "extProc procName=%s, addr=%p, noop=%p\n",
+                       curProc->procName, procAddr, noop_func);
+        }
+    }
 
     dispatch->generation = latestGeneration;
 }
@@ -169,7 +223,17 @@ static void FixupDispatchTable(__GLdispatchTable *dispatch)
 static __GLdispatchProcEntry *FindProcInList(const char *procName,
                                              struct glvnd_list *list)
 {
-    /* TODO */
+    DBG_PRINTF(20, "%s\n", procName);
+    __GLdispatchProcEntry *curProc;
+    CheckDispatchLocked();
+    glvnd_list_for_each_entry(curProc, list, entry) {
+        if (!strcmp(curProc->procName, procName)) {
+            DBG_PRINTF(20, "yes\n");
+            return curProc;
+        }
+    }
+
+    DBG_PRINTF(20, "no\n");
     return NULL;
 }
 
