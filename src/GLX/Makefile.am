@@ -30,12 +30,14 @@ lib_LTLIBRARIES = libGLX.la
 UTIL_DIR = ../util
 TRACE_DIR = ../util/trace
 GLVND_PTHREAD_DIR = ../util/glvnd_pthread
+UTHASH_DIR = ../util/uthash/src
 
 SUBDIRS = $(TRACE_DIR) $(GLVND_PTHREAD_DIR)
 
 # Warning settings
 # Include paths
-libGLX_la_CFLAGS = -I$(UTIL_DIR)
+libGLX_la_CFLAGS = -I$(UTHASH_DIR)
+libGLX_la_CFLAGS += -I$(UTIL_DIR)
 libGLX_la_CFLAGS += -I$(TRACE_DIR)
 libGLX_la_CFLAGS += -I$(GLVND_PTHREAD_DIR)
 libGLX_la_CFLAGS += -I$(top_builddir)/include

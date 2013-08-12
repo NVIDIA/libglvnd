@@ -41,6 +41,8 @@
 #include "trace.h"
 #include "GL/glxproto.h"
 
+#include "uthash.h"
+
 /* current version numbers */
 #define GLX_MAJOR_VERSION 1
 #define GLX_MINOR_VERSION 4
@@ -707,23 +709,130 @@ PUBLIC void glXSelectEvent(Display *dpy, GLXDrawable draw, unsigned long event_m
     pDispatch->glx14ep.selectEvent(dpy, draw, event_mask);
 }
 
+typedef struct {
+    GLubyte *procName;
+    __GLXextFuncPtr addr;
+    UT_hash_handle hh;
+} __GLXprocAddressHash;
+
+static __GLXprocAddressHash *__glXProcAddressHash = NULL;
+
+#define LOCAL_FUNC_TABLE_ENTRY(func) \
+    { (GLubyte *)#func, (__GLXextFuncPtr)(func) },
+
+/*
+ * This helper function initializes the __GLXprocAddressHash with the
+ * dispatch functions implemented above.
+ */
+void cacheInitializeOnce(void)
+{
+    size_t i;
+    __GLXprocAddressHash *pEntry;
+    const struct {
+        const GLubyte *procName;
+        __GLXextFuncPtr addr;
+    } localFuncTable[] = {
+        LOCAL_FUNC_TABLE_ENTRY(glXChooseFBConfig)
+        LOCAL_FUNC_TABLE_ENTRY(glXChooseVisual)
+        LOCAL_FUNC_TABLE_ENTRY(glXCopyContext)
+        LOCAL_FUNC_TABLE_ENTRY(glXCreateContext)
+        LOCAL_FUNC_TABLE_ENTRY(glXCreateGLXPixmap)
+        LOCAL_FUNC_TABLE_ENTRY(glXCreateNewContext)
+        LOCAL_FUNC_TABLE_ENTRY(glXCreatePbuffer)
+        LOCAL_FUNC_TABLE_ENTRY(glXCreatePixmap)
+        LOCAL_FUNC_TABLE_ENTRY(glXCreateWindow)
+        LOCAL_FUNC_TABLE_ENTRY(glXDestroyContext)
+        LOCAL_FUNC_TABLE_ENTRY(glXDestroyGLXPixmap)
+        LOCAL_FUNC_TABLE_ENTRY(glXDestroyPbuffer)
+        LOCAL_FUNC_TABLE_ENTRY(glXDestroyPixmap)
+        LOCAL_FUNC_TABLE_ENTRY(glXDestroyWindow)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetClientString)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetConfig)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetCurrentContext)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetCurrentDisplay)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetCurrentDrawable)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetCurrentReadDrawable)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetFBConfigAttrib)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetFBConfigs)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetProcAddress)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetSelectedEvent)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetVisualFromFBConfig)
+        LOCAL_FUNC_TABLE_ENTRY(glXIsDirect)
+        LOCAL_FUNC_TABLE_ENTRY(glXMakeContextCurrent)
+        LOCAL_FUNC_TABLE_ENTRY(glXMakeCurrent)
+        LOCAL_FUNC_TABLE_ENTRY(glXQueryContext)
+        LOCAL_FUNC_TABLE_ENTRY(glXQueryDrawable)
+        LOCAL_FUNC_TABLE_ENTRY(glXQueryExtension)
+        LOCAL_FUNC_TABLE_ENTRY(glXQueryExtensionsString)
+        LOCAL_FUNC_TABLE_ENTRY(glXQueryServerString)
+        LOCAL_FUNC_TABLE_ENTRY(glXQueryVersion)
+        LOCAL_FUNC_TABLE_ENTRY(glXSelectEvent)
+        LOCAL_FUNC_TABLE_ENTRY(glXSwapBuffers)
+        LOCAL_FUNC_TABLE_ENTRY(glXUseXFont)
+        LOCAL_FUNC_TABLE_ENTRY(glXWaitGL)
+        LOCAL_FUNC_TABLE_ENTRY(glXWaitX)
+    };
+
+    /* TODO: take write lock */
+
+    // Initialize the hash table with our locally-exported functions
+
+    for (i = 0; i < ARRAY_LEN(localFuncTable); i++) {
+        pEntry = malloc(sizeof(*pEntry));
+        if (!pEntry) {
+            assert(pEntry);
+            break;
+        }
+        pEntry->procName =
+            (GLubyte *)strdup((const char *)localFuncTable[i].procName);
+        pEntry->addr = localFuncTable[i].addr;
+        HASH_ADD_KEYPTR(hh, __glXProcAddressHash, pEntry->procName,
+                        strlen((const char *)pEntry->procName), pEntry);
+    }
+    /* TODO: unlock */
+
+}
+
 static __GLXextFuncPtr getCachedProcAddress(const GLubyte *procName)
 {
     /*
-     * TODO
-     *
      * If this is the first time GetProcAddress has been called,
-     * initialize a procname -> address hash table with locally-exported
-     * functions.
-     *
-     * Then, try to look up the function address in the hash table.
+     * initialize the hash table with locally-exported functions.
      */
+    static glvnd_once_t cacheInitializeOnceControl = GLVND_ONCE_INIT;
+    __GLXprocAddressHash *pEntry = NULL;
+
+    __glXPthreadFuncs.once(&cacheInitializeOnceControl, cacheInitializeOnce);
+
+    /* TODO: take read lock */
+    HASH_FIND(hh, __glXProcAddressHash, procName,
+              strlen((const char *)procName), pEntry);
+    /* TODO: unlock */
+
+    if (pEntry) {
+        return pEntry->addr;
+    }
+
     return NULL;
 }
 
 static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
 {
-    /* TODO: save the mapping in the local hash table */
+    __GLXprocAddressHash *pEntry = malloc(sizeof(*pEntry));
+
+    if (!pEntry) {
+        assert(pEntry);
+        return;
+    }
+
+    pEntry->procName = (GLubyte *)strdup((const char *)procName);
+    pEntry->addr = addr;
+
+    /* TODO: take write lock */
+    HASH_ADD_KEYPTR(hh, __glXProcAddressHash, pEntry->procName,
+                    strlen((const char*)pEntry->procName),
+                    pEntry);
+    /* TODO: unlock */
 }
 
 PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
