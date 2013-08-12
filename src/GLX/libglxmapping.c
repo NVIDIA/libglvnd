@@ -360,22 +360,92 @@ __GLXdispatchTableDynamic *__glXGetDynDispatch(Display *dpy, const int screen)
     }
 }
 
+/****************************************************************************/
+/*
+ * __glXScreenPointerMappingHash is a hash table that maps a void*
+ * (either GLXContext or GLXFBConfig) to a screen index.  Note this
+ * stores both GLXContext and GLXFBConfig in this table.
+ */
+
+typedef struct {
+    void *ptr;
+    int screen;
+    UT_hash_handle hh;
+} __GLXscreenPointerMappingHash;
+
+
+static DEFINE_INITIALIZED_LKDHASH(__GLXscreenPointerMappingHash, __glXScreenPointerMappingHash);
+
 static void AddScreenPointerMapping(void *ptr, int screen)
 {
-    // TODO
+    __GLXscreenPointerMappingHash *pEntry;
+
+    if (ptr == NULL) {
+        return;
+    }
+
+    if (screen < 0) {
+        return;
+    }
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
+
+    HASH_FIND_PTR(_LH(__glXScreenPointerMappingHash), &ptr, pEntry);
+
+    if (pEntry == NULL) {
+        pEntry = malloc(sizeof(*pEntry));
+        pEntry->ptr = ptr;
+        pEntry->screen = screen;
+        HASH_ADD_PTR(_LH(__glXScreenPointerMappingHash), ptr, pEntry);
+    } else {
+        pEntry->screen = screen;
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
 }
 
 
 static void RemoveScreenPointerMapping(void *ptr, int screen)
 {
-    // TODO
+    __GLXscreenPointerMappingHash *pEntry;
+
+    if (ptr == NULL) {
+        return;
+    }
+
+    if (screen < 0) {
+        return;
+    }
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
+
+    HASH_FIND(hh, _LH(__glXScreenPointerMappingHash), ptr, sizeof(ptr), pEntry);
+
+    if (pEntry != NULL) {
+        HASH_DELETE(hh, _LH(__glXScreenPointerMappingHash), pEntry);
+        free(pEntry);
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
 }
 
 
 static int ScreenFromPointer(void *ptr)
 {
-    // TODO
-    return -1;
+    __GLXscreenPointerMappingHash *pEntry;
+    int screen = -1;
+
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
+
+    HASH_FIND(hh, _LH(__glXScreenPointerMappingHash), &ptr, sizeof(ptr), pEntry);
+
+    if (pEntry != NULL) {
+        screen = pEntry->screen;
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
+
+    return screen;
 }
 
 
