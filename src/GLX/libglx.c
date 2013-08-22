@@ -1,22 +1,66 @@
 /*
  * Copyright (c) 2013, NVIDIA CORPORATION.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and/or associated documentation files (the
+ * "Materials"), to deal in the Materials without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Materials, and to
+ * permit persons to whom the Materials are furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * unaltered in all copies or substantial portions of the Materials.
+ * Any additions, deletions, or changes to the original source files
+ * must be clearly indicated in accompanying documentation.
+ *
+ * If only executable code is distributed, then the accompanying
+ * documentation must state that "this software is based in part on the
+ * work of the Khronos Group."
+ *
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
 #include <X11/Xlib.h>
+#include <X11/Xlibint.h>
+#include <X11/Xproto.h>
+#include <dlfcn.h>
+#include <string.h>
 
+#include "compiler.h"
 #include "libglxabi.h"
-#include "libglxmapping.h"
+#include "GL/glxproto.h"
 
+/* current version numbers */
+#define GLX_MAJOR_VERSION 1
+#define GLX_MINOR_VERSION 4
 
-XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
+#define GLX_EXTENSION_NAME "GLX"
+
+typedef __GLXapiImports __GLXdispatchTableStatic;
+
+static __GLXdispatchTableStatic *GetStaticDispatch(void)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    // XXX this is a placeholder for a real strategy to get
+    // the dispatch table
+    return NULL;
+}
 
-    return pDispatch->chooseVisual(dpy, screen, attrib_list);
+PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
+{
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
+
+    return pDispatch->glx14ep.chooseVisual(dpy, screen, attrib_list);
 }
 
 
-void glXCopyContext(Display *dpy, GLXContext src, GLXContext dst,
+PUBLIC void glXCopyContext(Display *dpy, GLXContext src, GLXContext dst,
                     unsigned long mask)
 {
     /*
@@ -26,121 +70,90 @@ void glXCopyContext(Display *dpy, GLXContext src, GLXContext dst,
      * implementation validate that both contexts are on the same
      * screen.
      */
-    const int screen = __glXScreenFromContext(src);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    pDispatch->copyContext(dpy, src, dst, mask);
+    pDispatch->glx14ep.copyContext(dpy, src, dst, mask);
 }
 
 
-GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis,
+PUBLIC GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis,
                             GLXContext share_list, Bool direct)
 {
-    const int screen = vis->screen;
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    GLXContext context = pDispatch->createContext(dpy, vis, share_list, direct);
+    GLXContext context = pDispatch->glx14ep.createContext(dpy, vis, share_list, direct);
 
-    __glXAddScreenContextMapping(context, screen);
+    /* TODO: Add a mapping */
 
     return context;
 }
 
 
-void glXDestroyContext(Display *dpy, GLXContext context)
+PUBLIC void glXDestroyContext(Display *dpy, GLXContext context)
 {
-    const int screen = __glXScreenFromContext(context);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    __glXRemoveScreenContextMapping(context, screen);
+    /* TODO: Remove a mapping */
 
-    pDispatch->destroyContext(dpy, context);
+    pDispatch->glx14ep.destroyContext(dpy, context);
 }
 
 
-GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixmap)
+PUBLIC GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixmap)
 {
-    const int screen = vis->screen;
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    GLXPixmap pmap = pDispatch->createGLXPixmap(dpy, vis, pixmap);
+    GLXPixmap pmap = pDispatch->glx14ep.createGLXPixmap(dpy, vis, pixmap);
 
-    __glXAddScreenDrawableMapping(pmap, screen);
+    /* TODO: Add a mapping */
 
     return pmap;
 }
 
 
-void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
+PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
 {
-    const int screen = __glXScreenFromDrawable(pix);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    __glXRemoveScreenDrawableMapping(pix, screen);
+    /* TODO: Remove a mapping */
 
-    pDispatch->destroyGLXPixmap(dpy, pix);
+    pDispatch->glx14ep.destroyGLXPixmap(dpy, pix);
 }
 
 
-int glXGetConfig(Display *dpy, XVisualInfo *vis, int attrib, int *value)
+PUBLIC int glXGetConfig(Display *dpy, XVisualInfo *vis, int attrib, int *value)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, vis->screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    return pDispatch->getConfig(dpy, vis, attrib, value);
+    return pDispatch->glx14ep.getConfig(dpy, vis, attrib, value);
+}
+
+PUBLIC GLXContext glXGetCurrentContext(void)
+{
+    return NULL; // TODO
 }
 
 
-GLXContext glXGetCurrentContext(void)
+PUBLIC GLXDrawable glXGetCurrentDrawable(void)
 {
-    /* XXX return the current context from TLS */
-    return 0;
+    return None; // TODO
 }
 
 
-GLXDrawable glXGetCurrentDrawable(void)
+PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
 {
-    /* XXX return the current drawable from TLS */
-    return 0;
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
+
+    return pDispatch->glx14ep.isDirect(dpy, context);
+}
+
+PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext context)
+{
+    return False;
 }
 
 
-Bool glXIsDirect(Display *dpy, GLXContext context)
-{
-    const int screen = __glXScreenFromContext(context);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
-
-    return pDispatch->isDirect(dpy, context);
-}
-
-
-Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext context)
-{
-    const int screen = __glXScreenFromContext(context);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
-
-    Bool ret = pDispatch->makeCurrent(dpy, drawable, context);
-
-    if (ret) {
-        /*
-         * XXX record in TLS that drawable is current
-         * XXX record in TLS that context is current
-         * XXX record in TLS that dpy is current
-         * XXX record in TLS the vendor, to be able to can dispatch based on TLS
-         *
-         * XXX It is possible that this drawable was never seen by
-         * this libGLX.so instance before now.  Since the screen is
-         * known from the context, and the drawable must be on the
-         * same screen if MakeCurrent passed, then record the mapping
-         * of this drawable to the context's screen.
-         */
-        __glXAddScreenDrawableMapping(drawable, screen);
-    }
-
-    return ret;
-}
-
-
-Bool glXQueryExtension(Display *dpy, int *error_base, int *event_base)
+PUBLIC Bool glXQueryExtension(Display *dpy, int *error_base, int *event_base)
 {
     /*
      * There isn't enough information to dispatch to a vendor's
@@ -160,311 +173,309 @@ Bool glXQueryExtension(Display *dpy, int *error_base, int *event_base)
 }
 
 
-Bool glXQueryVersion(Display *dpy, int *major, int *minor)
+PUBLIC Bool glXQueryVersion(Display *dpy, int *major, int *minor)
 {
-    /*
-     * There isn't enough information to dispatch to a vendor's
-     * implementation, so handle the request here.
-     */
-
-    /* XXX pack protocol for QueryVersion */
-
-    return False;
+    return False; // TODO
 }
 
 
-void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
+PUBLIC void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 {
-    const int screen = __glXScreenFromDrawable(drawable);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    pDispatch->swapBuffers(dpy, drawable);
+    pDispatch->glx14ep.swapBuffers(dpy, drawable);
 }
 
 
-void glXUseXFont(Font font, int first, int count, int list_base)
+PUBLIC void glXUseXFont(Font font, int first, int count, int list_base)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatchFromTLS();
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    pDispatch->useXFont(font, first, count, list_base);
+    pDispatch->glx14ep.useXFont(font, first, count, list_base);
 }
 
 
-void glXWaitGL(void)
+PUBLIC void glXWaitGL(void)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatchFromTLS();
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    pDispatch->waitGL();
+    pDispatch->glx14ep.waitGL();
 }
 
 
-void glXWaitX(void)
+PUBLIC void glXWaitX(void)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatchFromTLS();
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    pDispatch->waitX();
+    pDispatch->glx14ep.waitX();
 }
 
+#define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
+#define CLIENT_STRING_BUFFER_SIZE 256
 
-const char *glXGetClientString(Display *dpy, int name)
+PUBLIC const char *glXGetClientString(Display *dpy, int name)
 {
-    /*
-     * XXX do the following:
-     * Enumerate all of the X screens on the X server.
-     * Query the vendor for each X screen.
-     * Get the client string for each vendor.
-     * Take the union of client strings across all vendors.
-     */
-
     return NULL;
 }
 
 
-const char *glXQueryServerString(Display *dpy, int screen, int name)
+PUBLIC const char *glXQueryServerString(Display *dpy, int screen, int name)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    return pDispatch->queryServerString(dpy, screen, name);
+    return pDispatch->glx14ep.queryServerString(dpy, screen, name);
 }
 
 
-const char *glXQueryExtensionsString(Display *dpy, int screen)
+PUBLIC const char *glXQueryExtensionsString(Display *dpy, int screen)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    return pDispatch->queryExtensionsString(dpy, screen);
+    return pDispatch->glx14ep.queryExtensionsString(dpy, screen);
 }
 
 
-Display *glXGetCurrentDisplay(void)
+PUBLIC Display *glXGetCurrentDisplay(void)
 {
-    /* XXX return the current Display from TLS */
     return NULL;
 }
 
 
-GLXFBConfig *glXChooseFBConfig(Display *dpy, int screen,
-                               const int *attrib_list, int *nelements)
+PUBLIC GLXFBConfig *glXChooseFBConfig(Display *dpy, int screen,
+                                      const int *attrib_list, int *nelements)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
     GLXFBConfig *fbconfigs =
-        pDispatch->chooseFBConfig(dpy, screen, attrib_list, nelements);
-    int i;
+        pDispatch->glx14ep.chooseFBConfig(dpy, screen, attrib_list, nelements);
 
-    if (fbconfigs != NULL) {
-        for (i = 0; i < *nelements; i++) {
-            __glXAddScreenFBConfigMapping(fbconfigs[i], screen);
-        }
-    }
+    /* TODO: add mappings for each fbconfig */
 
     return fbconfigs;
 }
 
 
-GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
+PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
                                int render_type, GLXContext share_list,
                                Bool direct)
 {
-    const int screen = __glXScreenFromFBConfig(config);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    GLXContext context = pDispatch->createNewContext(dpy, config, render_type,
+    GLXContext context = pDispatch->glx14ep.createNewContext(dpy, config, render_type,
                                                      share_list, direct);
-    __glXAddScreenContextMapping(context, screen);
+    /* TODO: Add a mapping */
 
     return context;
 }
 
 
-GLXPbuffer glXCreatePbuffer(Display *dpy, GLXFBConfig config,
+PUBLIC GLXPbuffer glXCreatePbuffer(Display *dpy, GLXFBConfig config,
                             const int *attrib_list)
 {
-    const int screen = __glXScreenFromFBConfig(config);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    GLXPbuffer pbuffer = pDispatch->createPbuffer(dpy, config, attrib_list);
+    GLXPbuffer pbuffer = pDispatch->glx14ep.createPbuffer(dpy, config, attrib_list);
 
-    __glXAddScreenDrawableMapping(pbuffer, screen);
+    /* TODO: Add a mapping */
 
     return pbuffer;
 }
 
 
-GLXPixmap glXCreatePixmap(Display *dpy, GLXFBConfig config,
+PUBLIC GLXPixmap glXCreatePixmap(Display *dpy, GLXFBConfig config,
                           Pixmap pixmap, const int *attrib_list)
 {
-    const int screen = __glXScreenFromFBConfig(config);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
     GLXPixmap glxPixmap =
-        pDispatch->createPixmap(dpy, config, pixmap, attrib_list);
+        pDispatch->glx14ep.createPixmap(dpy, config, pixmap, attrib_list);
 
-    __glXAddScreenDrawableMapping(glxPixmap, screen);
+    /* TODO: Add a mapping */
 
     return glxPixmap;
 }
 
 
-GLXWindow glXCreateWindow(Display *dpy, GLXFBConfig config,
+PUBLIC GLXWindow glXCreateWindow(Display *dpy, GLXFBConfig config,
                           Window win, const int *attrib_list)
 {
-    const int screen = __glXScreenFromFBConfig(config);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
     GLXWindow glxWindow =
-        pDispatch->createWindow(dpy, config, win, attrib_list);
+        pDispatch->glx14ep.createWindow(dpy, config, win, attrib_list);
 
-    __glXAddScreenDrawableMapping(glxWindow, screen);
+    /* TODO: Add a mapping */
 
     return glxWindow;
 }
 
 
-void glXDestroyPbuffer(Display *dpy, GLXPbuffer pbuf)
+PUBLIC void glXDestroyPbuffer(Display *dpy, GLXPbuffer pbuf)
 {
-    const int screen = __glXScreenFromDrawable(pbuf);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    __glXRemoveScreenDrawableMapping(pbuf, screen);
+    /* TODO: Remove a mapping */
 
-    pDispatch->destroyPbuffer(dpy, pbuf);
+    pDispatch->glx14ep.destroyPbuffer(dpy, pbuf);
 }
 
 
-void glXDestroyPixmap(Display *dpy, GLXPixmap pixmap)
+PUBLIC void glXDestroyPixmap(Display *dpy, GLXPixmap pixmap)
 {
-    const int screen = __glXScreenFromDrawable(pixmap);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    __glXRemoveScreenDrawableMapping(pixmap, screen);
+    /* TODO: Remove a mapping */
 
-    pDispatch->destroyPixmap(dpy, pixmap);
+    pDispatch->glx14ep.destroyPixmap(dpy, pixmap);
 }
 
 
-void glXDestroyWindow(Display *dpy, GLXWindow win)
+PUBLIC void glXDestroyWindow(Display *dpy, GLXWindow win)
 {
-    const int screen = __glXScreenFromDrawable(win);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    __glXRemoveScreenDrawableMapping(win, screen);
+    /* TODO: Remove a mapping */
 
-    pDispatch->destroyWindow(dpy, win);
+    pDispatch->glx14ep.destroyWindow(dpy, win);
 }
 
 
-GLXDrawable glXGetCurrentReadDrawable(void)
+PUBLIC GLXDrawable glXGetCurrentReadDrawable(void)
 {
-    /* XXX return read drawable from TLS */
-    return None;
+    return None; // TODO
 }
 
 
-int glXGetFBConfigAttrib(Display *dpy, GLXFBConfig config,
+PUBLIC int glXGetFBConfigAttrib(Display *dpy, GLXFBConfig config,
                          int attribute, int *value)
 {
-    const int screen = __glXScreenFromFBConfig(config);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    return pDispatch->getFBConfigAttrib(dpy, config, attribute, value);
+    return pDispatch->glx14ep.getFBConfigAttrib(dpy, config, attribute, value);
 }
 
 
-GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
+PUBLIC GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
 {
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
-    GLXFBConfig *fbconfigs = pDispatch->getFBConfigs(dpy, screen, nelements);
-    int i;
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
+    GLXFBConfig *fbconfigs = pDispatch->glx14ep.getFBConfigs(dpy, screen, nelements);
 
-    if (fbconfigs != NULL) {
-        for (i = 0; i < *nelements; i++) {
-            __glXAddScreenFBConfigMapping(fbconfigs[i], screen);
-        }
-    }
+    /* TODO: add mappings for each FBconfig */
 
     return fbconfigs;
 }
 
 
-void glXGetSelectedEvent(Display *dpy, GLXDrawable draw,
+PUBLIC void glXGetSelectedEvent(Display *dpy, GLXDrawable draw,
                          unsigned long *event_mask)
 {
-    const int screen = __glXScreenFromDrawable(draw);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    pDispatch->getSelectedEvent(dpy, draw, event_mask);
+    pDispatch->glx14ep.getSelectedEvent(dpy, draw, event_mask);
 }
 
 
-XVisualInfo *glXGetVisualFromFBConfig(Display *dpy, GLXFBConfig config)
+PUBLIC XVisualInfo *glXGetVisualFromFBConfig(Display *dpy, GLXFBConfig config)
 {
-    const int screen = __glXScreenFromFBConfig(config);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    return pDispatch->getVisualFromFBConfig(dpy, config);
+    return pDispatch->glx14ep.getVisualFromFBConfig(dpy, config);
 }
 
-
-Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
+PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
                            GLXDrawable read, GLXContext context)
 {
-    const int screen = __glXScreenFromContext(context);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
-
-    Bool ret = pDispatch->makeContextCurrent(dpy, draw, read, context);
-
-    if (ret) {
-        /*
-         * XXX record in TLS that drawable(s) is current
-         * XXX record in TLS that context is current
-         * XXX record in TLS that dpy is current
-         * XXX record in TLS the vendor, to be able to can dispatch based on TLS
-         *
-         * XXX It is possible that these drawables were never seen by
-         * this libGLX.so instance before now.  Since the screen is
-         * known from the context, and the drawable must be on the
-         * same screen if MakeCurrent passed, then record the mapping
-         * of this drawable to the context's screen.
-         */
-
-        __glXAddScreenDrawableMapping(draw, screen);
-        __glXAddScreenDrawableMapping(read, screen);
-    }
-
-    return ret;
+    return False;
 }
 
 
-int glXQueryContext(Display *dpy, GLXContext context, int attribute, int *value)
+PUBLIC int glXQueryContext(Display *dpy, GLXContext context, int attribute, int *value)
 {
-    const int screen = __glXScreenFromContext(context);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    return pDispatch->queryContext(dpy, context, attribute, value);
+    return pDispatch->glx14ep.queryContext(dpy, context, attribute, value);
 }
 
 
-void glXQueryDrawable(Display *dpy, GLXDrawable draw,
+PUBLIC void glXQueryDrawable(Display *dpy, GLXDrawable draw,
                       int attribute, unsigned int *value)
 {
-    const int screen = __glXScreenFromDrawable(draw);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    return pDispatch->queryDrawable(dpy, draw, attribute, value);
+    return pDispatch->glx14ep.queryDrawable(dpy, draw, attribute, value);
 }
 
 
-void glXSelectEvent(Display *dpy, GLXDrawable draw, unsigned long event_mask)
+PUBLIC void glXSelectEvent(Display *dpy, GLXDrawable draw, unsigned long event_mask)
 {
-    const int screen = __glXScreenFromDrawable(draw);
-    const __GLXdispatchTable *pDispatch = __glXGetDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = GetStaticDispatch();
 
-    pDispatch->selectEvent(dpy, draw, event_mask);
+    pDispatch->glx14ep.selectEvent(dpy, draw, event_mask);
 }
 
-
-__GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
+static __GLXextFuncPtr getCachedProcAddress(const GLubyte *procName)
 {
-    /* XXX implement me */
+    /*
+     * TODO
+     *
+     * If this is the first time GetProcAddress has been called,
+     * initialize a procname -> address hash table with locally-exported
+     * functions.
+     *
+     * Then, try to look up the function address in the hash table.
+     */
     return NULL;
+}
+
+static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
+{
+    /* TODO: save the mapping in the local hash table */
+}
+
+PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
+{
+    __GLXextFuncPtr addr = NULL;
+
+    /*
+     * Easy case: First check if we already know this address from
+     * a previous GetProcAddress() call or by virtue of being a function
+     * exported by libGLX.
+     */
+    addr = getCachedProcAddress(procName);
+    if (addr) {
+        return addr;
+    }
+
+    /*
+     * TODO: If that doesn't work, try requesting a dispatch function
+     * from one of the loaded vendor libraries.
+     */
+
+    /*
+     * TODO: If *that* doesn't work, request a NOP stub from the core
+     * dispatcher.
+     */
+
+    /* Store the resulting proc address. */
+    if (addr) {
+        cacheProcAddress(procName, addr);
+    }
+
+    return addr;
+}
+
+
+void __attribute__ ((constructor)) __glXInit(void)
+{
+
+    /* TODO Initialize pthreads imports */
+
+    /*
+     * TODO Check if we need to pre-load any vendors specified via environment
+     * variable.
+     */
+}
+
+void __attribute__ ((destructor)) __glXFini(void)
+{
+    // TODO teardown code here
 }
