@@ -36,5 +36,6 @@
  * Noop dispatch table.
  */
 extern const __GLXdispatchTableStatic *__glXDispatchNoopPtr;
+const __GLXdispatchTableStatic __glXDispatchNoop;
 
 #endif /* __LIB_GLX_NOOP_H */

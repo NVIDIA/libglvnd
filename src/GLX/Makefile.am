@@ -56,4 +56,5 @@ libGLX_la_LDFLAGS = -shared
 
 libGLX_la_SOURCES = \
 	libglx.c \
-	libglxmapping.c
+	libglxmapping.c \
+	libglxnoop.c
