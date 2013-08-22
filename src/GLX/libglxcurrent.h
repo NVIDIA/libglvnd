@@ -36,6 +36,7 @@
 #include "libglxthread.h"
 #include "libglxabipriv.h"
 #include "libglxmapping.h"
+#include "libglxnoop.h"
 
 /*
  * Define current API library state here. An API state is per-thread, per-winsys
@@ -77,8 +78,13 @@ static inline __GLXAPIState *__glXGetCurrentAPIState(void)
  */
 static inline const __GLXdispatchTableStatic *__glXGetCurrentDispatch(void)
 {
-    /* TODO */
-    return NULL;
+    __GLXAPIState *apiState = __glXGetCurrentAPIState();
+    if (likely(apiState)) {
+        return apiState->currentStaticDispatch ?
+               apiState->currentStaticDispatch : __glXDispatchNoopPtr;
+    } else {
+        return __glXDispatchNoopPtr;
+    }
 }
 
 /*!

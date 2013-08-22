@@ -1,189 +1,124 @@
 /*
  * Copyright (c) 2013, NVIDIA CORPORATION.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and/or associated documentation files (the
+ * "Materials"), to deal in the Materials without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Materials, and to
+ * permit persons to whom the Materials are furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * unaltered in all copies or substantial portions of the Materials.
+ * Any additions, deletions, or changes to the original source files
+ * must be clearly indicated in accompanying documentation.
+ *
+ * If only executable code is distributed, then the accompanying
+ * documentation must state that "this software is based in part on the
+ * work of the Khronos Group."
+ *
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
+
+#include <X11/Xlibint.h>
+
+#include <pthread.h>
+#include <dlfcn.h>
+
+#if defined(HASH_DEBUG)
+# include <stdio.h>
+#endif
 
 #include "libglxmapping.h"
 #include "libglxnoop.h"
+#include "libglxthread.h"
+#include "trace.h"
 
-#include "uthash/src/uthash.h"
+#define _GNU_SOURCE 1
+#include <assert.h>
+#include <stdio.h>
 
-/****************************************************************************/
 /*
- * Locking primitives to protect:
- *
- * __glXDispatchHash
- * __glXScreenPointerMappingHash
- * __glXScreenXIDMappingHash
+ * This function queries each loaded vendor to determine if there is
+ * a vendor-implemented dispatch function. The dispatch function
+ * uses the vendor <-> API library ABI to determine the screen given
+ * the parameters of the function and dispatch to the correct vendor's
+ * implementation.
  */
-
-static inline void TakeLock(int *pLock)
+__GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
 {
-    // XXX implement me
+    return NULL; // TODO;
 }
 
-
-static inline void ReleaseLock(int *pLock)
+__GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 {
-    // XXX implement me
+    return NULL;
 }
 
-
-/****************************************************************************/
-/*
- * __glXDispatchHash is a hash table which maps a Display+screen to a
- * vendor's __GLXdispatchTable.  Look up this mapping from the X
- * server once, the first time a unique Display+screen pair is seen.
- */
-typedef struct {
-    Display *dpy;
-    int screen;
-} __GLXdispatchHashKey;
-
-
-typedef struct {
-    __GLXdispatchHashKey key;
-    const __GLXdispatchTable* table;
-    UT_hash_handle hh;
-} __GLXdispatchHash;
-
-
-static __GLXdispatchHash *__glXDispatchHash = NULL;
-static int __glXDispatchHashLock = 0;
-
-
-const __GLXdispatchTable* __glXGetDispatch(Display *dpy, const int screen)
+__GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
 {
-    __GLXdispatchHash *pEntry = NULL;
-    __GLXdispatchHashKey key;
+    return NULL; // TODO
+}
 
-    if (screen < 0) {
+const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int screen)
+{
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
+
+    if (vendor) {
+        assert(vendor->staticDispatch);
+        return vendor->staticDispatch;
+    } else {
         return __glXDispatchNoopPtr;
     }
-
-    memset(&key, 0, sizeof(key));
-
-    key.dpy = dpy;
-    key.screen = screen;
-
-    TakeLock(&__glXDispatchHashLock);
-
-    HASH_FIND(hh, __glXDispatchHash, &key, sizeof(key), pEntry);
-
-    if (pEntry == NULL) {
-
-        // XXX send request to server to identify vendor for this X screen
-        // XXX load libGLX_VENDOR.so for the identified vendor
-
-        pEntry = malloc(sizeof(*pEntry));
-        pEntry->key.dpy = dpy;
-        pEntry->key.screen = screen;
-        pEntry->table = __glXDispatchNoopPtr;
-
-        HASH_ADD(hh, __glXDispatchHash, key,
-                 sizeof(__GLXdispatchHashKey), pEntry);
-    }
-
-    ReleaseLock(&__glXDispatchHashLock);
-
-    return pEntry->table;
 }
 
-
-const __GLXdispatchTable *__glXGetDispatchFromTLS(void)
+void *__glXGetGLDispatch(Display *dpy, const int screen)
 {
-    // XXX implement me
-    return __glXDispatchNoopPtr;
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
+
+    if (vendor) {
+        assert(vendor->glDispatch);
+        return vendor->glDispatch;
+    } else {
+        return NULL;
+    }
 }
 
+__GLXdispatchTableDynamic *__glXGetDynDispatch(Display *dpy, const int screen)
+{
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
-/****************************************************************************/
-/*
- * __glXScreenPointerMappingHash is a hash table that maps a void*
- * (either GLXContext or GLXFBConfig) to a screen index.  Note this
- * stores both GLXContext and GLXFBConfig in this table.
- */
-
-typedef struct {
-    void *ptr;
-    int screen;
-    UT_hash_handle hh;
-} __GLXscreenPointerMappingHash;
-
-
-static __GLXscreenPointerMappingHash *__glXScreenPointerMappingHash = NULL;
-static int __glXScreenPointerMappingHashLock = 0;
-
+    if (vendor) {
+        assert(vendor->dynDispatch);
+        return vendor->dynDispatch;
+    } else {
+        return NULL;
+    }
+}
 
 static void AddScreenPointerMapping(void *ptr, int screen)
 {
-    __GLXscreenPointerMappingHash *pEntry;
-
-    if (ptr == NULL) {
-        return;
-    }
-
-    if (screen < 0) {
-        return;
-    }
-
-    TakeLock(&__glXScreenPointerMappingHashLock);
-
-    HASH_FIND(hh, __glXScreenPointerMappingHash, ptr, sizeof(ptr), pEntry);
-
-    if (pEntry == NULL) {
-        pEntry = malloc(sizeof(*pEntry));
-        pEntry->ptr = ptr;
-        pEntry->screen = screen;
-        HASH_ADD(hh, __glXScreenPointerMappingHash, ptr, sizeof(ptr), pEntry);
-    } else {
-        pEntry->screen = screen;
-    }
-
-    ReleaseLock(&__glXScreenPointerMappingHashLock);
+    // TODO
 }
 
 
 static void RemoveScreenPointerMapping(void *ptr, int screen)
 {
-    __GLXscreenPointerMappingHash *pEntry;
-
-    if (ptr == NULL) {
-        return;
-    }
-
-    if (screen < 0) {
-        return;
-    }
-
-    TakeLock(&__glXScreenPointerMappingHashLock);
-
-    HASH_FIND(hh, __glXScreenPointerMappingHash, ptr, sizeof(ptr), pEntry);
-
-    if (pEntry != NULL) {
-        HASH_DELETE(hh, __glXScreenPointerMappingHash, pEntry);
-        free(pEntry);
-    }
-
-    ReleaseLock(&__glXScreenPointerMappingHashLock);
+    // TODO
 }
 
 
 static int ScreenFromPointer(void *ptr)
 {
-    __GLXscreenPointerMappingHash *pEntry;
-    int screen = -1;
-
-    TakeLock(&__glXScreenPointerMappingHashLock);
-
-    HASH_FIND(hh, __glXScreenPointerMappingHash, ptr, sizeof(ptr), pEntry);
-
-    if (pEntry != NULL) {
-        screen = pEntry->screen;
-    }
-
-    ReleaseLock(&__glXScreenPointerMappingHashLock);
-
-    return screen;
+    // TODO
+    return -1;
 }
 
 
@@ -226,92 +161,21 @@ int __glXScreenFromFBConfig(GLXFBConfig config)
 
 
 /****************************************************************************/
-/*
- * __glXScreenXIDMappingHash is a hash table which maps XIDs to screens.
- */
-
-
-typedef struct {
-    XID xid;
-    int screen;
-    UT_hash_handle hh;
-} __GLXscreenXIDMappingHash;
-
-
-static __GLXscreenXIDMappingHash *__glXScreenXIDMappingHash = NULL;
-static int __glXScreenXIDMappingHashLock = 0;
-
-
 static void AddScreenXIDMapping(XID xid, int screen)
 {
-    __GLXscreenXIDMappingHash *pEntry = NULL;
-
-    if (xid == None) {
-        return;
-    }
-
-    if (screen < 0) {
-        return;
-    }
-
-    TakeLock(&__glXScreenXIDMappingHashLock);
-
-    HASH_FIND(hh, __glXScreenXIDMappingHash, &xid, sizeof(xid), pEntry);
-
-    if (pEntry == NULL) {
-        pEntry = malloc(sizeof(*pEntry));
-        pEntry->xid = xid;
-        pEntry->screen = screen;
-        HASH_ADD(hh, __glXScreenXIDMappingHash, xid, sizeof(xid), pEntry);
-    } else {
-        pEntry->screen = screen;
-    }
-
-    ReleaseLock(&__glXScreenXIDMappingHashLock);
+    // TODO
 }
 
 
 static void RemoveScreenXIDMapping(XID xid, int screen)
 {
-    __GLXscreenXIDMappingHash *pEntry;
-
-    if (xid == None) {
-        return;
-    }
-
-    if (screen < 0) {
-        return;
-    }
-
-    TakeLock(&__glXScreenXIDMappingHashLock);
-
-    HASH_FIND(hh, __glXScreenXIDMappingHash, &xid, sizeof(xid), pEntry);
-
-    if (pEntry != NULL) {
-        HASH_DELETE(hh, __glXScreenXIDMappingHash, pEntry);
-        free(pEntry);
-    }
-
-    ReleaseLock(&__glXScreenXIDMappingHashLock);
+    // TODO
 }
 
 
-static int ScreenFromXID(XID xid)
+static int ScreenFromXID(Display *dpy, XID xid)
 {
-    __GLXscreenXIDMappingHash *pEntry;
-    int screen = -1;
-
-    TakeLock(&__glXScreenXIDMappingHashLock);
-
-    HASH_FIND(hh, __glXScreenXIDMappingHash, &xid, sizeof(xid), pEntry);
-
-    if (pEntry != NULL) {
-        screen = pEntry->screen;
-    }
-
-    ReleaseLock(&__glXScreenXIDMappingHashLock);
-
-    return screen;
+    return -1; // TODO
 }
 
 
@@ -327,7 +191,7 @@ void __glXRemoveScreenDrawableMapping(GLXDrawable drawable, int screen)
 }
 
 
-int __glXScreenFromDrawable(GLXDrawable drawable)
+int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable)
 {
-    return ScreenFromXID(drawable);
+    return ScreenFromXID(dpy, drawable);
 }

@@ -53,4 +53,5 @@ libGLX_la_LIBADD += $(GLVND_PTHREAD_DIR)/libglvnd_pthread.la
 libGLX_la_LDFLAGS = -shared
 
 libGLX_la_SOURCES = \
-	libglx.c
+	libglx.c \
+	libglxmapping.c
