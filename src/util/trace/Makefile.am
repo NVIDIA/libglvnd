@@ -25,29 +25,11 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-lib_LTLIBRARIES = libGLX.la
+# libtrace.la: convenience library for API library tracing routines
 
-UTIL_DIR = ../util
-TRACE_DIR = ../util/trace
+noinst_LTLIBRARIES = libtrace.la
 
-SUBDIRS = $(TRACE_DIR)
+libtrace_la_LIBADD = $(PTHREAD_LIBS)
 
-# Warning settings
-# Include paths
-libGLX_la_CFLAGS = -I$(UTIL_DIR)
-libGLX_la_CFLAGS += -I$(TRACE_DIR)
-libGLX_la_CFLAGS += -I$(top_builddir)/include
-
-# Required library flags
-libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)
-
-# Required libraries
-libGLX_la_LIBADD = -ldl
-libGLX_la_LIBADD += $(X11_LIBS)
-libGLX_la_LIBADD += $(XEXT_LIBS)
-libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
-
-libGLX_la_LDFLAGS = -shared
-
-libGLX_la_SOURCES = \
-	libglx.c
+libtrace_la_SOURCES = \
+	trace.c

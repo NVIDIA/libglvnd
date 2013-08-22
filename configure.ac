@@ -154,5 +154,7 @@ dnl default CFLAGS
 CFLAGS="$CFLAGS -Wall -Werror -std=gnu99 -include config.h -fvisibility=hidden $DEFINES"
 
 AC_CONFIG_FILES([Makefile
-                 src/Makefile])
+                 src/Makefile
+                 src/GLX/Makefile
+                 src/util/trace/Makefile])
 AC_OUTPUT

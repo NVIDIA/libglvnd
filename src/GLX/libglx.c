@@ -37,6 +37,7 @@
 #include "libglxmapping.h"
 #include "libglxcurrent.h"
 #include "utils_misc.h"
+#include "trace.h"
 #include "GL/glxproto.h"
 
 /* current version numbers */
@@ -510,6 +511,7 @@ void __attribute__ ((constructor)) __glXInit(void)
         __glXLookupVendorByName(preloadedVendor);
     }
 
+    DBG_PRINTF(0, "Loading GLX...\n");
 
 }
 
