@@ -228,6 +228,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXdispatchTableDynamic *dynDispatch,
             if (!pEntry) {
                 // Uh-oh!
                 assert(pEntry);
+                LKDHASH_UNLOCK(__glXPthreadFuncs, dynDispatch->hash);
                 return NULL;
             }
             pEntry->index = index;
