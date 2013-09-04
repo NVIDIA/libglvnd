@@ -130,6 +130,10 @@ static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
     }
 
     pEntry->procName = (GLubyte *)strdup((const char *)procName);
+    if (!pEntry->procName) {
+        free(pEntry);
+        return GL_FALSE;
+    }
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
     pEntry->index = __glXNextUnusedHashIndex++;
