@@ -68,8 +68,8 @@ testglxnscreens_CFLAGS = -I$(X11GLVND_DIR) $(AM_CFLAGS)
 testglxnscreens_LDADD = -lX11
 testglxnscreens_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxnscreens_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testglxnscreens_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 testglxnscreens_LDADD += $(top_builddir)/src/util/glvnd_pthread/libglvnd_pthread.la
+testglxnscreens_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 testglxnscreens_LDADD += -lX11 $(X11GLVND_DIR)/libx11glvnd_client.la
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
@@ -86,8 +86,8 @@ testglxmakecurrent_oldlink_SOURCES = \
 
 testglxmakecurrent_oldlink_LDADD = -lX11
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
-testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/glvnd_pthread/libglvnd_pthread.la
+testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 
 testx11glvndproto_CFLAGS = -I$(X11GLVND_DIR)
 testx11glvndproto_LDADD = -lX11 $(X11GLVND_DIR)/libx11glvnd_client.la
@@ -107,8 +107,8 @@ testglxgetprocaddress_LDADD = $(top_builddir)/src/GLX/libGLX.la
 testglxmakecurrent_LDADD = -lX11
 testglxmakecurrent_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testglxmakecurrent_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/util/glvnd_pthread/libglvnd_pthread.la
+testglxmakecurrent_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 
 testglxgetclientstr_LDADD = -lX11
 testglxgetclientstr_LDADD += $(top_builddir)/src/GLX/libGLX.la
