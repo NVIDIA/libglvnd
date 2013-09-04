@@ -880,6 +880,13 @@ static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
     }
 
     pEntry->procName = (GLubyte *)strdup((const char *)procName);
+
+    if (pEntry->procName == NULL) {
+        assert(pEntry->procName);
+        free(pEntry);
+        return;
+    }
+
     pEntry->addr = addr;
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXProcAddressHash);
