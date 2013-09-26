@@ -34,8 +34,6 @@ UTHASH_DIR = ../util/uthash/src
 GL_DISPATCH_DIR = ../GLdispatch
 X11GLVND_DIR = ../x11glvnd
 
-SUBDIRS = $(GL_DISPATCH_DIR) $(X11GLVND_DIR) $(TRACE_DIR) $(GLVND_PTHREAD_DIR)
-
 # Warning settings
 # Include paths
 libGLX_la_CFLAGS = -I$(UTHASH_DIR)
