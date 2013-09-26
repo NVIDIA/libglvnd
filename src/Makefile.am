@@ -1,1 +1,1 @@
-SUBDIRS = GLX OpenGL GL
+SUBDIRS = util GLdispatch x11glvnd GLX OpenGL GL
