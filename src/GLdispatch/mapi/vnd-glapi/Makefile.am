@@ -31,7 +31,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/$(MAPI_PREFIX) \
 	-I$(top_builddir)/$(MAPI_PREFIX) \
-	-I$(top_builddir)/$(MAPI_PREFIX)/glapi \
+	-I$(top_srcdir)/$(MAPI_PREFIX)/glapi \
 	-I$(top_srcdir)/$(MAPI_MESA_PREFIX) \
 	-DMAPI_MODE_GLAPI \
 	-DMAPI_ABI_HEADER=\"vnd-glapi/glapi_mapi_tmp.h\"

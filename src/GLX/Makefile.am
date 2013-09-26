@@ -36,13 +36,13 @@ X11GLVND_DIR = ../x11glvnd
 
 # Warning settings
 # Include paths
-libGLX_la_CFLAGS = -I$(UTHASH_DIR)
-libGLX_la_CFLAGS += -I$(UTIL_DIR)
-libGLX_la_CFLAGS += -I$(TRACE_DIR)
-libGLX_la_CFLAGS += -I$(GLVND_PTHREAD_DIR)
-libGLX_la_CFLAGS += -I$(GL_DISPATCH_DIR)
-libGLX_la_CFLAGS += -I$(top_builddir)/include
-libGLX_la_CFLAGS += -I$(X11GLVND_DIR)
+libGLX_la_CFLAGS =  -I$(srcdir)/$(UTHASH_DIR)
+libGLX_la_CFLAGS += -I$(srcdir)/$(UTIL_DIR)
+libGLX_la_CFLAGS += -I$(srcdir)/$(TRACE_DIR)
+libGLX_la_CFLAGS += -I$(srcdir)/$(GLVND_PTHREAD_DIR)
+libGLX_la_CFLAGS += -I$(srcdir)/$(GL_DISPATCH_DIR)
+libGLX_la_CFLAGS += -I$(top_srcdir)/include
+libGLX_la_CFLAGS += -I$(srcdir)/$(X11GLVND_DIR)
 
 # Required library flags
 libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)

@@ -30,6 +30,6 @@
 noinst_LTLIBRARIES = libglvnd_pthread.la
 
 libglvnd_pthread_la_LIBADD = -ldl
-libglvnd_pthread_la_CFLAGS = -I../trace/
+libglvnd_pthread_la_CFLAGS = -I$(top_srcdir)/src/util/trace/
 libglvnd_pthread_la_SOURCES = \
 	glvnd_pthread.c
