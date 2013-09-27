@@ -12,7 +12,8 @@ AC_CANONICAL_SYSTEM
 
 AC_USE_SYSTEM_EXTENSIONS
 
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([1.11 foreign silent-rules])
+AM_SILENT_RULES([yes])
 
 dnl Checks for programs.
 AC_PROG_AWK
