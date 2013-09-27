@@ -32,7 +32,7 @@ noinst_PROGRAMS = gen_matypes
 
 gen_matypes_SOURCES = gen_matypes.c
 BUILT_SOURCES = matypes.h
-CLEANFILES = matypes.h
+CLEANFILES = $(BUILT_SOURCES)
 
 matypes.h: gen_matypes
 	$(AM_V_GEN)./gen_matypes > $@
