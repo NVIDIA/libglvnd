@@ -2,7 +2,7 @@
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TOP_BUILDDIR/tests/GLX_dummy/.libs
 
-if [ -n "$SKIP_ENV_INIT" ]; then
+if [ -z "$DO_X11_TESTS" ]; then
     echo "Skipping test; requires environment init"
     exit 77
 fi

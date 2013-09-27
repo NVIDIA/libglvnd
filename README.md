@@ -54,9 +54,9 @@ There are a few good starting points for familiarizing oneself with the code:
 
 The tests/ directory contains several unit tests which verify that dispatching
 to different vendors actually works. Run `make check` to run these unit tests.
-Note some of the unit tests require a special environment that can only be set
-up if X is not currently running. To skip these tests (and environment
-initialization/teardown), run `make check SKIP_ENV_INIT=1`.
+Note some of the unit tests require a special X server configuration and
+are skipped by default.  To include these tests (and X server
+initialization/teardown), run `make check DO_X11_TESTS=1`.
 
 Architecture
 ------------
