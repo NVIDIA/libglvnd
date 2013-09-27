@@ -27,6 +27,8 @@
 
 # libtrace.la: convenience library for API library tracing routines
 
+noinst_HEADERS = trace.h
+
 noinst_LTLIBRARIES = libtrace.la
 
 libtrace_la_LIBADD = $(PTHREAD_LIBS)

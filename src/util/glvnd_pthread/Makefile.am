@@ -27,6 +27,8 @@
 
 # libglvnd_pthread.la: Convenience library for wrapping pthreads
 
+noinst_HEADERS = glvnd_pthread.h
+
 noinst_LTLIBRARIES = libglvnd_pthread.la
 
 libglvnd_pthread_la_LIBADD = -ldl

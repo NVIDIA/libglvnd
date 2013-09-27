@@ -1,5 +1,7 @@
 # Used by OpenGL vendor-neutral dispatch library
 
+EXTRA_DIST = mapi
+
 TOP = $(top_srcdir)
 GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
 include $(srcdir)/mapi/Makefile.sources

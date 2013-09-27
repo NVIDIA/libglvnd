@@ -28,6 +28,8 @@
 SUBDIRS = \
 	GLX_dummy
 
+noinst_HEADERS = test_utils.h
+
 TESTS_ENVIRONMENT = \
 	TOP_BUILDDIR=$(top_builddir) \
 	ABS_TOP_BUILDDIR=$(abs_top_builddir) \
@@ -47,6 +49,8 @@ TESTS = \
 	testglxnscreens.sh \
 	testglxnscrthreads.sh \
 	fini_test_env.sh
+
+EXTRA_DIST = $(TESTS)
 
 check_PROGRAMS = \
 	testglxgetprocaddress \

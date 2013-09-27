@@ -25,6 +25,11 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
+noinst_HEADERS = \
+	x11glvnd.h \
+	x11glvndproto.h \
+	x11glvndserver.h
+
 noinst_LTLIBRARIES = libx11glvnd_client.la
 
 INCLUDES = \

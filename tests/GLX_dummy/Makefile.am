@@ -1,3 +1,4 @@
+noinst_HEADERS = GLX_dummy.h
 lib_LTLIBRARIES = libGLX_dummy.la
 
 check-local: libGLX_dummy_copy
