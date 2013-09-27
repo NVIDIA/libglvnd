@@ -563,7 +563,7 @@ static void RemoveScreenPointerMapping(void *ptr, int screen)
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
 
-    HASH_FIND(hh, _LH(__glXScreenPointerMappingHash), ptr, sizeof(ptr), pEntry);
+    HASH_FIND_PTR(_LH(__glXScreenPointerMappingHash), &ptr, pEntry);
 
     if (pEntry != NULL) {
         HASH_DELETE(hh, _LH(__glXScreenPointerMappingHash), pEntry);
@@ -581,7 +581,7 @@ static int ScreenFromPointer(void *ptr)
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
 
-    HASH_FIND(hh, _LH(__glXScreenPointerMappingHash), &ptr, sizeof(ptr), pEntry);
+    HASH_FIND_PTR(_LH(__glXScreenPointerMappingHash), &ptr, pEntry);
 
     if (pEntry != NULL) {
         screen = pEntry->screen;
