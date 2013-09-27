@@ -83,7 +83,7 @@ if [ "x$AUTOCONF_VERSION" = "x" ] ; then
 fi
 # set to minimum acceptable version of automake
 if [ "x$AUTOMAKE_VERSION" = "x" ] ; then
-    AUTOMAKE_VERSION=1.6.0
+    AUTOMAKE_VERSION=1.11.0
 fi
 # set to minimum acceptable version of libtool
 if [ "x$LIBTOOL_VERSION" = "x" ] ; then
