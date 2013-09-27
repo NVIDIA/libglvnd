@@ -32,6 +32,7 @@ libGL_la_SOURCES = \
 	glapitemp.h
 
 BUILT_SOURCES = glapitemp.h
+CLEANFILES = $(BUILT_SOURCES)
 
 TOP = $(top_srcdir)
 GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
