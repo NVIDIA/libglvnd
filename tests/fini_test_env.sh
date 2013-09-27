@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ -n "$SKIP_ENV_INIT" ]; then
+if [ -z "$DO_X11_TESTS" ]; then
     echo "Test environment cleanup skipped"
     exit 77
 fi
