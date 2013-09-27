@@ -25,6 +25,16 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
+noinst_HEADERS = \
+	libglxabi.h \
+	libglxabipriv.h \
+	libglxcurrent.h \
+	libglxgldispatch.h \
+	libglxmapping.h \
+	libglxnoop.h \
+	libglxnoopdefs.h \
+	libglxthread.h
+
 lib_LTLIBRARIES = libGLX.la
 
 UTIL_DIR = ../util
