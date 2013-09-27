@@ -168,9 +168,6 @@ AC_CONFIG_FILES([Makefile
                  src/GLX/Makefile
                  src/x11glvnd/Makefile
                  src/GLdispatch/Makefile
-                 src/GLdispatch/mapi/Makefile
-                 src/GLdispatch/mapi/glapi/Makefile
-                 src/GLdispatch/mapi/glapi/gen/Makefile
                  src/GLdispatch/mapi/vnd-glapi/Makefile
                  src/util/Makefile
                  src/util/glvnd_pthread/Makefile
