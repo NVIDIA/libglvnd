@@ -36,7 +36,6 @@
 int main(int argc, char **argv)
 {
     Display *dpy = XOpenDisplay(NULL);
-    const char *str;
     Bool ret;
     int major, minor;
 
