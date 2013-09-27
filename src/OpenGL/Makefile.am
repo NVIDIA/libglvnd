@@ -41,7 +41,7 @@ glapitemp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi,$<,noop-gl)
 
 libOpenGL_la_CFLAGS = \
-	-I$(top_builddir)/include
+	-I$(top_srcdir)/include
 
 libOpenGL_la_LDFLAGS = -shared -Wl,--auxiliary=libGLdispatch.so.0
 
