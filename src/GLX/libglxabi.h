@@ -33,6 +33,8 @@
 #include <stdint.h>
 #include <GL/glx.h>
 
+#include "GLdispatchABI.h"
+
 /*!
  * \defgroup glxvendorabi GLX Vendor ABI
  *
@@ -67,11 +69,6 @@
  * functions retrieve and operate on this structure using the API below.
  */
 typedef struct __GLXdispatchTableDynamicRec __GLXdispatchTableDynamic;
-
-/*!
- * This opaque structure describes the core GL dispatch table.
- */
-typedef struct __GLXcoreDispatchTableRec __GLXcoreDispatchTable;
 
 /*!
  * Forward declaration for createGLDispatch export.
@@ -120,70 +117,10 @@ typedef struct __GLXapiExportsRec {
     GLXContext                (*getCurrentContext)(void);
 
     /************************************************************************
-     * When a context is current, for performance reasons it may be desirable
-     * for a vendor to use different entrypoints for that context depending on
-     * the current GL state. The following routines allow a vendor to create and
-     * manage auxiliary dispatch tables for this purpose.
+     * This structure stores procs for managing core GL dispatch tables.
      ************************************************************************/
 
-    /*!
-     * This retrieves the current core GL dispatch table.
-     */
-    __GLXcoreDispatchTable    *(*getCurrentGLDispatch)(void);
-
-    /*!
-     * This retrieves the top-level GL dispatch table for the current vendor.
-     * This must always be defined for the lifetime of the vendor library.
-     */
-    __GLXcoreDispatchTable     *(*getTopLevelDispatch)(void);
-
-    /*!
-     * This creates an auxiliary core GL dispatch table using the given
-     * vendor-specific callbacks and data. This data will be passed to the
-     * getProcAddress callback during dispatch table construction and can be
-     * used to discriminate between different flavors of entrypoints in the
-     * vendor.
-     * XXX: is the getProcAddress callback method too slow? Should we have
-     * a way for vendor libraries to declare fixed tables at startup that
-     * can be read quickly?
-     */
-    __GLXcoreDispatchTable   *(*createGLDispatch)(
-        const __GLXvendorCallbacks *cb,
-        void *data
-    );
-
-    /*!
-     * This retrieves the offset into the GL dispatch table for the given
-     * function name, or -1 if the function is not found.
-     * If a valid offset is returned, the offset is valid for all dispatch
-     * tables for the lifetime of the API library.
-     * XXX: should there be a way for vendor libraries to pre-load procs
-     * they care about?
-     */
-    GLint (*getGLDispatchOffset)(const GLubyte *procName);
-
-    /*!
-     * This sets the given entry in the GL dispatch table to the function
-     * address pointed to by addr.
-     */
-    void (*setGLDispatchEntry)(__GLXcoreDispatchTable *table,
-                               GLint offset,
-                               __GLXextFuncPtr addr);
-
-    /*!
-     * This makes the given GL dispatch table current. Note this operation
-     * is only valid when there is a GL context owned by the vendor which
-     * is current.
-     */
-    void (*makeGLDispatchCurrent)(__GLXcoreDispatchTable *table);
-
-    /*!
-     * This destroys the given GL dispatch table, and returns GL_TRUE on
-     * success. Note it is an error to attempt to destroy the top-level
-     * dispatch.
-     */
-    GLboolean (*destroyGLDispatch)(__GLXcoreDispatchTable *table);
-
+    __GLdispatchExports glde;
 } __GLXapiExports;
 
 /*****************************************************************************

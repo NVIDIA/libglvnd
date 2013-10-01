@@ -33,6 +33,7 @@
 #include "glheader.h"
 #include "compiler.h"
 #include "glvnd_pthread.h"
+#include "GLdispatchABI.h"
 
 /*!
  * \defgroup gldispatch core GL/GLES dispatch and TLS module
@@ -52,19 +53,6 @@
 #define CURRENT_API_STATE   2  // GLAPI_CURRENT_USER1
 
 PUBLIC void *_glapi_get_current(int index);
-
-typedef void (*__GLdispatchProc)(void);
-typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
-                                            void *vendorData);
-typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
-                                            void *vendorData);
-typedef GLboolean (*__GLgetDispatchProtoCallback)(const GLubyte *procName,
-                                                  char ***function_names,
-                                                  char **parameter_signature);
-typedef void (*__GLdestroyVendorDataCallback)(void *vendorData);
-
-/* Opaque dispatch table structure. */
-typedef struct __GLdispatchTableRec __GLdispatchTable;
 
 /* Namespaces for API state */
 enum {
@@ -184,7 +172,7 @@ static inline void *__glDispatchGetCurrentContext(void)
  * describes a real offset.  If the call succeeds, the offset remains valid for
  * the lifetime of libglvnd for all GL dispatch tables used by libglvnd.
  */
-PUBLIC GLint __glDispatchGetOffset(const char *procName);
+PUBLIC GLint __glDispatchGetOffset(const GLubyte *procName);
 
 /*!
  * This sets the dispatch table entry given by <offset> to the entrypoint
