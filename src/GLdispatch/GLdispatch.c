@@ -305,9 +305,9 @@ PUBLIC void __glDispatchSetEntry(__GLdispatchTable *dispatch,
     UnlockDispatch();
 }
 
-GLint __glDispatchGetOffset(const char *procName)
+GLint __glDispatchGetOffset(const GLubyte *procName)
 {
-    return _glapi_get_proc_offset(procName);
+    return _glapi_get_proc_offset((const char *)procName);
 }
 
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback getProcAddress,

@@ -248,21 +248,20 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXdispatchTableDynamic *dynDispatch,
     return addr;
 }
 
-static __GLXapiExports glxExportsTable = {
-    .getDynDispatch = __glXGetDynDispatch,
-    .fetchDispatchEntry = __glXFetchDispatchEntry,
+static __GLXapiExports glxExportsTable;
+static glvnd_once_t glxExportsTableOnceControl = GLVND_ONCE_INIT;
+
+static void InitExportsTable(void)
+{
+    glxExportsTable.getDynDispatch = __glXGetDynDispatch;
+    glxExportsTable.fetchDispatchEntry = __glXFetchDispatchEntry;
 
     /* We use the real function since __glXGetCurrentContext is inline */
-    .getCurrentContext = glXGetCurrentContext,
+    glxExportsTable.getCurrentContext = glXGetCurrentContext;
 
-    /* GL dispatch management */
-    .getCurrentGLDispatch = __glXGetCurrentGLDispatch,
-    .getTopLevelDispatch = __glXGetTopLevelDispatch,
-    .createGLDispatch = __glXCreateGLDispatch,
-    .getGLDispatchOffset = __glXGetGLDispatchOffset,
-    .makeGLDispatchCurrent = __glXMakeGLDispatchCurrent,
-    .destroyGLDispatch = __glXDestroyGLDispatch
-};
+    /* Plug in the GLdispatch table, defined in libglxgldispatch.h */
+    glxExportsTable.glde = __glXGLdispatchExportsTable;
+}
 
 static char *ConstructVendorLibraryFilename(const char *vendorName)
 {
@@ -322,6 +321,10 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
 
+            /* Initialize the glxExportsTable if we haven't already */
+            __glXPthreadFuncs.once(&glxExportsTableOnceControl,
+                                   InitExportsTable);
+
             dispatch = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
                                       &glxExportsTable,
                                       vendorName);
@@ -343,7 +346,12 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             vendor->staticDispatch = dispatch;
 
             vendor->glDispatch = (__GLdispatchTable *)
-                __glXCreateGLDispatch(&dispatch->glxvc, NULL);
+                __glDispatchCreateTable(
+                    dispatch->glxvc.getProcAddress,
+                    dispatch->glxvc.getDispatchProto,
+                    dispatch->glxvc.destroyDispatchData,
+                    NULL
+                );
             if (!vendor->glDispatch) {
                 goto fail;
             }

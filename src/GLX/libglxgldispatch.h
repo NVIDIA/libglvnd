@@ -32,21 +32,6 @@
 
 #include "libglxabi.h"
 
-/*
- * These functions define the interface by which a vendor library can install
- * and manage its own collection of dispatch tables. See libglxabi.h for
- * a more detailed explanation of these functions.
- */
-
-__GLXcoreDispatchTable *__glXGetCurrentGLDispatch(void);
-__GLXcoreDispatchTable *__glXGetTopLevelDispatch(void);
-__GLXcoreDispatchTable *__glXCreateGLDispatch(const __GLXvendorCallbacks *cb,
-                                              void *data);
-GLint __glXGetGLDispatchOffset(const GLubyte *procName);
-void __glXSetGLDispatchEntry(__GLXcoreDispatchTable *table,
-                             GLint offset,
-                             __GLXextFuncPtr addr);
-void __glXMakeGLDispatchCurrent(__GLXcoreDispatchTable *table);
-GLboolean __glXDestroyGLDispatch(__GLXcoreDispatchTable *table);
+extern __GLdispatchExports __glXGLdispatchExportsTable;
 
 #endif // __LIBGLX_GL_DISPATCH_H__

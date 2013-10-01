@@ -30,21 +30,16 @@
 #include "libglxabi.h"
 #include "libglxcurrent.h"
 #include "libglxmapping.h"
+#include "GLdispatch.h"
 
-/*
- * XXX hack: cast (__GLXcoreDispatchTable *) to the real type (__GLdispatchTable
- * *). Maybe cleaner to just expose __GLdispatchTable to the ABI, or have the
- * relevant functions take in (void *)?
- */
-
-__GLXcoreDispatchTable *__glXGetCurrentGLDispatch(void)
+static __GLdispatchTable *GetCurrentGLDispatch(void)
 {
     __GLXAPIState *apiState = __glXGetCurrentAPIState();
 
-    return (__GLXcoreDispatchTable *)apiState->glas.dispatch;
+    return apiState->glas.dispatch;
 }
 
-__GLXcoreDispatchTable *__glXGetTopLevelDispatch(void)
+static __GLdispatchTable *GetTopLevelDispatch(void)
 {
     __GLXAPIState *apiState;
     __GLXvendorInfo *vendor;
@@ -52,37 +47,10 @@ __GLXcoreDispatchTable *__glXGetTopLevelDispatch(void)
     apiState = __glXGetCurrentAPIState();
     vendor = apiState ? apiState->currentVendor : NULL;
 
-    return (__GLXcoreDispatchTable *)vendor->glDispatch;
+    return vendor->glDispatch;
 }
 
-__GLXcoreDispatchTable *__glXCreateGLDispatch(const __GLXvendorCallbacks *cb,
-                                              void *data)
-{
-    __GLdispatchTable *dispatch = __glDispatchCreateTable(
-            cb->getProcAddress,
-            cb->getDispatchProto,
-            cb->destroyDispatchData,
-            data
-   );
-
-    return (__GLXcoreDispatchTable *)dispatch;
-}
-
-GLint __glXGetGLDispatchOffset(const GLubyte *procName)
-{
-    return __glDispatchGetOffset((const char *)procName);
-}
-
-void __glXSetGLDispatchEntry(__GLXcoreDispatchTable *table,
-                             GLint offset,
-                             __GLXextFuncPtr addr)
-{
-    __glDispatchSetEntry((__GLdispatchTable *)table,
-                         offset,
-                         (__GLdispatchProc)addr);
-}
-
-void __glXMakeGLDispatchCurrent(__GLXcoreDispatchTable *table)
+static void MakeGLDispatchCurrent(__GLdispatchTable *table)
 {
     __GLXAPIState *apiState = __glXGetCurrentAPIState();
 
@@ -92,9 +60,9 @@ void __glXMakeGLDispatchCurrent(__GLXcoreDispatchTable *table)
     }
 }
 
-GLboolean __glXDestroyGLDispatch(__GLXcoreDispatchTable *table)
+static GLboolean DestroyGLDispatch(__GLdispatchTable *table)
 {
-    if (table == __glXGetTopLevelDispatch()) {
+    if (table == GetTopLevelDispatch()) {
         return GL_FALSE;
     }
 
@@ -102,3 +70,15 @@ GLboolean __glXDestroyGLDispatch(__GLXcoreDispatchTable *table)
 
     return GL_TRUE;
 }
+
+__GLdispatchExports __glXGLdispatchExportsTable = {
+    .getCurrentGLDispatch = GetCurrentGLDispatch,
+    .getTopLevelDispatch = GetTopLevelDispatch,
+    .createGLDispatch = __glDispatchCreateTable,
+    .getGLDispatchOffset = __glDispatchGetOffset,
+    .setGLDispatchEntry = __glDispatchSetEntry,
+    .makeGLDispatchCurrent = MakeGLDispatchCurrent,
+    .destroyGLDispatch = DestroyGLDispatch,
+};
+
+
