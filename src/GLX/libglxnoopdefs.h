@@ -271,6 +271,11 @@ GLXNOOP __GLXextFuncPtr NOOP_FUNC(GetProcAddress)(const GLubyte *procName)
     return NULL;
 }
 
+GLXNOOP __GLXextFuncPtr NOOP_FUNC(GetProcAddressARB)(const GLubyte *procName)
+{
+    return NULL;
+}
+
 GLXNOOP Bool NOOP_FUNC(QueryExtension)(Display *dpy,
                                        int *error_base,
                                        int *event_base)

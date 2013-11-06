@@ -809,6 +809,7 @@ void cacheInitializeOnce(void)
         LOCAL_FUNC_TABLE_ENTRY(glXGetFBConfigAttrib)
         LOCAL_FUNC_TABLE_ENTRY(glXGetFBConfigs)
         LOCAL_FUNC_TABLE_ENTRY(glXGetProcAddress)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetProcAddressARB)
         LOCAL_FUNC_TABLE_ENTRY(glXGetSelectedEvent)
         LOCAL_FUNC_TABLE_ENTRY(glXGetVisualFromFBConfig)
         LOCAL_FUNC_TABLE_ENTRY(glXIsDirect)
@@ -894,6 +895,11 @@ static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
                     strlen((const char*)pEntry->procName),
                     pEntry);
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+}
+
+PUBLIC __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
+{
+    return glXGetProcAddress(procName);
 }
 
 PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
