@@ -37,7 +37,7 @@
 #include "u_execmem.h"
 
 
-#define EXEC_MAP_SIZE (4*1024)
+#define EXEC_MAP_SIZE (16*4096) // DISPATCH_FUNCTION_SIZE * MAPI_TABLE_NUM_DYNAMIC
 
 u_mutex_declare_static(exec_mutex);
 

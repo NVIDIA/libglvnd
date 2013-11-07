@@ -108,7 +108,7 @@ get_entrypoint_address(unsigned int functionOffset);
  * the two limits will be hit simultaneously. For larger dispatch function
  * sizes, MAX_EXTENSION_FUNCS is effectively reduced.
  */
-#define MAX_EXTENSION_FUNCS 256
+#define MAX_EXTENSION_FUNCS 4096
 
 
 #endif
