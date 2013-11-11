@@ -52,20 +52,10 @@
 #include "u_thread.h"
 #include <assert.h>
 
-#ifndef MAPI_MODE_UTIL
 
 #include "table.h"
 #include "stub.h"
 
-#else
-
-extern void init_glapi_relocs_once(void);
-extern void (*__glapi_noop_table[])(void);
-
-#define table_noop_array __glapi_noop_table
-#define stub_init_once() init_glapi_relocs_once()
-
-#endif
 
 /**
  * \name Current dispatch and current context control variables

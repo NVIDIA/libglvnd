@@ -51,7 +51,6 @@ __asm__(".text\n"
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
-#ifndef MAPI_MODE_BRIDGE
 
 __asm__(".balign 32\n"
         "x86_entry_end:");
@@ -100,4 +99,3 @@ entry_generate(int slot)
    return entry;
 }
 
-#endif /* MAPI_MODE_BRIDGE */

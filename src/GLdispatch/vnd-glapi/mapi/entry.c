@@ -33,11 +33,7 @@
 #define ENTRY_CURRENT_TABLE U_STRINGIFY(u_current)
 
 /* in bridge mode, mapi is a user of glapi */
-#ifdef MAPI_MODE_BRIDGE
-#define ENTRY_CURRENT_TABLE_GET "_glapi_get_dispatch"
-#else
 #define ENTRY_CURRENT_TABLE_GET U_STRINGIFY(u_current_get_internal)
-#endif
 
 #if defined(USE_X86_ASM) && defined(__GNUC__)
 #   ifdef GLX_USE_TLS
@@ -54,11 +50,7 @@
 static INLINE const struct mapi_table *
 entry_current_get(void)
 {
-#ifdef MAPI_MODE_BRIDGE
-   return GET_DISPATCH();
-#else
    return u_current_get();
-#endif
 }
 
 /* C version of the public entries */
@@ -67,7 +59,6 @@ entry_current_get(void)
 #define MAPI_TMP_PUBLIC_ENTRIES
 #include "mapi_tmp.h"
 
-#ifndef MAPI_MODE_BRIDGE
 
 void
 entry_patch_public(void)
@@ -92,6 +83,5 @@ entry_patch(mapi_func entry, int slot)
 {
 }
 
-#endif /* MAPI_MODE_BRIDGE */
 
 #endif /* asm */

@@ -65,7 +65,6 @@ __asm__(".balign 16\n"
 __asm__(".text");
 #endif /* GLX_X86_READONLY_TEXT */
 
-#ifndef MAPI_MODE_BRIDGE
 
 #include "u_execmem.h"
 
@@ -129,4 +128,3 @@ entry_generate(int slot)
    return entry;
 }
 
-#endif /* MAPI_MODE_BRIDGE */
