@@ -99,14 +99,6 @@ fi
 dnl Various conditionals.
 AM_CONDITIONAL([GCC], [test x$GCC = xyes ])
 
-AM_CONDITIONAL(HAVE_VND_GLAPI, true)
-dnl HACK FIXME TODO
-AM_CONDITIONAL(HAVE_SHARED_GLAPI, false)
-AM_CONDITIONAL(HAVE_OPENGL, false)
-AM_CONDITIONAL(HAVE_OPENGL_ES1, false)
-AM_CONDITIONAL(HAVE_OPENGL_ES2, false)
-AM_CONDITIONAL(HAVE_OPENVG, false)
-
 dnl
 dnl mapi top-relative paths: defined here so mapi can be used elsewhere
 dnl
