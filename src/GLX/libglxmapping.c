@@ -711,12 +711,12 @@ static int ScreenFromXID(Display *dpy, XID xid)
 
     if (pEntry) {
         screen = pEntry->screen;
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
     } else {
         screen = XGLVQueryXIDScreenMapping(dpy, xid);
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
         AddScreenXIDMapping(xid, screen);
     }
-
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
 
     return screen;
 }
