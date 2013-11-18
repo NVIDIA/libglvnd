@@ -128,7 +128,13 @@ PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
 
 PUBLIC int glXGetConfig(Display *dpy, XVisualInfo *vis, int attrib, int *value)
 {
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, vis->screen);
+    const __GLXdispatchTableStatic *pDispatch;
+
+    if (!dpy || !vis || !value) {
+        return GLX_BAD_VALUE;
+    }
+
+    pDispatch = __glXGetStaticDispatch(dpy, vis->screen);
 
     return pDispatch->glx14ep.getConfig(dpy, vis, attrib, value);
 }

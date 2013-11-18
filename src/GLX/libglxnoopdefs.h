@@ -82,7 +82,11 @@ GLXNOOP void NOOP_FUNC(DestroyGLXPixmap)(Display *dpy, GLXPixmap pix)
 GLXNOOP int NOOP_FUNC(GetConfig)(Display *dpy, XVisualInfo *vis,
                               int attrib, int *value)
 {
-    return -1;
+    /*
+     * We get here if libglvnd couldn't find a valid vendor for vis->screen.
+     * Hence, "the screen of vis does not correspond to a screen".
+     */
+    return GLX_BAD_SCREEN;
 }
 
 
