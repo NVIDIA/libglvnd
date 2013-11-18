@@ -429,14 +429,15 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
             vendor = __glXLookupVendorByName(preloadedVendorName);
         }
 
-        if (!vendor) {
+        if (!vendor && (dpy != NULL)) {
             queriedVendorName = XGLVQueryScreenVendorMapping(dpy, screen);
             vendor = __glXLookupVendorByName(queriedVendorName);
             Xfree(queriedVendorName);
         }
 
         if (!vendor) {
-            assert(!"Missing vendor library!");
+            /* No vendor available */
+            return NULL;
         }
 
         LKDHASH_WRLOCK(__glXPthreadFuncs, __glXVendorScreenHash);
