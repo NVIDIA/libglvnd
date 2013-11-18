@@ -256,9 +256,6 @@ static int ProcGLVQueryXIDScreenMapping(ClientPtr client)
     REQUEST_SIZE_MATCH(*stuff);
 
     scrnum = LookupXIDScreenMapping(client, stuff->xid);
-    if (scrnum < 0) {
-        return BadValue;
-    }
 
     // Write the reply
     GLVND_REPLY_HEADER(rep, 0);
@@ -282,33 +279,35 @@ static int ProcGLVQueryScreenVendorMapping(ClientPtr client)
 
     if ((stuff->screen >= screenInfo.numScreens) ||
         (stuff->screen < 0)) {
-        return BadValue;
+        vendor = NULL;
+    } else {
+        pScreen = screenInfo.screens[stuff->screen];
+        pScreenPriv = XGLV_SCREEN_PRIVATE(pScreen);
+        vendor = pScreenPriv->vendorLib;
     }
 
-    pScreen = screenInfo.screens[stuff->screen];
-    pScreenPriv = XGLV_SCREEN_PRIVATE(pScreen);
-    vendor = pScreenPriv->vendorLib;
+    if (vendor) {
+        n = strlen(vendor) + 1;
+        length = GLVND_PAD(n) >> 2;
+        buf = malloc(length << 2);
+        if (!buf) {
+            return BadAlloc;
+        }
+        strncpy(buf, vendor, n);
 
-    if (!vendor) {
-        return BadValue;
+        // Write the reply
+        GLVND_REPLY_HEADER(rep, length);
+        rep.n = n;
+
+        WriteToClient(client, sz_xglvQueryScreenVendorMappingReply, (char *)&rep);
+        WriteToClient(client, (int)(length << 2), buf);
+
+        free(buf);
+    } else {
+        GLVND_REPLY_HEADER(rep, 0);
+        rep.n = 0;
+        WriteToClient(client, sz_xglvQueryScreenVendorMappingReply, (char *)&rep);
     }
-
-    n = strlen(vendor) + 1;
-    length = GLVND_PAD(n) >> 2;
-    buf = malloc(length << 2);
-    if (!buf) {
-        return BadAlloc;
-    }
-    strncpy(buf, vendor, n);
-
-    // Write the reply
-    GLVND_REPLY_HEADER(rep, length);
-    rep.n = n;
-
-    WriteToClient(client, sz_xglvQueryScreenVendorMappingReply, (char *)&rep);
-    WriteToClient(client, (int)(length << 2), buf);
-
-    free(buf);
 
     return client->noClientException;
 }

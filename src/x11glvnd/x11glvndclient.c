@@ -32,6 +32,7 @@
 #include <X11/Xproto.h>
 #include <X11/extensions/Xext.h>
 #include <X11/extensions/extutil.h>
+#include <assert.h>
 
 #include "x11glvnd.h"
 #include "x11glvndproto.h"
@@ -133,16 +134,23 @@ char *XGLVQueryScreenVendorMapping(
         return NULL;
     }
 
+
     length = rep.length;
     nbytes = rep.n;
-    slop = nbytes & 3;
-    buf = (char *)Xmalloc(nbytes);
-    if (!buf) {
-        _XEatData(dpy, length);
+
+    if (!nbytes) {
+        buf = NULL;
+        assert(!length);
     } else {
-        _XRead(dpy, (char *)buf, nbytes);
-        if (slop) {
-            _XEatData(dpy, 4-slop);
+        slop = nbytes & 3;
+        buf = (char *)Xmalloc(nbytes);
+        if (!buf) {
+            _XEatData(dpy, length);
+        } else {
+            _XRead(dpy, (char *)buf, nbytes);
+            if (slop) {
+                _XEatData(dpy, 4-slop);
+            }
         }
     }
 
