@@ -68,6 +68,9 @@ typedef struct _glvnd_thread_t {
 typedef pthread_attr_t glvnd_thread_attr_t;
 typedef pthread_rwlockattr_t glvnd_rwlockattr_t;
 
+typedef pthread_key_t glvnd_key_t;
+#define GLVND_KEYS_MAX PTHREAD_KEYS_MAX
+
 /*!
  * Struct defining the wrapper functions implemented by this library.
  * The implementations will differ depending on whether we're in the
@@ -93,6 +96,15 @@ typedef struct GLVNDPthreadFuncsRec {
 
     /* Other used functions */
     int (*once)(glvnd_once_t *once_control, void (*init_routine)(void));
+
+    /*
+     * TSD key management.  Used to handle the corner case when a thread
+     * is destroyed with a context current.
+     */
+    int (*key_create)(glvnd_key_t *key, void (*destr_function)(void *));
+    int (*key_delete)(glvnd_key_t key);
+    int (*setspecific)(glvnd_key_t key, const void *p);
+    void *(*getspecific)(glvnd_key_t key);
 } GLVNDPthreadFuncs;
 
 /*!

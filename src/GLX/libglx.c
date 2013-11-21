@@ -52,6 +52,55 @@
 
 GLVNDPthreadFuncs __glXPthreadFuncs;
 
+static glvnd_key_t threadDestroyKey;
+static Bool threadDestroyKeyInitialized;
+static glvnd_once_t threadDestroyKeyCreateOnceControl = GLVND_ONCE_INIT;
+
+static void UntrackCurrentContext(GLXContext ctx);
+
+/*
+ * Hashtable tracking current contexts for the purpose of determining whether
+ * glXDestroyContext() should remove the context -> screen mapping immediately,
+ * or defer this until the context loses current.
+ */
+typedef struct __GLXcurrentContextHashRec {
+    GLXContext ctx;
+    Bool needsUnmap;
+    UT_hash_handle hh;
+} __GLXcurrentContextHash;
+
+static DEFINE_INITIALIZED_LKDHASH(__GLXcurrentContextHash,
+                                  __glXCurrentContextHash);
+
+
+
+static void ThreadDestroyed(void *tsdCtx)
+{
+    /*
+     * If a GLX context is current in this thread, remove it from the
+     * current context hash before destroying the thread.
+     *
+     * The TSD key associated with this destructor contains a pointer
+     * to the current context.
+     */
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+    UntrackCurrentContext(tsdCtx);
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+}
+
+static void ThreadDestroyKeyCreateOnce(void)
+{
+    int ret = __glXPthreadFuncs.key_create(&threadDestroyKey, ThreadDestroyed);
+    assert(!ret);
+
+    threadDestroyKeyInitialized = True;
+}
+
+void __glXInitThreads(void)
+{
+    __glXPthreadFuncs.once(&threadDestroyKeyCreateOnceControl, ThreadDestroyKeyCreateOnce);
+}
+
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
 {
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
@@ -212,20 +261,6 @@ __GLXAPIState *__glXGetAPIState(glvnd_thread_t tid)
 }
 
 /*
- * Hashtable tracking current contexts for the purpose of determining whether
- * glXDestroyContext() should remove the context -> screen mapping immediately,
- * or defer this until the context loses current.
- */
-typedef struct __GLXcurrentContextHashRec {
-    GLXContext ctx;
-    Bool needsUnmap;
-    UT_hash_handle hh;
-} __GLXcurrentContextHash;
-
-static DEFINE_INITIALIZED_LKDHASH(__GLXcurrentContextHash,
-                                  __glXCurrentContextHash);
-
-/*
  * Notifies libglvnd that the given context has been marked for destruction
  * by glXDestroyContext(), and removes any context -> screen mappings if
  * necessary.
@@ -268,6 +303,14 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
 static Bool TrackCurrentContext(GLXContext ctx)
 {
     __GLXcurrentContextHash *pEntry = NULL;
+    GLXContext tsdCtx;
+
+    assert(threadDestroyKeyInitialized);
+
+    // Update the TSD entry to reflect the correct current context
+    tsdCtx = (GLXContext)__glXPthreadFuncs.getspecific(threadDestroyKey);
+    __glXPthreadFuncs.setspecific(threadDestroyKey, ctx);
+
     if (!ctx) {
         // Don't track NULL contexts
         return True;
@@ -279,6 +322,8 @@ static Bool TrackCurrentContext(GLXContext ctx)
 
     pEntry = malloc(sizeof(*pEntry));
     if (!pEntry) {
+        // Restore the original TSD entry
+        __glXPthreadFuncs.setspecific(threadDestroyKey, tsdCtx);
         return False;
     }
 

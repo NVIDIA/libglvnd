@@ -56,6 +56,15 @@ typedef struct GLVNDPthreadRealFuncsRec {
 
     /* Other used functions */
     int (*once)(pthread_once_t *once_control, void (*init_routine)(void));
+
+    /*
+     * TSD key management.  Used to handle the corner case when a thread
+     * is destroyed with a context current.
+     */
+    int (*key_create)(pthread_key_t *key, void (*destr_function)(void *));
+    int (*key_delete)(pthread_key_t key);
+    int (*setspecific)(pthread_key_t key, const void *p);
+    void *(*getspecific)(pthread_key_t key);
 } GLVNDPthreadRealFuncs;
 
 static GLVNDPthreadRealFuncs pthreadRealFuncs;
@@ -153,6 +162,26 @@ static int st_once(glvnd_once_t *once_control, void (*init_routine)(void))
     return 0;
 }
 
+static int st_key_create(glvnd_key_t *key, void (*destr_function)(void *))
+{
+    return 0;
+}
+
+static int st_key_delete(glvnd_key_t key)
+{
+    return 0;
+}
+
+static int st_setspecific(glvnd_key_t key, const void *p)
+{
+    return 0;
+}
+
+static void *st_getspecific(glvnd_key_t key)
+{
+    return NULL;
+}
+
 /* Multi-threaded functions */
 
 static int mt_create(glvnd_thread_t *thread, const glvnd_thread_attr_t *attr,
@@ -222,6 +251,26 @@ static int mt_once(glvnd_once_t *once_control, void (*init_routine)(void))
     return pthreadRealFuncs.once(&once_control->once, init_routine);
 }
 
+static int mt_key_create(glvnd_key_t *key, void (*destr_function)(void *))
+{
+    return pthreadRealFuncs.key_create(key, destr_function);
+}
+
+static int mt_key_delete(glvnd_key_t key)
+{
+    return pthreadRealFuncs.key_delete(key);
+}
+
+static int mt_setspecific(glvnd_key_t key, const void *p)
+{
+    return pthreadRealFuncs.setspecific(key, p);
+}
+
+static void *mt_getspecific(glvnd_key_t key)
+{
+    return pthreadRealFuncs.getspecific(key);
+}
+
 int glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
 {
     char *force_st = getenv("__GL_SINGLETHREADED");
@@ -244,6 +293,10 @@ int glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
     GET_MT_FUNC(funcs, dlhandle, rwlock_wrlock);
     GET_MT_FUNC(funcs, dlhandle, rwlock_unlock);
     GET_MT_FUNC(funcs, dlhandle, once);
+    GET_MT_FUNC(funcs, dlhandle, key_create);
+    GET_MT_FUNC(funcs, dlhandle, key_delete);
+    GET_MT_FUNC(funcs, dlhandle, setspecific);
+    GET_MT_FUNC(funcs, dlhandle, getspecific);
 
     // Multi-threaded
     return 1;
@@ -265,6 +318,10 @@ fail:
     GET_ST_FUNC(funcs, rwlock_wrlock);
     GET_ST_FUNC(funcs, rwlock_unlock);
     GET_ST_FUNC(funcs, once);
+    GET_ST_FUNC(funcs, key_create);
+    GET_ST_FUNC(funcs, key_delete);
+    GET_ST_FUNC(funcs, setspecific);
+    GET_ST_FUNC(funcs, getspecific);
 
 
     // Single-threaded
