@@ -96,7 +96,7 @@ PUBLIC void glXDestroyContext(Display *dpy, GLXContext context)
     const int screen = __glXScreenFromContext(context);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
-    __glXRemoveScreenContextMapping(context, screen);
+    __glXNotifyContextDestroyed(context);
 
     pDispatch->glx14ep.destroyContext(dpy, context);
 }
@@ -211,6 +211,133 @@ __GLXAPIState *__glXGetAPIState(glvnd_thread_t tid)
     return apiState;
 }
 
+/*
+ * Hashtable tracking current contexts for the purpose of determining whether
+ * glXDestroyContext() should remove the context -> screen mapping immediately,
+ * or defer this until the context loses current.
+ */
+typedef struct __GLXcurrentContextHashRec {
+    GLXContext ctx;
+    Bool needsUnmap;
+    UT_hash_handle hh;
+} __GLXcurrentContextHash;
+
+static DEFINE_INITIALIZED_LKDHASH(__GLXcurrentContextHash,
+                                  __glXCurrentContextHash);
+
+/*
+ * Notifies libglvnd that the given context has been marked for destruction
+ * by glXDestroyContext(), and removes any context -> screen mappings if
+ * necessary.
+ */
+void __glXNotifyContextDestroyed(GLXContext ctx)
+{
+    Bool canUnmap = True;
+    __GLXcurrentContextHash *pEntry = NULL;
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+
+    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
+
+    if (pEntry) {
+        canUnmap = False;
+        pEntry->needsUnmap = True;
+    }
+
+    if (canUnmap) {
+        /*
+         * XXX: kludge. We should probably remove the screen argument
+         * from the Remove.*Mapping commands.
+         *
+         * XXX: Note: this implies a lock ordering: the current context
+         * hash lock must be taken before the screen pointer hash lock!
+         */
+        int screen = __glXScreenFromContext(ctx);
+        __glXRemoveScreenContextMapping(ctx, screen);
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+
+}
+
+/*
+ * Adds a context to the current context list. Note: __glXCurrentContextHash
+ * must be write-locked before calling this function!
+ *
+ * Returns True on success.
+ */
+static Bool TrackCurrentContext(GLXContext ctx)
+{
+    __GLXcurrentContextHash *pEntry = NULL;
+    if (!ctx) {
+        // Don't track NULL contexts
+        return True;
+    }
+
+    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
+
+    assert(!pEntry);
+
+    pEntry = malloc(sizeof(*pEntry));
+    if (!pEntry) {
+        return False;
+    }
+
+    pEntry->ctx = ctx;
+    pEntry->needsUnmap = False;
+    HASH_ADD(hh, _LH(__glXCurrentContextHash), ctx, sizeof(ctx), pEntry);
+
+    return True;
+}
+
+/*
+ * Note: __glXCurrentContextHash must be (read or write)-locked before calling
+ * this function!
+ */
+static Bool IsContextCurrentToAnyOtherThread(GLXContext ctx)
+{
+    GLXContext current = glXGetCurrentContext();
+    __GLXcurrentContextHash *pEntry = NULL;
+
+    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
+
+    return !!pEntry && (current != ctx);
+}
+
+/*
+ * Removes a context from the current context list, and removes any context ->
+ * screen mappings if necessary. TODO: need to handle the corner case where the
+ * thread is terminated and we haven't lost current to this context
+ *
+ * Note: The __glXCurrentContextHash must be write-locked before calling this
+ * function!
+ */
+static void UntrackCurrentContext(GLXContext ctx)
+{
+    Bool needsUnmap = False;
+    __GLXcurrentContextHash *pEntry = NULL;
+    if (!ctx) {
+        // Don't untrack NULL contexts
+        return;
+    }
+
+    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
+
+    assert(pEntry);
+
+    needsUnmap = pEntry->needsUnmap;
+    HASH_DELETE(hh, _LH(__glXCurrentContextHash), pEntry);
+    free(pEntry);
+
+    if (needsUnmap) {
+        /*
+         * XXX: kludge. We should probably remove the screen argument
+         * from the Remove.*Mapping commands.
+         */
+        int screen = __glXScreenFromContext(ctx);
+        __glXRemoveScreenContextMapping(ctx, screen);
+    }
+}
+
 static Bool MakeContextCurrentInternal(Display *dpy,
                                        GLXDrawable draw,
                                        GLXDrawable read,
@@ -228,7 +355,24 @@ static Bool MakeContextCurrentInternal(Display *dpy,
     apiState = __glXGetCurrentAPIState();
     oldVendor = apiState->currentVendor;
     screen = __glXScreenFromContext(context);
+
+    if (context && (screen < 0)) {
+        /*
+         * XXX: We can run into this corner case if a GLX client calls
+         * glXDestroyContext() on a current context, loses current to this
+         * context (causing it to be freed), then tries to make current to the
+         * context again.  This is incorrect application behavior, but we should
+         * attempt to handle this failure gracefully.
+         */
+        return False;
+    }
+
+    /*
+     * If we have a valid screen number, there must be a valid vendor associated
+     * with that screen.
+     */
     newVendor = __glXLookupVendorByScreen(dpy, screen);
+    assert(!context || newVendor);
 
     if (oldVendor != newVendor) {
         // Lose current on the old context before proceeding
@@ -325,6 +469,24 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
 
     SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
 
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+
+    if (IsContextCurrentToAnyOtherThread(context)) {
+        // XXX throw BadAccess?
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+        return False;
+    }
+
+    if (oldContext != context) {
+        if (!TrackCurrentContext(context)) {
+            /*
+             * Fail here. Continuing on would mess up our accounting.
+             */
+            LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+            return False;
+        }
+    }
+
     ret = MakeContextCurrentInternal(dpy,
                                      drawable,
                                      drawable,
@@ -352,6 +514,20 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
             }
         }
     }
+
+    if (oldContext != context) {
+        /*
+         * Only untrack the old context if the make current operation succeeded.
+         * Otherwise, untrack the new context.
+         */
+        if (ret) {
+            UntrackCurrentContext(oldContext);
+        } else {
+            UntrackCurrentContext(context);
+        }
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 
     return ret;
 }
@@ -695,7 +871,7 @@ PUBLIC XVisualInfo *glXGetVisualFromFBConfig(Display *dpy, GLXFBConfig config)
 }
 
 PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
-                           GLXDrawable read, GLXContext context)
+                                  GLXDrawable read, GLXContext context)
 {
     const __GLXdispatchTableStatic *pDispatch;
     Bool ret;
@@ -703,6 +879,24 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
     GLXContext oldContext;
 
     SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+
+    if (IsContextCurrentToAnyOtherThread(context)) {
+        // XXX throw BadAccess?
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+        return False;
+    }
+
+    if (oldContext != context) {
+        if (!TrackCurrentContext(context)) {
+            /*
+             * Fail here. Continuing on would mess up our accounting.
+             */
+            LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+            return False;
+        }
+    }
 
     ret = MakeContextCurrentInternal(dpy,
                                      draw,
@@ -734,6 +928,20 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
             }
         }
     }
+
+    if (oldContext != context) {
+        /*
+         * Only untrack the old context if the make current operation succeeded.
+         * Otherwise, untrack the new context.
+         */
+        if (ret) {
+            UntrackCurrentContext(oldContext);
+        } else {
+            UntrackCurrentContext(context);
+        }
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 
     return ret;
 }

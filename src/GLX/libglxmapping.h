@@ -80,6 +80,11 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName);
 __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen);
 
+/*!
+ * Notifies libglvnd that a context has been marked for destruction.
+ */
+void __glXNotifyContextDestroyed(GLXContext ctx);
+
 /*
  * Close the vendor library and perform any relevant teardown. This should
  * be called on each vendor when the API library is unloaded.
