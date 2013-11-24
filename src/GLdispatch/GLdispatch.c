@@ -362,18 +362,18 @@ static struct _glapi_table
     return table;
 }
 
-PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState)
+PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
+                                    __GLdispatchTable *dispatch,
+                                    void *context)
 {
     __GLdispatchAPIState *curApiState = (__GLdispatchAPIState *)
         _glapi_get_current(CURRENT_API_STATE);
-    __GLdispatchTable *dispatch = apiState->dispatch;
     __GLdispatchTable *curDispatch = curApiState ? curApiState->dispatch : NULL;
 
     // We need to fix up the dispatch table if it hasn't been
     // initialized, or there are new dynamic entries which were
     // added since the last time make current was called.
     LockDispatch();
-    DBG_PRINTF(20, "dispatch=%p\n", dispatch);
 
     if (!dispatch->table ||
         (dispatch->generation < latestGeneration)) {
@@ -394,20 +394,20 @@ PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState)
         DispatchCurrentRef(dispatch);
     }
 
-    /*
-     * Set the current __GLdispatchTable and _glapi_table in TLS
-     * we have to keep the dispatch lock until the _glapi_table
-     * is set.
-     * XXX: this would be cleaner if this used
-     * _glapi_set_current(dispatch->table, CURRENT_DISPATCH)
-     */
-    _glapi_set_dispatch(dispatch->table);
-
-    DBG_PRINTF(20, "done\n");
     UnlockDispatch();
 
-    _glapi_set_current(apiState->context, CURRENT_CONTEXT);
+    /*
+     * Update the API state with the new values.
+     */
+    apiState->context = context;
+    apiState->dispatch = dispatch;
+
+    /*
+     * Set the current state in TLS.
+     */
+    _glapi_set_current(context, CURRENT_CONTEXT);
     _glapi_set_current(apiState, CURRENT_API_STATE);
+    _glapi_set_dispatch(dispatch->table);
 }
 
 PUBLIC void __glDispatchLoseCurrent(void)
@@ -415,12 +415,13 @@ PUBLIC void __glDispatchLoseCurrent(void)
     __GLdispatchAPIState *curApiState =
         (__GLdispatchAPIState *)_glapi_get_current(CURRENT_API_STATE);
 
-    DBG_PRINTF(20, "\n");
-
     if (curApiState) {
         LockDispatch();
         DispatchCurrentUnref(curApiState->dispatch);
         UnlockDispatch();
+
+        curApiState->dispatch = NULL;
+        curApiState->context = NULL;
     }
 
     _glapi_set_current(NULL, CURRENT_API_STATE);

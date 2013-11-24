@@ -88,7 +88,9 @@ void __glXMakeGLDispatchCurrent(__GLXcoreDispatchTable *table)
 
     if (apiState) {
         apiState->glas.dispatch = (__GLdispatchTable *)table;
-        __glDispatchMakeCurrent(&apiState->glas);
+        __glDispatchMakeCurrent(&apiState->glas,
+                                apiState->glas.dispatch,
+                                apiState->glas.context);
     }
 }
 

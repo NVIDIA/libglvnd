@@ -144,10 +144,12 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(
 PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
 
 /*!
- * This makes the given API state current, and sets the current dispatch
- * table and context based on the settings in the API state.
+ * This makes the given API state current, and assigns this API state
+ * the passed-in current dispatch table and context.
  */
-PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState);
+PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
+                                    __GLdispatchTable *dispatch,
+                                    void *context);
 
 /*!
  * This makes the NOP dispatch table current and sets the current context and

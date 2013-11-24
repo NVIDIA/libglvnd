@@ -254,6 +254,10 @@ static Bool MakeContextCurrentInternal(Display *dpy,
             return False;
         }
 
+        /*
+         * Call into GLdispatch to lose current and update the context and GL
+         * dispatch table
+         */
         __glDispatchLoseCurrent();
 
         /* Update the current display and drawable(s) in this apiState */
@@ -266,11 +270,6 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         apiState->currentStaticDispatch = NULL;
         apiState->currentDynDispatch = NULL;
 
-        /* Update the GL dispatch table */
-        apiState->glas.dispatch = NULL;
-
-        /* Update the current context */
-        apiState->glas.context = NULL;
         return True;
     } else {
         /* Update the current display and drawable(s) in this apiState */
@@ -283,13 +282,8 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         apiState->currentStaticDispatch = *ppDispatch;
         apiState->currentDynDispatch = newVendor->dynDispatch;
 
-        /* Update the GL dispatch table */
-        apiState->glas.dispatch = newVendor->glDispatch;
-
         DBG_PRINTF(0, "GL dispatch = %p\n", apiState->glas.dispatch);
 
-        /* Update the current context */
-        apiState->glas.context = context;
 
         /*
          * XXX It is possible that these drawables were never seen by
@@ -302,9 +296,12 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         __glXAddScreenDrawableMapping(read, screen);
 
         /*
-         * Call into GLdispatch to set up the current state.
+         * Call into GLdispatch to set up the current context and
+         * GL dispatch table.
          */
-        __glDispatchMakeCurrent(&apiState->glas);
+        __glDispatchMakeCurrent(&apiState->glas,
+                                newVendor->glDispatch,
+                                (void *)context);
     }
 
     return True;
