@@ -172,7 +172,7 @@ PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
     const int screen = __glXScreenFromDrawable(dpy, pix);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
-    __glXRemoveScreenDrawableMapping(pix, screen);
+    __glXRemoveScreenDrawableMapping(pix);
 
     pDispatch->glx14ep.destroyGLXPixmap(dpy, pix);
 }
@@ -298,14 +298,10 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
 
     if (canUnmap) {
         /*
-         * XXX: kludge. We should probably remove the screen argument
-         * from the Remove.*Mapping commands.
-         *
-         * XXX: Note: this implies a lock ordering: the current context
+         * Note: this implies a lock ordering: the current context
          * hash lock must be taken before the screen pointer hash lock!
          */
-        int screen = __glXScreenFromContext(ctx);
-        __glXRemoveScreenContextMapping(ctx, screen);
+        __glXRemoveScreenContextMapping(ctx);
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
@@ -392,12 +388,7 @@ static void UntrackCurrentContext(GLXContext ctx)
     free(pEntry);
 
     if (needsUnmap) {
-        /*
-         * XXX: kludge. We should probably remove the screen argument
-         * from the Remove.*Mapping commands.
-         */
-        int screen = __glXScreenFromContext(ctx);
-        __glXRemoveScreenContextMapping(ctx, screen);
+        __glXRemoveScreenContextMapping(ctx);
     }
 }
 
@@ -854,7 +845,7 @@ PUBLIC void glXDestroyPbuffer(Display *dpy, GLXPbuffer pbuf)
     const int screen = __glXScreenFromDrawable(dpy, pbuf);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
-    __glXRemoveScreenDrawableMapping(pbuf, screen);
+    __glXRemoveScreenDrawableMapping(pbuf);
 
     pDispatch->glx14ep.destroyPbuffer(dpy, pbuf);
 }
@@ -865,7 +856,7 @@ PUBLIC void glXDestroyPixmap(Display *dpy, GLXPixmap pixmap)
     const int screen = __glXScreenFromDrawable(dpy, pixmap);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
-    __glXRemoveScreenDrawableMapping(pixmap, screen);
+    __glXRemoveScreenDrawableMapping(pixmap);
 
     pDispatch->glx14ep.destroyPixmap(dpy, pixmap);
 }
@@ -876,7 +867,7 @@ PUBLIC void glXDestroyWindow(Display *dpy, GLXWindow win)
     const int screen = __glXScreenFromDrawable(dpy, win);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
-    __glXRemoveScreenDrawableMapping(win, screen);
+    __glXRemoveScreenDrawableMapping(win);
 
     pDispatch->glx14ep.destroyWindow(dpy, win);
 }

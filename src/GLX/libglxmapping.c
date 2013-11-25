@@ -36,8 +36,8 @@
 # include <stdio.h>
 #endif
 
+#include "libglxcurrent.h"
 #include "libglxmapping.h"
-#include "libglxgldispatch.h"
 #include "libglxnoop.h"
 #include "libglxthread.h"
 #include "trace.h"
@@ -74,7 +74,7 @@ typedef struct __GLXdispatchFuncHashRec {
     UT_hash_handle hh;
 } __GLXdispatchFuncHash;
 
-typedef struct __GLXdispatchTableDynamicRec {
+struct __GLXdispatchTableDynamicRec {
     /*
      * Hash table containing the dynamic dispatch funcs. This is used instead of
      * a flat array to avoid sparse array usage. XXX might be more performant to
@@ -86,7 +86,7 @@ typedef struct __GLXdispatchTableDynamicRec {
      * Pointer to the vendor library info, used by __glXFetchDispatchEntry()
      */
      __GLXvendorInfo *vendor;
-} __GLXdispatchTableDynamic;
+};
 
 /****************************************************************************/
 /*
@@ -165,6 +165,10 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
      * XXX for full correctness, we should probably load vendors
      * on all screens up-front before doing this. However, that
      * might be bad for performance?
+     *
+     * A better way to solve this issue might be to tweak the ABI slightly
+     * to allow vendors to provide a standalone DSO which only
+     * exports vendor-neutral dispatch functions, and nothing else.
      */
     LKDHASH_RDLOCK(__glXPthreadFuncs, __glXVendorNameHash);
     HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
@@ -222,7 +226,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXdispatchTableDynamic *dynDispatch,
         if (procName) {
             // Get the real address
             addr = dynDispatch->vendor->staticDispatch->
-                glxvc.getProcAddress(procName, NULL);
+                glxvc.getProcAddress(procName, GL_FALSE);
         }
 
         LKDHASH_WRLOCK(__glXPthreadFuncs, dynDispatch->hash);
@@ -248,21 +252,31 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXdispatchTableDynamic *dynDispatch,
     return addr;
 }
 
-static __GLXapiExports glxExportsTable = {
-    .getDynDispatch = __glXGetDynDispatch,
-    .fetchDispatchEntry = __glXFetchDispatchEntry,
+static __GLXapiExports glxExportsTable;
+static glvnd_once_t glxExportsTableOnceControl = GLVND_ONCE_INIT;
+
+static void InitExportsTable(void)
+{
+    glxExportsTable.getDynDispatch = __glXGetDynDispatch;
+    glxExportsTable.getCurrentDynDispatch = __glXGetCurrentDynDispatch;
+    glxExportsTable.fetchDispatchEntry = __glXFetchDispatchEntry;
 
     /* We use the real function since __glXGetCurrentContext is inline */
-    .getCurrentContext = glXGetCurrentContext,
+    glxExportsTable.getCurrentContext = glXGetCurrentContext;
 
-    /* GL dispatch management */
-    .getCurrentGLDispatch = __glXGetCurrentGLDispatch,
-    .getTopLevelDispatch = __glXGetTopLevelDispatch,
-    .createGLDispatch = __glXCreateGLDispatch,
-    .getGLDispatchOffset = __glXGetGLDispatchOffset,
-    .makeGLDispatchCurrent = __glXMakeGLDispatchCurrent,
-    .destroyGLDispatch = __glXDestroyGLDispatch
-};
+    glxExportsTable.addScreenContextMapping = __glXAddScreenContextMapping;
+    glxExportsTable.removeScreenContextMapping = __glXRemoveScreenContextMapping;
+    glxExportsTable.screenFromContext = __glXScreenFromContext;
+
+    glxExportsTable.addScreenFBConfigMapping = __glXAddScreenFBConfigMapping;
+    glxExportsTable.removeScreenFBConfigMapping = __glXRemoveScreenFBConfigMapping;
+    glxExportsTable.screenFromFBConfig = __glXScreenFromFBConfig;
+
+    glxExportsTable.addScreenDrawableMapping = __glXAddScreenDrawableMapping;
+    glxExportsTable.removeScreenDrawableMapping = __glXRemoveScreenDrawableMapping;
+    glxExportsTable.screenFromDrawable = __glXScreenFromDrawable;
+
+}
 
 static char *ConstructVendorLibraryFilename(const char *vendorName)
 {
@@ -322,6 +336,10 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
 
+            /* Initialize the glxExportsTable if we haven't already */
+            __glXPthreadFuncs.once(&glxExportsTableOnceControl,
+                                   InitExportsTable);
+
             dispatch = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
                                       &glxExportsTable,
                                       vendorName);
@@ -343,7 +361,9 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             vendor->staticDispatch = dispatch;
 
             vendor->glDispatch = (__GLdispatchTable *)
-                __glXCreateGLDispatch(&dispatch->glxvc, NULL);
+                __glDispatchCreateTable(
+                    dispatch->glxvc.getProcAddress
+                );
             if (!vendor->glDispatch) {
                 goto fail;
             }
@@ -556,15 +576,11 @@ static void AddScreenPointerMapping(void *ptr, int screen)
 }
 
 
-static void RemoveScreenPointerMapping(void *ptr, int screen)
+static void RemoveScreenPointerMapping(void *ptr)
 {
     __GLXscreenPointerMappingHash *pEntry;
 
     if (ptr == NULL) {
-        return;
-    }
-
-    if (screen < 0) {
         return;
     }
 
@@ -606,9 +622,9 @@ void __glXAddScreenContextMapping(GLXContext context, int screen)
 }
 
 
-void __glXRemoveScreenContextMapping(GLXContext context, int screen)
+void __glXRemoveScreenContextMapping(GLXContext context)
 {
-    RemoveScreenPointerMapping(context, screen);
+    RemoveScreenPointerMapping(context);
 }
 
 
@@ -624,9 +640,9 @@ void __glXAddScreenFBConfigMapping(GLXFBConfig config, int screen)
 }
 
 
-void __glXRemoveScreenFBConfigMapping(GLXFBConfig config, int screen)
+void __glXRemoveScreenFBConfigMapping(GLXFBConfig config)
 {
-    RemoveScreenPointerMapping(config, screen);
+    RemoveScreenPointerMapping(config);
 }
 
 
@@ -682,15 +698,11 @@ static void AddScreenXIDMapping(XID xid, int screen)
 }
 
 
-static void RemoveScreenXIDMapping(XID xid, int screen)
+static void RemoveScreenXIDMapping(XID xid)
 {
     __GLXscreenXIDMappingHash *pEntry;
 
     if (xid == None) {
-        return;
-    }
-
-    if (screen < 0) {
         return;
     }
 
@@ -735,9 +747,9 @@ void __glXAddScreenDrawableMapping(GLXDrawable drawable, int screen)
 }
 
 
-void __glXRemoveScreenDrawableMapping(GLXDrawable drawable, int screen)
+void __glXRemoveScreenDrawableMapping(GLXDrawable drawable)
 {
-    RemoveScreenXIDMapping(drawable, screen);
+    RemoveScreenXIDMapping(drawable);
 }
 
 

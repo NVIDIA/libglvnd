@@ -33,6 +33,7 @@
 #include "glheader.h"
 #include "compiler.h"
 #include "glvnd_pthread.h"
+#include "GLdispatchABI.h"
 
 /*!
  * \defgroup gldispatch core GL/GLES dispatch and TLS module
@@ -52,19 +53,6 @@
 #define CURRENT_API_STATE   2  // GLAPI_CURRENT_USER1
 
 PUBLIC void *_glapi_get_current(int index);
-
-typedef void (*__GLdispatchProc)(void);
-typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
-                                            void *vendorData);
-typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
-                                            void *vendorData);
-typedef GLboolean (*__GLgetDispatchProtoCallback)(const GLubyte *procName,
-                                                  char ***function_names,
-                                                  char **parameter_signature);
-typedef void (*__GLdestroyVendorDataCallback)(void *vendorData);
-
-/* Opaque dispatch table structure. */
-typedef struct __GLdispatchTableRec __GLdispatchTable;
 
 /* Namespaces for API state */
 enum {
@@ -124,18 +112,13 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName);
  * \param [in] getProcAddress a vendor library callback GLdispatch can use to
  * query addresses of functions from the vendor. This callback also takes
  * a pointer to vendor-private data.
- * \param [in] getDispatchProto a vendor library callback GLdispatch can use to
- * query prototypes of functions it doesn't know about from the vendor.
  * \param [in] destroyVendorData a vendor library callback to destroy private
  * data when the dispatch table is destroyed.
  * \param [in] vendorData a pointer to vendor library private data, which can
  * be used by the getProcAddress callback.
  */
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(
-    __GLgetProcAddressCallback getProcAddress,
-    __GLgetDispatchProtoCallback getDispatchProto,
-    __GLdestroyVendorDataCallback destroyVendorData,
-    void *vendorData
+    __GLgetProcAddressCallback getProcAddress
 );
 
 /*!
@@ -186,7 +169,7 @@ static inline void *__glDispatchGetCurrentContext(void)
  * describes a real offset.  If the call succeeds, the offset remains valid for
  * the lifetime of libglvnd for all GL dispatch tables used by libglvnd.
  */
-PUBLIC GLint __glDispatchGetOffset(const char *procName);
+PUBLIC GLint __glDispatchGetOffset(const GLubyte *procName);
 
 /*!
  * This sets the dispatch table entry given by <offset> to the entrypoint

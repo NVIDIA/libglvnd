@@ -27,26 +27,35 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
-#ifndef __LIBGLX_GL_DISPATCH_H__
-#define __LIBGLX_GL_DISPATCH_H__
+#include <GL/gl.h>
 
-#include "libglxabi.h"
+#if !defined(__GL_DISPATCH_ABI_H)
+#define __GL_DISPATCH_ABI_H
 
-/*
- * These functions define the interface by which a vendor library can install
- * and manage its own collection of dispatch tables. See libglxabi.h for
- * a more detailed explanation of these functions.
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+/*!
+ * \defgroup gldispatchabi GL dispatching ABI
+ *
+ * This is not a complete ABI, but rather a fragment common to the libEGL and
+ * libGLX ABIs.  Changes to this file should be accompanied by a version bump to
+ * these client ABIs.
  */
 
-__GLXcoreDispatchTable *__glXGetCurrentGLDispatch(void);
-__GLXcoreDispatchTable *__glXGetTopLevelDispatch(void);
-__GLXcoreDispatchTable *__glXCreateGLDispatch(const __GLXvendorCallbacks *cb,
-                                              void *data);
-GLint __glXGetGLDispatchOffset(const GLubyte *procName);
-void __glXSetGLDispatchEntry(__GLXcoreDispatchTable *table,
-                             GLint offset,
-                             __GLXextFuncPtr addr);
-void __glXMakeGLDispatchCurrent(__GLXcoreDispatchTable *table);
-GLboolean __glXDestroyGLDispatch(__GLXcoreDispatchTable *table);
+/*!
+ * This opaque structure describes the core GL dispatch table.
+ */
+typedef struct __GLdispatchTableRec __GLdispatchTable;
 
-#endif // __LIBGLX_GL_DISPATCH_H__
+typedef void (*__GLdispatchProc)(void);
+
+typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
+                                            int isClientAPI);
+
+#if defined(__cplusplus)
+}
+#endif
+
+#endif // __GL_DISPATCH_ABI_H

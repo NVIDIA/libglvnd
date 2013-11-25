@@ -38,7 +38,7 @@
  * Private dispatch table structure. This is used by GLdispatch for tracking
  * and updating dispatch tables.
  */
-typedef struct __GLdispatchTableRec {
+struct __GLdispatchTableRec {
     /*! Number of threads this dispatch is current on */
     int currentThreads;
 
@@ -47,17 +47,12 @@ typedef struct __GLdispatchTableRec {
 
     /*! Saved vendor library callbacks */
     __GLgetProcAddressCallback getProcAddress;
-    __GLgetDispatchProtoCallback getDispatchProto;
-    __GLdestroyVendorDataCallback destroyVendorData;
-
-    /*! A pointer to vendor-specific data */
-    void *vendorData;
 
     /*! The real dispatch table */
     struct _glapi_table *table;
 
     /*! List handle */
     struct glvnd_list entry;
-} __GLdispatchTable;
+};
 
 #endif

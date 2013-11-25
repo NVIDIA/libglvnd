@@ -157,42 +157,44 @@ static void FixupDispatchTable(__GLdispatchTable *dispatch)
     CheckDispatchLocked();
 
     __GLdispatchProcEntry *curProc, *tmpProc;
-
-    char **function_name, **function_names, *parameter_signature;
-
+    const char *function_names[2];
     void *procAddr;
     void **tbl = (void **)dispatch->table;
 
     /*
-     * For each proc in the newProcList, request a dispatch prototype from the
-     * vendor library and plug it into glapi. If we succeed, move the proc
-     * from the newProcList to the extProcList, and do some cleanup.
+     * For each proc in the newProcList, attempt to create a dispatch stub in
+     * glapi, then move the proc from the newProcList to the extProcList and do
+     * some cleanup.
      */
     glvnd_list_for_each_entry_safe(curProc, tmpProc, &newProcList, entry) {
 
         DBG_PRINTF(20, "newProc procName=%s\n", curProc->procName);
-        if ((*dispatch->getDispatchProto)((const GLubyte *)curProc->procName,
-                                          &function_names,
-                                          &parameter_signature)) {
 
-            curProc->offset =
-                _glapi_add_dispatch((const char * const *)function_names,
-                                    (const char *)parameter_signature);
-            DBG_PRINTF(20, "newProc offset=%d\n", curProc->offset);
+        /*
+         * _glapi_add_dispatch() has support for mapping multiple "equivalent"
+         * function names (for example, glUniform1fv() and glUniform1fvARB()) to
+         * one dispatch stub.  However, this becomes problematic in a
+         * multi-vendor scenario, as vendors may have differing viewpoints on
+         * whether two entrypoints are identical.  The GLX_ARB_create_context
+         * extension, for example, defines "forward-compatible" contexts in
+         * which calling the ARB version of a function is an error if the
+         * non-ARB version is available.  For vendors that support this
+         * extension, the ARB and non-ARB entrypoints are not identical.
+         *
+         * Hence, we only pass one function name per entrypoint to glapi.
+         */
+        function_names[0] = curProc->procName;
+        function_names[1] = NULL;
 
-            assert(curProc->offset != -1);
+        curProc->offset =
+            _glapi_add_dispatch((const char * const *)function_names);
+        DBG_PRINTF(20, "newProc offset=%d\n", curProc->offset);
 
-            glvnd_list_del(&curProc->entry);
-            glvnd_list_add(&curProc->entry, &extProcList);
+        assert(curProc->offset != -1);
 
-            for (function_name = function_names;
-                 *function_name; function_name++) {
-                free(*function_name);
-            }
+        glvnd_list_del(&curProc->entry);
+        glvnd_list_add(&curProc->entry, &extProcList);
 
-            free(function_names);
-            free(parameter_signature);
-        }
     }
 
     /*
@@ -208,8 +210,7 @@ static void FixupDispatchTable(__GLdispatchTable *dispatch)
             assert(curProc->procName);
 
             procAddr = (void*)(*dispatch->getProcAddress)(
-                (const GLubyte *)curProc->procName,
-                dispatch->vendorData);
+                (const GLubyte *)curProc->procName, GL_TRUE);
 
             tbl[curProc->offset] = procAddr ? procAddr : (void *)noop_func;
             DBG_PRINTF(20, "extProc procName=%s, addr=%p, noop=%p\n",
@@ -305,15 +306,12 @@ PUBLIC void __glDispatchSetEntry(__GLdispatchTable *dispatch,
     UnlockDispatch();
 }
 
-GLint __glDispatchGetOffset(const char *procName)
+GLint __glDispatchGetOffset(const GLubyte *procName)
 {
-    return _glapi_get_proc_offset(procName);
+    return _glapi_get_proc_offset((const char *)procName);
 }
 
-PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback getProcAddress,
-                                                  __GLgetDispatchProtoCallback getDispatchProto,
-                                                  __GLdestroyVendorDataCallback destroyVendorData,
-                                                  void *vendorData)
+PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback getProcAddress)
 {
     __GLdispatchTable *dispatch = malloc(sizeof(__GLdispatchTable));
 
@@ -322,10 +320,6 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback get
     dispatch->table = NULL;
 
     dispatch->getProcAddress = getProcAddress;
-    dispatch->getDispatchProto = getDispatchProto;
-    dispatch->destroyVendorData = destroyVendorData;
-
-    dispatch->vendorData = vendorData;
 
     return dispatch;
 }
@@ -336,15 +330,13 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch)
     // TODO: delete the global lists
     // TODO: this is currently unused...
     LockDispatch();
-    dispatch->destroyVendorData(dispatch->vendorData);
     free(dispatch->table);
     free(dispatch);
     UnlockDispatch();
 }
 
 static struct _glapi_table
-*CreateGLAPITable(__GLgetProcAddressCallback getProcAddress,
-                  void *vendorData)
+*CreateGLAPITable(__GLgetProcAddressCallback getProcAddress)
 {
     size_t entries = _glapi_get_dispatch_table_size();
     struct _glapi_table *table = (struct _glapi_table *)
@@ -355,8 +347,7 @@ static struct _glapi_table
     if (table) {
         _glapi_init_table_from_callback(table,
                                         entries,
-                                        getProcAddress,
-                                        vendorData);
+                                        getProcAddress);
     }
 
     return table;
@@ -380,8 +371,7 @@ PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
 
         // Lazily create the dispatch table if we haven't already
         if (!dispatch->table) {
-            dispatch->table = CreateGLAPITable(dispatch->getProcAddress,
-                                               dispatch->vendorData);
+            dispatch->table = CreateGLAPITable(dispatch->getProcAddress);
         }
 
         FixupDispatchTable(dispatch);

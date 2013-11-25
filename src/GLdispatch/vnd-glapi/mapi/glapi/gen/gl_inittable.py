@@ -114,8 +114,7 @@ void
 _glapi_init_table_from_callback(struct _glapi_table *table,
                                 size_t entries,
                                 void *(*get_proc_addr)(const unsigned char *name,
-                                                       void *private_data),
-                                void *private_data)
+                                                       int isClientAPI))
 {
 """
 
@@ -128,7 +127,7 @@ body_template = """
     if(!table->%(name)s) {
         void ** procp = (void **) &table->%(name)s;
         *procp = (*get_proc_addr)((const unsigned char *)"gl%(entry_point)s",
-                                  private_data);
+                                  GL_TRUE);
     }
 """
 

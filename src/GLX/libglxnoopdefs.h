@@ -35,9 +35,6 @@
  * libglxnoop.c and the libGL filter library code.
  */
 
-#include "libglxabipriv.h"
-#include "libglxnoop.h"
-
 GLXNOOP XVisualInfo* NOOP_FUNC(ChooseVisual)(Display *dpy, int screen,
                                           int *attrib_list)
 {

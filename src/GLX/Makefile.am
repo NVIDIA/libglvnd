@@ -29,7 +29,6 @@ noinst_HEADERS = \
 	libglxabi.h \
 	libglxabipriv.h \
 	libglxcurrent.h \
-	libglxgldispatch.h \
 	libglxmapping.h \
 	libglxnoop.h \
 	libglxnoopdefs.h \
@@ -71,5 +70,4 @@ libGLX_la_LDFLAGS = -shared
 libGLX_la_SOURCES = \
 	libglx.c \
 	libglxmapping.c \
-	libglxnoop.c \
-	libglxgldispatch.c
+	libglxnoop.c
