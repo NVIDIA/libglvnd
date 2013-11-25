@@ -34,11 +34,14 @@
 #include <X11/extensions/extutil.h>
 #include <assert.h>
 
+#include "glvnd_list.h"
 #include "x11glvnd.h"
 #include "x11glvndproto.h"
 
 const char *xglv_ext_name = XGLV_EXTENSION_NAME;
 static XExtensionInfo *xglv_ext_info = NULL;
+
+static int close_display(Display *dpy, XExtCodes *codes);
 
 static /* const */ XExtensionHooks xglv_ext_hooks = {
     NULL,                               /* create_gc */
@@ -47,7 +50,7 @@ static /* const */ XExtensionHooks xglv_ext_hooks = {
     NULL,                               /* free_gc */
     NULL,                               /* create_font */
     NULL,                               /* free_font */
-    NULL,                               /* close_display */
+    close_display,                      /* close_display */
     NULL,                               /* wire_to_event */
     NULL,                               /* event_to_wire */
     NULL,                               /* error */
@@ -55,16 +58,61 @@ static /* const */ XExtensionHooks xglv_ext_hooks = {
 };
 
 
-XEXT_GENERATE_FIND_DISPLAY(find_display, xglv_ext_info,
-                           (char *)xglv_ext_name,
-                           &xglv_ext_hooks,
-                           XGLV_NUM_EVENTS, NULL);
+static XEXT_GENERATE_FIND_DISPLAY(find_display, xglv_ext_info,
+                                  (char *)xglv_ext_name,
+                                  &xglv_ext_hooks,
+                                  XGLV_NUM_EVENTS, NULL);
+
+typedef struct CloseDisplayHookRec {
+    /*
+     * Callback function
+     */
+    void (*callback)(Display *);
+
+    /*
+     * List entry
+     */
+    struct glvnd_list entry;
+} CloseDisplayHook;
+
+static int closeDisplayHookListInitialized;
+static struct glvnd_list closeDisplayHookList;
+
+void XGLVRegisterCloseDisplayCallback(void (*callback)(Display *))
+{
+    CloseDisplayHook *hook = malloc(sizeof(*hook));
+    hook->callback = callback;
+
+    if (!closeDisplayHookListInitialized) {
+        glvnd_list_init(&closeDisplayHookList);
+    }
+
+    glvnd_list_add(&hook->entry, &closeDisplayHookList);
+}
+
+static XEXT_GENERATE_CLOSE_DISPLAY(close_display_internal, xglv_ext_info);
+
+static XEXT_CLOSE_DISPLAY_PROTO(close_display)
+{
+    CloseDisplayHook *curHook;
+
+    /*
+     * Call any registered hooks before calling into the
+     * generated close_display() hook.
+     */
+    glvnd_list_for_each_entry(curHook, &closeDisplayHookList, entry) {
+        curHook->callback(dpy);
+    }
+
+    return close_display_internal(dpy, codes);
+}
 
 #define CHECK_EXTENSION(dpy, i, val)                \
     do {                                            \
         if (!XextHasExtension(i)) {                 \
             XMissingExtension(dpy, xglv_ext_name);  \
             UnlockDisplay(dpy);                     \
+            SyncHandle();                           \
             return val;                             \
         }                                           \
    } while (0)

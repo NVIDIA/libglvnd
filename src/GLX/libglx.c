@@ -54,7 +54,7 @@ GLVNDPthreadFuncs __glXPthreadFuncs;
 
 static glvnd_key_t threadDestroyKey;
 static Bool threadDestroyKeyInitialized;
-static glvnd_once_t threadDestroyKeyCreateOnceControl = GLVND_ONCE_INIT;
+static glvnd_once_t threadInitOnceControl = GLVND_ONCE_INIT;
 
 static void UntrackCurrentContext(GLXContext ctx);
 
@@ -88,17 +88,20 @@ static void ThreadDestroyed(void *tsdCtx)
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 }
 
-static void ThreadDestroyKeyCreateOnce(void)
+static void DisplayClosed(Display *dpy);
+
+static void ThreadInitOnce(void)
 {
     int ret = __glXPthreadFuncs.key_create(&threadDestroyKey, ThreadDestroyed);
     assert(!ret);
 
     threadDestroyKeyInitialized = True;
+    XGLVRegisterCloseDisplayCallback(DisplayClosed);
 }
 
 void __glXInitThreads(void)
 {
-    __glXPthreadFuncs.once(&threadDestroyKeyCreateOnceControl, ThreadDestroyKeyCreateOnce);
+    __glXPthreadFuncs.once(&threadInitOnceControl, ThreadInitOnce);
 }
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
@@ -210,6 +213,21 @@ PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
 }
 
 static DEFINE_INITIALIZED_LKDHASH(__GLXAPIState, __glXAPIStateHash);
+
+void DisplayClosed(Display *dpy)
+{
+    __GLXAPIState *apiState, *tmp;
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXAPIStateHash);
+    HASH_ITER(hh, _LH(__glXAPIStateHash), apiState, tmp) {
+        /*
+         * Stub out any references to this display in the API states.
+         */
+        if (apiState->currentDisplay == dpy) {
+            apiState->currentDisplay = NULL;
+        }
+    }
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXAPIStateHash);
+}
 
 /* NOTE this assumes the __glXAPIStateHash lock is taken! */
 static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
