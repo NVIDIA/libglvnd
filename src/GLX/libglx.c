@@ -387,6 +387,9 @@ static void UntrackCurrentContext(GLXContext ctx)
     HASH_DELETE(hh, _LH(__glXCurrentContextHash), pEntry);
     free(pEntry);
 
+    // Clear the TSD entry
+    __glXPthreadFuncs.setspecific(threadDestroyKey, NULL);
+
     if (needsUnmap) {
         __glXRemoveScreenContextMapping(ctx);
     }
