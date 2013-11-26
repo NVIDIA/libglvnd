@@ -420,12 +420,6 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
         return NULL;
     }
 
-    /*
-     * This is the first thing done by most vendor-neutral GLX entrypoints, and
-     * hence a good time to do any necessary per-thread initialization.
-     */
-    __glXInitThreads();
-
     memset(&key, 0, sizeof(key));
 
     key.dpy = dpy;

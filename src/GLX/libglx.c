@@ -52,9 +52,9 @@
 
 GLVNDPthreadFuncs __glXPthreadFuncs;
 
-static glvnd_key_t threadDestroyKey;
-static Bool threadDestroyKeyInitialized;
-static glvnd_once_t threadInitOnceControl = GLVND_ONCE_INIT;
+static glvnd_key_t tsdContextKey;
+static Bool tsdContextKeyInitialized;
+static glvnd_once_t threadCreateTSDContextOnceControl = GLVND_ONCE_INIT;
 
 static void UntrackCurrentContext(GLXContext ctx);
 
@@ -72,8 +72,6 @@ typedef struct __GLXcurrentContextHashRec {
 static DEFINE_INITIALIZED_LKDHASH(__GLXcurrentContextHash,
                                   __glXCurrentContextHash);
 
-
-
 static void ThreadDestroyed(void *tsdCtx)
 {
     /*
@@ -88,20 +86,12 @@ static void ThreadDestroyed(void *tsdCtx)
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 }
 
-static void DisplayClosed(Display *dpy);
-
-static void ThreadInitOnce(void)
+static void ThreadCreateTSDContextOnce(void)
 {
-    int ret = __glXPthreadFuncs.key_create(&threadDestroyKey, ThreadDestroyed);
+    int ret = __glXPthreadFuncs.key_create(&tsdContextKey, ThreadDestroyed);
     assert(!ret);
 
-    threadDestroyKeyInitialized = True;
-    XGLVRegisterCloseDisplayCallback(DisplayClosed);
-}
-
-void __glXInitThreads(void)
-{
-    __glXPthreadFuncs.once(&threadInitOnceControl, ThreadInitOnce);
+    tsdContextKeyInitialized = True;
 }
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
@@ -319,11 +309,15 @@ static Bool TrackCurrentContext(GLXContext ctx)
     __GLXcurrentContextHash *pEntry = NULL;
     GLXContext tsdCtx;
 
-    assert(threadDestroyKeyInitialized);
+    // Initialize the TSD entry (if we haven't already)
+    __glXPthreadFuncs.once(&threadCreateTSDContextOnceControl,
+                           ThreadCreateTSDContextOnce);
+
+    assert(tsdContextKeyInitialized);
 
     // Update the TSD entry to reflect the correct current context
-    tsdCtx = (GLXContext)__glXPthreadFuncs.getspecific(threadDestroyKey);
-    __glXPthreadFuncs.setspecific(threadDestroyKey, ctx);
+    tsdCtx = (GLXContext)__glXPthreadFuncs.getspecific(tsdContextKey);
+    __glXPthreadFuncs.setspecific(tsdContextKey, ctx);
 
     if (!ctx) {
         // Don't track NULL contexts
@@ -337,7 +331,7 @@ static Bool TrackCurrentContext(GLXContext ctx)
     pEntry = malloc(sizeof(*pEntry));
     if (!pEntry) {
         // Restore the original TSD entry
-        __glXPthreadFuncs.setspecific(threadDestroyKey, tsdCtx);
+        __glXPthreadFuncs.setspecific(tsdContextKey, tsdCtx);
         return False;
     }
 
@@ -388,7 +382,7 @@ static void UntrackCurrentContext(GLXContext ctx)
     free(pEntry);
 
     // Clear the TSD entry
-    __glXPthreadFuncs.setspecific(threadDestroyKey, NULL);
+    __glXPthreadFuncs.setspecific(tsdContextKey, NULL);
 
     if (needsUnmap) {
         __glXRemoveScreenContextMapping(ctx);
@@ -1230,6 +1224,9 @@ void __attribute__ ((constructor)) __glXInit(void)
             __glXLookupVendorByName(preloadedVendor);
         }
     }
+
+    /* Register our XCloseDisplay() callback */
+    XGLVRegisterCloseDisplayCallback(DisplayClosed);
 
     DBG_PRINTF(0, "Loading GLX...\n");
 
