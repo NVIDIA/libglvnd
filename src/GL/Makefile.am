@@ -44,6 +44,6 @@ glapitemp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
 
-libGL_la_LDFLAGS = -shared -Wl,--auxiliary=libGLdispatch.so.0 -Wl,--auxiliary=libGLX.so.0
+libGL_la_LDFLAGS = -shared -Wl,--auxiliary=libGLdispatch.so.0 -Wl,--auxiliary=libGLX.so.0 -version-info 1
 
 libGL_la_LIBADD = ../GLX/libGLX.la ../GLdispatch/libGLdispatch.la

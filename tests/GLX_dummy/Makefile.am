@@ -11,8 +11,9 @@ libGLX_dummy_copy : libGLX_dummy.la
 	cp .libs/libGLX_dummy.so.0.0.0 .libs/libGLX_dummy_1.so.0
 
 
-libGLX_dummy_la_CFLAGS =             \
+libGLX_dummy_la_CFLAGS =           \
 	-I$(top_srcdir)/src/GLX        \
+	-I$(top_srcdir)/src/GLdispatch \
 	-I$(top_srcdir)/src/util       \
 	-I$(top_srcdir)/src/util/trace \
 	-I$(top_srcdir)/include        \

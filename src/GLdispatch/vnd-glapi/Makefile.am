@@ -4,9 +4,19 @@ EXTRA_DIST = mapi
 
 TOP = $(top_srcdir)
 GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
-include $(srcdir)/mapi/Makefile.sources
 
 noinst_LTLIBRARIES = libglapi.la
+
+MAPI_UTIL_FILES = \
+	$(TOP)/$(MAPI_PREFIX)/u_current.c \
+	$(TOP)/$(MAPI_PREFIX)/u_execmem.c
+
+MAPI_GLAPI_FILES = \
+	$(TOP)/$(MAPI_PREFIX)/entry.c \
+	$(TOP)/$(MAPI_PREFIX)/mapi_glapi.c \
+	$(TOP)/$(MAPI_PREFIX)/stub.c \
+	$(TOP)/$(MAPI_PREFIX)/table.c \
+	$(MAPI_UTIL_FILES)
 
 libglapi_la_SOURCES = \
 	$(MAPI_GLAPI_FILES) \
@@ -35,5 +45,4 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/$(MAPI_PREFIX) \
 	-I$(top_srcdir)/$(MAPI_PREFIX)/glapi \
 	-I$(top_srcdir)/$(MAPI_MESA_PREFIX) \
-	-DMAPI_MODE_GLAPI \
 	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_tmp.h\"

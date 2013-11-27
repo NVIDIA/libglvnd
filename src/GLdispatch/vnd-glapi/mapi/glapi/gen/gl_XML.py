@@ -255,7 +255,10 @@ class gl_print_base(object):
 
 def real_function_name(element):
     name = element.nsProp( "name", None )
-    alias = element.nsProp( "alias", None )
+
+    # Disable aliasing static dispatch functions.  This functionality will be
+    # handled by the vendor libraries.
+    alias = None
 
     if alias:
         return alias
@@ -649,7 +652,10 @@ class gl_function( gl_item ):
 
     def process_element(self, element):
         name = element.nsProp( "name", None )
-        alias = element.nsProp( "alias", None )
+
+        # Disable aliasing static dispatch functions.  This functionality will
+        # be handled by the vendor libraries.
+        alias = None
 
         if is_attr_true(element, "static_dispatch"):
             self.static_entry_points.append(name)

@@ -43,15 +43,17 @@ libx11glvnd_client_la_LIBADD = $(XEXT_LIBS)
 libx11glvnd_client_la_SOURCES = \
 	x11glvndclient.c
 
-lib_LTLIBRARIES = libx11glvnd.la
+x11glvnd_LTLIBRARIES = x11glvnd.la
 
-libx11glvnd_la_CFLAGS = \
+x11glvnddir = $(libdir)/xorg/modules/extensions
+
+x11glvnd_la_CFLAGS = \
 	$(XORG_CFLAGS)          \
 	$(X11_CFLAGS)           \
 	$(INCLUDES)
 
-libx11glvnd_la_LDFLAGS = \
-	-shared
+x11glvnd_la_LDFLAGS = \
+	-shared -module
 
-libx11glvnd_la_SOURCES = \
+x11glvnd_la_SOURCES = \
 	x11glvndserver.c

@@ -38,7 +38,7 @@ import glX_XML
 
 
 # number of dynamic entries
-ABI_NUM_DYNAMIC_ENTRIES = 256
+ABI_NUM_DYNAMIC_ENTRIES = 4096
 
 class ABIEntry(object):
     """Represent an ABI entry."""

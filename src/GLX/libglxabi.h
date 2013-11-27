@@ -33,6 +33,12 @@
 #include <stdint.h>
 #include <GL/glx.h>
 
+#include "GLdispatchABI.h"
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /*!
  * \defgroup glxvendorabi GLX Vendor ABI
  *
@@ -47,10 +53,6 @@
  *   present in the static table.
  * - core GL dispatch table: this is a structure maintained by the API library
  *   which contains both GL core (static) and GL extension (dynamic) functions.
- *   There is always a fixed top-level core dispatch table which is plugged in
- *   by the API library at make current time, but the vendor may optionally
- *   specify auxiliary core dispatch tables using the API described below
- *   with different entrypoints and install them while its context is current.
  *
  * @{
  */
@@ -67,11 +69,6 @@
  * functions retrieve and operate on this structure using the API below.
  */
 typedef struct __GLXdispatchTableDynamicRec __GLXdispatchTableDynamic;
-
-/*!
- * This opaque structure describes the core GL dispatch table.
- */
-typedef struct __GLXcoreDispatchTableRec __GLXcoreDispatchTable;
 
 /*!
  * Forward declaration for createGLDispatch export.
@@ -120,69 +117,21 @@ typedef struct __GLXapiExportsRec {
     GLXContext                (*getCurrentContext)(void);
 
     /************************************************************************
-     * When a context is current, for performance reasons it may be desirable
-     * for a vendor to use different entrypoints for that context depending on
-     * the current GL state. The following routines allow a vendor to create and
-     * manage auxiliary dispatch tables for this purpose.
+     * These routines are used by vendor dispatch functions to look up
+     * and add mappings between various objects and screens.
      ************************************************************************/
 
-    /*!
-     * This retrieves the current core GL dispatch table.
-     */
-    __GLXcoreDispatchTable    *(*getCurrentGLDispatch)(void);
+    void (*addScreenContextMapping)(GLXContext context, int screen);
+    void (*removeScreenContextMapping)(GLXContext context);
+    int  (*screenFromContext)(GLXContext context);
 
-    /*!
-     * This retrieves the top-level GL dispatch table for the current vendor.
-     * This must always be defined for the lifetime of the vendor library.
-     */
-    __GLXcoreDispatchTable     *(*getTopLevelDispatch)(void);
+    void (*addScreenFBConfigMapping)(GLXFBConfig config, int screen);
+    void (*removeScreenFBConfigMapping)(GLXFBConfig config);
+    int  (*screenFromFBConfig)(GLXFBConfig config);
 
-    /*!
-     * This creates an auxiliary core GL dispatch table using the given
-     * vendor-specific callbacks and data. This data will be passed to the
-     * getProcAddress callback during dispatch table construction and can be
-     * used to discriminate between different flavors of entrypoints in the
-     * vendor.
-     * XXX: is the getProcAddress callback method too slow? Should we have
-     * a way for vendor libraries to declare fixed tables at startup that
-     * can be read quickly?
-     */
-    __GLXcoreDispatchTable   *(*createGLDispatch)(
-        const __GLXvendorCallbacks *cb,
-        void *data
-    );
-
-    /*!
-     * This retrieves the offset into the GL dispatch table for the given
-     * function name, or -1 if the function is not found.
-     * If a valid offset is returned, the offset is valid for all dispatch
-     * tables for the lifetime of the API library.
-     * XXX: should there be a way for vendor libraries to pre-load procs
-     * they care about?
-     */
-    GLint (*getGLDispatchOffset)(const GLubyte *procName);
-
-    /*!
-     * This sets the given entry in the GL dispatch table to the function
-     * address pointed to by addr.
-     */
-    void (*setGLDispatchEntry)(__GLXcoreDispatchTable *table,
-                               GLint offset,
-                               __GLXextFuncPtr addr);
-
-    /*!
-     * This makes the given GL dispatch table current. Note this operation
-     * is only valid when there is a GL context owned by the vendor which
-     * is current.
-     */
-    void (*makeGLDispatchCurrent)(__GLXcoreDispatchTable *table);
-
-    /*!
-     * This destroys the given GL dispatch table, and returns GL_TRUE on
-     * success. Note it is an error to attempt to destroy the top-level
-     * dispatch.
-     */
-    GLboolean (*destroyGLDispatch)(__GLXcoreDispatchTable *table);
+    void (*addScreenDrawableMapping)(GLXDrawable drawable, int screen);
+    void (*removeScreenDrawableMapping)(GLXDrawable drawable);
+    int  (*screenFromDrawable)(Display *dpy, GLXDrawable drawable);
 
 } __GLXapiExports;
 
@@ -323,20 +272,15 @@ typedef struct __GLX14EntryPointsRec {
 /*!
  * This structure stores required vendor library callbacks.
  */
-typedef struct __GLXvendorCallbacksRec {
+struct __GLXvendorCallbacksRec {
     /*!
-     * This retrieves the pointer to the real GLX or core GL function.  data can
-     * optionally point to vendor-specific information.  If data is NULL this is
-     * expected to retrieve a function suitable for use in the top-level
-     * dispatch; otherwise the resulting function is implementation-dependent.
+     * This retrieves the pointer to the real GLX or core GL function.
+     * isClientAPI indicates whether libglvnd thinks this function is
+     * from GLX or a client API.  This can be used in vendor libraries
+     * for internal consistency checks.
      */
-    void        *(*getProcAddress)        (const GLubyte *procName, void *data);
-
-    /*!
-     * This callback destroys the vendor-specific data pointed to by data,
-     * which was passed into a createDispatchTable() request.
-     */
-    void       (*destroyDispatchData)    (void *data);
+    void        *(*getProcAddress)        (const GLubyte *procName,
+                                           int isClientAPI);
 
     /*!
      * This retrieves vendor-neutral functions which use the
@@ -349,39 +293,7 @@ typedef struct __GLXvendorCallbacksRec {
      * assigned to a particular GLX extension function.
      */
     void        (*setDispatchIndex)      (const GLubyte *procName, int index);
-
-    /*!
-     * This retrieves a function prototype spec (as described by
-     * _glapi_add_dispatch()) from the vendor library for the given
-     * function name.
-     *
-     * \param [in] procName The name of the function whose spec we are
-     * interested in.
-     *
-     * \param [out] function_names If GL_TRUE is returned, a list of
-     * null-terminated strings, terminated by NULL, which contain aliases for
-     * the given function which should share the same dispatch offset. Both the
-     * strings and the list itself should be free(3)d after they are no longer
-     * needed.
-     *
-     * \param [out] parameter_signature If GL_TRUE is returned, a string
-     * representing the types of parameters passed into the named function.
-     * Characters are converted into parameter types using the following rules:
-     *
-     *  - 'i' for \c GLint, \c GLuint, and \c GLenum
-     *  - 'p' for any pointer type
-     *  - 'f' for \c GLfloat and \c GLclampf
-     *  - 'd' for \c GLdouble and \c GLclampd
-     *
-     * This string should be free(3)d after it is no longer needed.
-     *
-     * \return GL_TRUE if the vendor library recognized this function and
-     * provided a prototype, GL_FALSE otherwise.
-     */
-    GLboolean (*getDispatchProto)     (const GLubyte *procName,
-                                       char ***function_names,
-                                       char **parameter_signature);
-} __GLXvendorCallbacks;
+};
 
 typedef struct __GLXapiImportsRec {
     __GLX14EntryPoints glx14ep;
@@ -412,5 +324,9 @@ typedef const __GLXapiImports *(*__PFNGLXMAINPROC)
 /*!
  * @}
  */
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* __LIB_GLX_ABI_H */

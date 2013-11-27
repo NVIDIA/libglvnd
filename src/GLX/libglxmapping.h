@@ -60,15 +60,15 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
  * of a particular GLX call.
  */
 void __glXAddScreenContextMapping(GLXContext context, int screen);
-void __glXRemoveScreenContextMapping(GLXContext context, int screen);
+void __glXRemoveScreenContextMapping(GLXContext context);
 int __glXScreenFromContext(GLXContext context);
 
 void __glXAddScreenFBConfigMapping(GLXFBConfig config, int screen);
-void __glXRemoveScreenFBConfigMapping(GLXFBConfig config, int screen);
+void __glXRemoveScreenFBConfigMapping(GLXFBConfig config);
 int __glXScreenFromFBConfig(GLXFBConfig config);
 
 void __glXAddScreenDrawableMapping(GLXDrawable drawable, int screen);
-void __glXRemoveScreenDrawableMapping(GLXDrawable drawable, int screen);
+void __glXRemoveScreenDrawableMapping(GLXDrawable drawable);
 int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
@@ -79,6 +79,11 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
  */
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName);
 __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen);
+
+/*!
+ * Notifies libglvnd that a context has been marked for destruction.
+ */
+void __glXNotifyContextDestroyed(GLXContext ctx);
 
 /*
  * Close the vendor library and perform any relevant teardown. This should

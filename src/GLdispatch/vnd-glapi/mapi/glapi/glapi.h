@@ -168,8 +168,7 @@ _glapi_get_dispatch_table_size(void);
 
 
 _GLAPI_EXPORT int
-_glapi_add_dispatch( const char * const * function_names,
-		     const char * parameter_signature );
+_glapi_add_dispatch(const char * const * function_names);
 
 _GLAPI_EXPORT int
 _glapi_get_proc_offset(const char *funcName);
@@ -190,8 +189,7 @@ _GLAPI_EXPORT void
 _glapi_init_table_from_callback(struct _glapi_table *table,
                                 size_t entries,
                                 void *(*get_proc_addr)(const unsigned char *name,
-                                                       void *private_data),
-                                void *private_data);
+                                                       int isClientAPI));
 
 
 _GLAPI_EXPORT unsigned long

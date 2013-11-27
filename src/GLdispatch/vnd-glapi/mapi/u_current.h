@@ -1,9 +1,6 @@
 #ifndef _U_CURRENT_H_
 #define _U_CURRENT_H_
 
-#if defined(MAPI_MODE_UTIL) || defined(MAPI_MODE_GLAPI) || \
-    defined(MAPI_MODE_BRIDGE)
-
 #include "glapi/glapi.h"
 
 /* ugly renames to match glapi.h */
@@ -28,34 +25,6 @@ enum {
 #define u_current_get_user_internal _glapi_get_context
 
 #define u_current_tsd _gl_CurrentTSD
-
-#else /* MAPI_MODE_UTIL || MAPI_MODE_GLAPI || MAPI_MODE_BRIDGE */
-
-#include "u_compiler.h"
-
-struct mapi_table;
-
-enum {
-    U_CURRENT_TABLE = 0,
-    U_CURRENT_USER0,
-    U_CURRENT_USER1,
-    U_CURRENT_USER2,
-    U_CURRENT_USER3,
-    U_CURRENT_NUM_ENTRIES
-};
-
-#ifdef GLX_USE_TLS
-
-extern __thread void *u_current[U_CURRENT_NUM_ENTRIES]
-    __attribute__((tls_model("initial-exec")));
-
-#else /* GLX_USE_TLS */
-
-extern void *u_current[U_CURRENT_NUM_ENTRIES];
-
-#endif /* GLX_USE_TLS */
-
-#endif /* MAPI_MODE_UTIL || MAPI_MODE_GLAPI || MAPI_MODE_BRIDGE */
 
 void
 u_current_init(void);

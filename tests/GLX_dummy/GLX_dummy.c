@@ -439,7 +439,8 @@ static void dummyNopStub (void)
 }
 
 // XXX non-entry point ABI functions
-static void         *dummyGetProcAddress         (const GLubyte *procName, void *data)
+static void         *dummyGetProcAddress         (const GLubyte *procName,
+                                                  int isClientAPI)
 {
     int i;
     for (i = 0; i < ARRAY_LEN(procAddresses); i++) {
@@ -449,11 +450,6 @@ static void         *dummyGetProcAddress         (const GLubyte *procName, void 
     }
 
     return (void *)dummyNopStub;
-}
-
-static void dummyDestroyDispatchData(void *data)
-{
-    // nop
 }
 
 static void         *dummyGetDispatchAddress     (const GLubyte *procName)
@@ -471,24 +467,6 @@ static void         dummySetDispatchIndex      (const GLubyte *procName, int ind
         dummyExampleExtensionFunctionIndex = index;
     }
 }
-
-static GLboolean    dummyGetDispatchProto   (const GLubyte *procName,
-                                          char ***function_names,
-                                          char **parameter_signature)
-{
-    // We only export one extension function here
-    // TODO: Maybe a good idea to test a bunch of different protos?
-    if (!strcmp((const char *)procName, "glMakeCurrentTestResults")) {
-        *function_names = malloc(2 * sizeof(char *));
-        (*function_names)[0] = strdup("glMakeCurrentTestResults");
-        (*function_names)[1] = NULL;
-        *parameter_signature = strdup("ipp");
-        return GL_TRUE;
-    }
-
-    return GL_FALSE;
-}
-
 
 static const __GLXapiImports dummyImports =
 {
@@ -531,10 +509,8 @@ static const __GLXapiImports dummyImports =
     /* Non-entry points */
     .glxvc = {
         .getProcAddress = dummyGetProcAddress,
-        .destroyDispatchData = dummyDestroyDispatchData,
         .getDispatchAddress = dummyGetDispatchAddress,
         .setDispatchIndex = dummySetDispatchIndex,
-        .getDispatchProto = dummyGetDispatchProto
     }
 };
 

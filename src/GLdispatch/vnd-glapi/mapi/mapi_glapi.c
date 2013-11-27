@@ -124,8 +124,7 @@ _glapi_get_dispatch_table_size(void)
  * Check parameter_signature.
  */
 int
-_glapi_add_dispatch( const char * const * function_names,
-		     const char * parameter_signature )
+_glapi_add_dispatch( const char * const * function_names)
 {
    const struct mapi_stub *function_stubs[8];
    const struct mapi_stub *alias = NULL;

@@ -1,7 +1,7 @@
 dnl configure.ac
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.68])
+AC_PREREQ([2.63])
 AC_INIT([libglvnd], [0.0.0], [brnguyen@nvidia.com])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
@@ -98,14 +98,6 @@ fi
 
 dnl Various conditionals.
 AM_CONDITIONAL([GCC], [test x$GCC = xyes ])
-
-AM_CONDITIONAL(HAVE_VND_GLAPI, true)
-dnl HACK FIXME TODO
-AM_CONDITIONAL(HAVE_SHARED_GLAPI, false)
-AM_CONDITIONAL(HAVE_OPENGL, false)
-AM_CONDITIONAL(HAVE_OPENGL_ES1, false)
-AM_CONDITIONAL(HAVE_OPENGL_ES2, false)
-AM_CONDITIONAL(HAVE_OPENVG, false)
 
 dnl
 dnl mapi top-relative paths: defined here so mapi can be used elsewhere

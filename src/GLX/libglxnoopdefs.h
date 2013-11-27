@@ -35,9 +35,6 @@
  * libglxnoop.c and the libGL filter library code.
  */
 
-#include "libglxabipriv.h"
-#include "libglxnoop.h"
-
 GLXNOOP XVisualInfo* NOOP_FUNC(ChooseVisual)(Display *dpy, int screen,
                                           int *attrib_list)
 {
@@ -82,7 +79,11 @@ GLXNOOP void NOOP_FUNC(DestroyGLXPixmap)(Display *dpy, GLXPixmap pix)
 GLXNOOP int NOOP_FUNC(GetConfig)(Display *dpy, XVisualInfo *vis,
                               int attrib, int *value)
 {
-    return -1;
+    /*
+     * We get here if libglvnd couldn't find a valid vendor for vis->screen.
+     * Hence, "the screen of vis does not correspond to a screen".
+     */
+    return GLX_BAD_SCREEN;
 }
 
 
@@ -267,6 +268,11 @@ GLXNOOP GLXDrawable NOOP_FUNC(GetCurrentReadDrawable)(void)
 }
 
 GLXNOOP __GLXextFuncPtr NOOP_FUNC(GetProcAddress)(const GLubyte *procName)
+{
+    return NULL;
+}
+
+GLXNOOP __GLXextFuncPtr NOOP_FUNC(GetProcAddressARB)(const GLubyte *procName)
 {
     return NULL;
 }

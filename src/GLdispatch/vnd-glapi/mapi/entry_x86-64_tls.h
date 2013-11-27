@@ -45,7 +45,6 @@ __asm__(".text\n"
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
-#ifndef MAPI_MODE_BRIDGE
 
 __asm__("x86_64_current_tls:\n\t"
 	"movq " ENTRY_CURRENT_TABLE "@GOTTPOFF(%rip), %rax\n\t"
@@ -109,4 +108,3 @@ entry_generate(int slot)
    return entry;
 }
 
-#endif /* MAPI_MODE_BRIDGE */
