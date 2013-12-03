@@ -32,7 +32,6 @@
 /* define macros for use by assembly dispatchers */
 #define ENTRY_CURRENT_TABLE U_STRINGIFY(u_current)
 
-/* in bridge mode, mapi is a user of glapi */
 #define ENTRY_CURRENT_TABLE_GET U_STRINGIFY(u_current_get_internal)
 
 #if defined(USE_X86_ASM) && defined(__GNUC__)
@@ -44,44 +43,6 @@
 #elif defined(USE_X86_64_ASM) && defined(__GNUC__) && defined(GLX_USE_TLS)
 #   include "entry_x86-64_tls.h"
 #else
+#   include "entry_pure_c.h"
+#endif
 
-#include <stdlib.h>
-
-static INLINE const struct mapi_table *
-entry_current_get(void)
-{
-   return u_current_get();
-}
-
-/* C version of the public entries */
-#define MAPI_TMP_DEFINES
-#define MAPI_TMP_PUBLIC_DECLARES
-#define MAPI_TMP_PUBLIC_ENTRIES
-#include "mapi_tmp.h"
-
-
-void
-entry_patch_public(void)
-{
-}
-
-mapi_func
-entry_get_public(int slot)
-{
-   /* pubic_entries are defined by MAPI_TMP_PUBLIC_ENTRIES */
-   return public_entries[slot];
-}
-
-mapi_func
-entry_generate(int slot)
-{
-   return NULL;
-}
-
-void
-entry_patch(mapi_func entry, int slot)
-{
-}
-
-
-#endif /* asm */

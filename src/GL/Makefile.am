@@ -27,23 +27,48 @@
 
 lib_LTLIBRARIES = libGL.la
 
-libGL_la_SOURCES = \
-	GL.c           \
-	glapitemp.h
+TOP = $(top_srcdir)
+MAPI = $(top_srcdir)/$(MAPI_PREFIX)
+GLAPI = $(MAPI)/glapi
 
-BUILT_SOURCES = glapitemp.h
+noinst_HEADERS =        \
+	glapitemp.h         \
+	libgl.h             \
+	glapi_mapi_tmp.h
+
+libGL_la_SOURCES =      \
+	libgl.c             \
+	$(MAPI)/entry.c     \
+	g_libglglxwrapper.c
+
+BUILT_SOURCES = glapitemp.h glapi_mapi_tmp.h g_libglglxwrapper.c
 CLEANFILES = $(BUILT_SOURCES)
 
-TOP = $(top_srcdir)
-GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
 include $(GLAPI)/gen/glapi_gen.mk
+
+glapi_mapi_tmp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
+	$(call glapi_gen_mapi,$<,vnd-glapi)
 
 glapitemp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi,$<,noop-gl)
 
+GLX_GEN_STUBS = $(top_srcdir)/src/GLX/gen_stubs.pl
+GLX_FUNCS_SPEC = $(top_srcdir)/src/GLX/glx_funcs.spec
+
+g_libglglxwrapper.c : $(GLX_GEN_STUBS) $(GLX_FUNCS_SPEC)
+	$(AM_V_GEN)$(PERL) $(GLX_GEN_STUBS) "glwrap" $(GLX_FUNCS_SPEC) > $@
+
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
 
-libGL_la_LDFLAGS = -shared -Wl,--auxiliary=libGLdispatch.so.0 -Wl,--auxiliary=libGLX.so.0 -version-info 1
+libGL_la_LDFLAGS = -shared -version-info 1
 
-libGL_la_LIBADD = ../GLX/libGLX.la ../GLdispatch/libGLdispatch.la
+AM_CPPFLAGS = \
+	-I$(TOP)/src/GLdispatch/vnd-glapi/mapi \
+	-I$(TOP)/src/GLX \
+	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_tmp.h\" \
+	-DSTATIC_DISPATCH_ONLY
+
+libGL_la_LIBADD  = ../GLX/libGLX.la
+libGL_la_LIBADD += ../GLdispatch/libGLdispatch.la
+libGL_la_LIBADD += -ldl

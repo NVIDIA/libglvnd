@@ -61,6 +61,7 @@ entry_patch_public(void)
 {
 }
 
+#if !defined(STATIC_DISPATCH_ONLY)
 static char
 x86_64_entry_start[];
 
@@ -107,4 +108,4 @@ entry_generate(int slot)
 
    return entry;
 }
-
+#endif // !defined(STATIC_DISPATCH_ONLY)

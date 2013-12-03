@@ -91,6 +91,7 @@ entry_patch_public(void)
 #endif
 }
 
+#if !defined(STATIC_DISPATCH_ONLY)
 mapi_func
 entry_get_public(int slot)
 {
@@ -127,4 +128,5 @@ entry_generate(int slot)
 
    return entry;
 }
+#endif // !defined(STATIC_DISPATCH_ONLY)
 

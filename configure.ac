@@ -26,6 +26,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_CHECK_PROGS([PYTHON2], [python2 python])
+AC_CHECK_PROGS([PERL], [perl])
 
 dnl
 dnl Arch/platform-specific settings. Copied from mesa

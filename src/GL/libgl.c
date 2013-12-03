@@ -27,16 +27,19 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
+#include <dlfcn.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
+#include "libgl.h"
 #include "compiler.h"
+#include "entry.h"
 
-// Define GLX functions
-#define GLXNOOP PUBLIC
-#define NOOP_FUNC(func) glX ## func
-#include "../GLX/libglxnoopdefs.h"
+// Initialize GLX imports
+void __attribute__((constructor)) __libGLInit(void)
+{
+    // Fix up the static GL entrypoints, if necessary
+    entry_patch_public();
 
-// Define OpenGL core functions
-#define noop_warn(...)
-#define MAPI_TMP_NOOP_FUNCTIONS
-#include "glapitemp.h"
+    // Lookup function pointers from libGLX for the GLX entrypoints
+    __glXWrapperInit(__glXGetCachedProcAddress);
+}
