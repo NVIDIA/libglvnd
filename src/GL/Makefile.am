@@ -61,7 +61,15 @@ g_libglglxwrapper.c : $(GLX_GEN_STUBS) $(GLX_FUNCS_SPEC)
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
 
-libGL_la_LDFLAGS = -shared -version-info 1
+if USE_DT_AUXILIARY
+# XXX: libtool has trouble processing "-Wl,*" options, so we use -Xlinker here
+# instead.
+DT_AUX_FLAGS = -Xlinker "--auxiliary=libGLX.so.0" -Xlinker "--auxiliary=libGLdispatch.so.0"
+else
+DT_AUX_FLAGS =
+endif
+
+libGL_la_LDFLAGS = -shared -version-info 1 $(DT_AUX_FLAGS)
 
 AM_CPPFLAGS = \
 	-I$(TOP)/src/GLdispatch/vnd-glapi/mapi \
