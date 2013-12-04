@@ -27,6 +27,9 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
+/* For RTLD_DEFAULT on x86 systems */
+#define _GNU_SOURCE 1
+
 #include <X11/Xlib.h>
 #include <X11/Xlibint.h>
 #include <X11/Xproto.h>
