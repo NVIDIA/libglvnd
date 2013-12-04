@@ -148,14 +148,14 @@ void *MakeCurrentThread(void *arg)
     const TestOptions *t = (const TestOptions *)arg;
     Display *dpy;
 
+    memset(&wi, 0, sizeof(wi));
+
     dpy = XOpenDisplay(NULL);
     if (!dpy) {
         printError("No display! Please re-test with a running X server\n"
                    "and the DISPLAY environment variable set appropriately.\n");
         goto fail;
     }
-
-    memset(&wi, 0, sizeof(wi));
 
     // Test the robustness of GetProcAddress() by calling this separately for
     // each thread.
