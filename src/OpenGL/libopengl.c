@@ -27,11 +27,15 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
-#define GL_GLEXT_PROTOTYPES
+#include <dlfcn.h>
 #include <GL/gl.h>
-#include <GL/glext.h>
+#include <GL/glx.h>
+#include "compiler.h"
+#include "entry.h"
 
-#define noop_warn(...)
-#define MAPI_TMP_NOOP_FUNCTIONS
-# include "glapitemp.h"
-
+// Initialize OpenGL imports
+void __attribute__((constructor)) __libGLInit(void)
+{
+    // Fix up the static GL entrypoints, if necessary
+    entry_patch_public();
+}
