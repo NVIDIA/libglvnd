@@ -378,8 +378,8 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             LKDHASH_INIT(__glXPthreadFuncs, dynDispatch->hash);
             dynDispatch->vendor = vendor;
 
-            HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendorName,
-                            strlen(vendorName), pEntry);
+            HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendor->name,
+                            strlen(vendor->name), pEntry);
         } else {
             /* Some other thread added a vendor */
             vendor = pEntry->vendor;
