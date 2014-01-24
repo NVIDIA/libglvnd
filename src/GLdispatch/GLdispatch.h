@@ -107,6 +107,12 @@ typedef struct __GLdispatchAPIStateRec {
 } __GLdispatchAPIState;
 
 /*!
+ * Offset hook type used by GLdispatch wrapper libraries to implement entrypoint
+ * rewriting.
+ */
+typedef void (*__GLdispatchGetOffsetHook)(void *(*lookupStubOffset)(const char *));
+
+/*!
  * Initialize GLdispatch with pthreads functions needed for locking.
  */
 PUBLIC void __glDispatchInit(GLVNDPthreadFuncs *funcs);
@@ -200,5 +206,23 @@ PUBLIC GLint __glDispatchGetOffset(const GLubyte *procName);
  */
 PUBLIC void __glDispatchSetEntry(__GLdispatchTable *dispatch,
                                  GLint offset, __GLdispatchProc addr);
+
+/*!
+ * This registers stubs with GLdispatch to be overwritten if a vendor library
+ * explicitly requests custom entrypoint code.  This is used by the wrapper
+ * interface libraries.
+ */
+PUBLIC void __glDispatchRegisterStubCallbacks(
+    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
+    void (*restore_func)(void)
+);
+
+/*!
+ * This unregisters the GLdispatch stubs, and performs any necessary cleanup.
+ */
+PUBLIC void __glDispatchUnregisterStubCallbacks(
+    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
+    void (*restore_func)(void)
+);
 
 #endif

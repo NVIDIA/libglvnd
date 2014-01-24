@@ -37,6 +37,7 @@
 #include "glvnd_list.h"
 #include "GLdispatch.h"
 #include "GLdispatchPrivate.h"
+#include "stub.h"
 
 /*
  * Global current dispatch table list. We need this to fix up all current
@@ -95,6 +96,18 @@ static struct glvnd_list extProcList;
 static int latestGeneration;
 
 /*
+ * Dispatch stub list for entrypoint rewriting.
+ */
+static struct glvnd_list dispatchStubList;
+
+/*
+ * Track the latest generation of the dispatch stub list so that vendor
+ * libraries can determine when their copies of the stub offsets need to
+ * be updated.
+ */
+static int dispatchStubListGeneration;
+
+/*
  * Used when generating new vendor IDs for GLdispatch clients.  Valid vendor
  * IDs must be non-zero.
  */
@@ -139,7 +152,12 @@ void __glDispatchInit(GLVNDPthreadFuncs *funcs)
         glvnd_list_init(&newProcList);
         glvnd_list_init(&extProcList);
         glvnd_list_init(&currentDispatchList);
+        glvnd_list_init(&dispatchStubList);
         UnlockDispatch();
+
+        // Register GLdispatch's static entrypoints for rewriting
+        __glDispatchRegisterStubCallbacks(stub_get_offsets,
+                                          stub_restore);
 
         initialized = GL_TRUE;
     }
@@ -391,6 +409,47 @@ static struct _glapi_table
     }
 
     return table;
+}
+
+typedef struct __GLdispatchStubCallbackRec {
+    void (*get_offsets_func)(__GLdispatchGetOffsetHook func);
+    void (*restore_func)(void);
+
+    struct glvnd_list entry;
+} __GLdispatchStubCallback;
+
+void __glDispatchRegisterStubCallbacks(
+    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
+    void (*restore_func)(void)
+)
+{
+    __GLdispatchStubCallback *stub = malloc(sizeof(*stub));
+    stub->get_offsets_func = get_offsets_func;
+    stub->restore_func = restore_func;
+
+    LockDispatch();
+    glvnd_list_add(&stub->entry, &dispatchStubList);
+    dispatchStubListGeneration++;
+    UnlockDispatch();
+}
+
+void __glDispatchUnregisterStubCallbacks(
+    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
+    void (*restore_func)(void)
+)
+{
+    __GLdispatchStubCallback *curStub, *tmpStub;
+    LockDispatch();
+
+    glvnd_list_for_each_entry_safe(curStub, tmpStub, &dispatchStubList, entry) {
+        if (get_offsets_func == curStub->get_offsets_func) {
+            assert(restore_func == curStub->restore_func);
+
+            glvnd_list_del(&curStub->entry);
+        }
+    }
+
+    UnlockDispatch();
 }
 
 PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
