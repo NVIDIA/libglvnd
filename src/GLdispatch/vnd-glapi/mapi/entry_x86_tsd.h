@@ -66,7 +66,7 @@ const int entry_type = ENTRY_X86_TSD;
 const int entry_stub_size = 0;
 
 void
-entry_patch_public(void)
+entry_init_public(void)
 {
 }
 

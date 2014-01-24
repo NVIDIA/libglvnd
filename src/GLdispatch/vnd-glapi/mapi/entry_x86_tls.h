@@ -101,7 +101,7 @@ void entry_generate_default_code(char *entry, int slot)
 }
 
 void
-entry_patch_public(void)
+entry_init_public(void)
 {
     int slot;
 

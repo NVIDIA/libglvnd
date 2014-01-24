@@ -44,7 +44,7 @@ extern const int entry_type;
 extern const int entry_stub_size;
 
 void
-entry_patch_public(void);
+entry_init_public(void);
 
 mapi_func
 entry_get_public(int slot);

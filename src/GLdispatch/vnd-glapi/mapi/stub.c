@@ -56,12 +56,12 @@ stub_init_once(void)
 {
 #ifdef HAVE_PTHREAD
    static pthread_once_t once = PTHREAD_ONCE_INIT;
-   pthread_once(&once, entry_patch_public);
+   pthread_once(&once, entry_init_public);
 #else
    static int first = 1;
    if (first) {
       first = 0;
-      entry_patch_public();
+      entry_init_public();
    }
 #endif
 }

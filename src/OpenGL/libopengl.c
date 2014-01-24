@@ -37,5 +37,5 @@
 void __attribute__((constructor)) __libGLInit(void)
 {
     // Fix up the static GL entrypoints, if necessary
-    entry_patch_public();
+    entry_init_public();
 }

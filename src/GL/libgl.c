@@ -38,7 +38,7 @@
 void __attribute__((constructor)) __libGLInit(void)
 {
     // Fix up the static GL entrypoints, if necessary
-    entry_patch_public();
+    entry_init_public();
 
     // Lookup function pointers from libGLX for the GLX entrypoints
     __glXWrapperInit(__glXGetCachedProcAddress);
