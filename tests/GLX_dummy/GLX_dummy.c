@@ -468,6 +468,144 @@ static void         dummySetDispatchIndex      (const GLubyte *procName, int ind
     }
 }
 
+#if defined(PATCH_ENTRYPOINTS)
+PUBLIC int __glXSawVertex3fv;
+
+static void patch_x86_64_tls(char *entry,
+                             int stubSize)
+{
+#if defined(__x86_64__)
+    char *pSawVertex3fv = (char *)&__glXSawVertex3fv;
+    int *p;
+    char tmpl[] = {
+        0x8b, 0x05, 0x0, 0x0, 0x0, 0x0,  // mov 0x0(%rip), %eax
+        0x83, 0xc0, 0x01,                // add $0x1, %eax
+        0x89, 0x05, 0x0, 0x0, 0x0, 0x0,  // mov %eax, 0x0(%rip)
+        0xc3,                            // ret
+    };
+
+    STATIC_ASSERT(sizeof(int) == 0x4);
+
+    if (stubSize < sizeof(tmpl)) {
+        return;
+    }
+
+    p = (int *)&tmpl[2];
+    *p = (int)(pSawVertex3fv - (entry + 6));
+
+    p = (int *)&tmpl[11];
+    *p = (int)(pSawVertex3fv - (entry + 15));
+
+    memcpy(entry, tmpl, sizeof(tmpl));
+#else
+    assert(0); // Should not be calling this
+#endif
+}
+
+static void patch_x86_tls(char *entry,
+                          int stubSize)
+{
+#if defined(__i386__)
+    char *pSawVertex3fv = (char *)&__glXSawVertex3fv;
+    int *p;
+    char tmpl[] = {
+        0xa1, 0x0, 0x0, 0x0, 0x0,   // mov 0x0, %eax
+        0x83, 0xc0, 0x01,           // add $0x1, %eax
+        0xa3, 0x0, 0x0, 0x0, 0x0,   // mov %eax, 0x0
+        0xc3                        // ret
+    };
+
+    STATIC_ASSERT(sizeof(int) == 0x4);
+
+    if (stubSize < sizeof(tmpl)) {
+        return;
+    }
+
+    p = (int *)&tmpl[1];
+    *p = (int)(pSawVertex3fv - (entry + 5));
+
+    p = (int *)&tmpl[9];
+    *p = (int)(pSawVertex3fv - (entry + 13));
+
+    memcpy(entry, tmpl, sizeof(tmpl));
+
+    // Jump to an intermediate location
+    __asm__(
+        "\tjmp 0f\n"
+        "\t0:\n"
+    );
+#else
+    assert(0); // Should not be calling this
+#endif
+}
+
+static int dummyStubType;
+static int dummyStubSize;
+static int dummyStubGeneration;
+static char *dummyVertex3fvAddrs[3];
+
+static GLboolean dummyInitiatePatch(int type,
+                                    int stubSize,
+                                    int stubGeneration,
+                                    GLboolean *needOffsets)
+{
+    assert(needOffsets);
+    switch (type) {
+        case __GLDISPATCH_STUB_X86_64_TLS:
+        case __GLDISPATCH_STUB_X86_TLS:
+            dummyStubType = type;
+            dummyStubSize = stubSize;
+            dummyStubGeneration = stubGeneration;
+            *needOffsets = GL_TRUE;
+            return GL_TRUE;
+        default:
+            *needOffsets = GL_FALSE;
+            return GL_FALSE;
+    }
+}
+
+/* Only interested in glVertex3fv() for testing purposes. */
+static void dummyGetOffsetHook(
+    void *(*lookupStubOffset)(const char *funcName)
+)
+{
+    char **pNewAddr;
+
+    // Seek to the first empty entry
+    for (pNewAddr = dummyVertex3fvAddrs;
+         *pNewAddr; pNewAddr++) {
+    }
+
+    assert((pNewAddr - dummyVertex3fvAddrs) < 3);
+
+    *pNewAddr = (char *)lookupStubOffset("Vertex3fv");
+}
+
+static void dummyFinalizePatch(void)
+{
+    char **pAddr;
+    for (pAddr = dummyVertex3fvAddrs; *pAddr; pAddr++) {
+        switch (dummyStubType) {
+            case __GLDISPATCH_STUB_X86_64_TLS:
+                patch_x86_64_tls(*pAddr, dummyStubSize);
+                break;
+            case __GLDISPATCH_STUB_X86_TLS:
+                patch_x86_tls(*pAddr, dummyStubSize);
+                break;
+            default:
+                assert(0);
+        }
+    }
+}
+
+static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
+{
+    .initiatePatch = dummyInitiatePatch,
+    .getOffsetHook = dummyGetOffsetHook,
+    .finalizePatch = dummyFinalizePatch
+};
+#endif // defined(PATCH_ENTRYPOINTS)
+
 static const __GLXapiImports dummyImports =
 {
     /* Entry points */
@@ -511,7 +649,11 @@ static const __GLXapiImports dummyImports =
         .getProcAddress = dummyGetProcAddress,
         .getDispatchAddress = dummyGetDispatchAddress,
         .setDispatchIndex = dummySetDispatchIndex,
+#if defined(PATCH_ENTRYPOINTS)
+        .patchCallbacks = &dummyPatchCallbacks,
+#else
         .patchCallbacks = NULL,
+#endif
     }
 };
 
