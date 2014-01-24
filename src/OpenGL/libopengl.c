@@ -32,10 +32,24 @@
 #include <GL/glx.h>
 #include "compiler.h"
 #include "entry.h"
+#include "stub.h"
+#include "GLdispatch.h"
 
 // Initialize OpenGL imports
 void __attribute__((constructor)) __libGLInit(void)
 {
     // Fix up the static GL entrypoints, if necessary
     entry_init_public();
+
+    __glDispatchInit(NULL);
+
+    // Register these entrypoints with GLdispatch so they can be
+    // overwritten at runtime
+    __glDispatchRegisterStubCallbacks(stub_get_offsets, stub_restore);
+}
+
+void __attribute__((destructor)) __libOpenGLFini(void)
+{
+    // Unregister the GLdispatch entrypoints
+    __glDispatchUnregisterStubCallbacks(stub_get_offsets, stub_restore);
 }

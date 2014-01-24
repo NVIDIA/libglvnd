@@ -27,7 +27,6 @@
 
 lib_LTLIBRARIES = libOpenGL.la
 
-TOP = $(top_srcdir)
 MAPI = $(top_srcdir)/$(MAPI_PREFIX)
 GLAPI = $(MAPI)/glapi
 
@@ -37,7 +36,8 @@ noinst_HEADERS =        \
 
 libOpenGL_la_SOURCES = \
 	libopengl.c        \
-	$(MAPI)/entry.c
+	$(MAPI)/entry.c    \
+	$(MAPI)/stub.c
 
 BUILT_SOURCES = glapitemp.h glapi_mapi_tmp.h
 CLEANFILES = $(BUILT_SOURCES)
@@ -62,8 +62,10 @@ endif
 libGL_la_LDFLAGS = -shared -version-info 1 $(DT_AUX_FLAGS)
 
 AM_CPPFLAGS = \
-	-I$(TOP)/src/util \
-	-I$(TOP)/src/GLdispatch/vnd-glapi/mapi \
+	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
+	-I$(top_srcdir)/src/GLdispatch/ \
+	-I$(top_srcdir)/src/util \
+	-I$(top_srcdir)/src/util/glvnd_pthread \
 	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_tmp.h\" \
 	-DSTATIC_DISPATCH_ONLY
 
