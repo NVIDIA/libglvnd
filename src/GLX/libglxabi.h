@@ -316,10 +316,11 @@ typedef struct __GLXapiImportsRec {
 #define __GLX_MAIN_PROTO(version, exports, vendorName)                \
     const __GLXapiImports *__glx_Main(uint32_t version,               \
                                       const __GLXapiExports *exports, \
-                                      const char *vendorName)
+                                      const char *vendorName,         \
+                                      int vendorID)
 
 typedef const __GLXapiImports *(*__PFNGLXMAINPROC)
-    (uint32_t, const __GLXapiExports *, const char*);
+    (uint32_t, const __GLXapiExports *, const char *, int);
 
 /*!
  * @}

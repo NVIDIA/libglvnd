@@ -71,6 +71,10 @@ enum {
  * a context current). This is done to conserve TLS space.
  */
 typedef struct __GLdispatchAPIStateRec {
+    /*************************************************************************
+     * Winsys-managed variables: fixed for lifetime of state
+     *************************************************************************/
+
     /*!
      * Namespace of the state: either API_GLX or API_EGL
      */
@@ -81,6 +85,15 @@ typedef struct __GLdispatchAPIStateRec {
      * to) thread id
      */
     void *id;
+
+    /*************************************************************************
+     * GLdispatch-managed variables: Modified by MakeCurrent()
+     *************************************************************************/
+
+    /*!
+     * ID of the current vendor for this state
+     */
+    int vendorID;
 
     /*!
      * The current (high-level) __GLdispatch table
@@ -97,6 +110,12 @@ typedef struct __GLdispatchAPIStateRec {
  * Initialize GLdispatch with pthreads functions needed for locking.
  */
 PUBLIC void __glDispatchInit(GLVNDPthreadFuncs *funcs);
+
+/*!
+ * This returns a process-unique ID that is suitable for use with a new GL
+ * vendor.
+ */
+PUBLIC int __glDispatchNewVendorID(void);
 
 /*!
  * Get a dispatch stub suitable for returning to the application from
@@ -128,11 +147,15 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
 
 /*!
  * This makes the given API state current, and assigns this API state
- * the passed-in current dispatch table and context.
+ * the passed-in current dispatch table, context, and vendor ID.
+ *
+ * This returns GL_FALSE if the make current operation failed, and GL_TRUE
+ * if it succeeded.
  */
-PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
-                                    __GLdispatchTable *dispatch,
-                                    void *context);
+PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
+                                         __GLdispatchTable *dispatch,
+                                         void *context,
+                                         int vendorID);
 
 /*!
  * This makes the NOP dispatch table current and sets the current context and

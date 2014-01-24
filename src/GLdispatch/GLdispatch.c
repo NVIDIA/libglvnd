@@ -95,6 +95,12 @@ static struct glvnd_list extProcList;
 static int latestGeneration;
 
 /*
+ * Used when generating new vendor IDs for GLdispatch clients.  Valid vendor
+ * IDs must be non-zero.
+ */
+static int firstUnusedVendorID = 1;
+
+/*
  * The dispatch lock. This should be taken around any code that manipulates the
  * above global variables or makes calls to _glapi_add_dispatch() or
  * _glapi_get_proc_offset().
@@ -146,6 +152,16 @@ void __glDispatchInit(GLVNDPthreadFuncs *funcs)
     }
 }
 
+int __glDispatchNewVendorID(void)
+{
+    int vendorID;
+
+    LockDispatch();
+    vendorID = firstUnusedVendorID++;
+    UnlockDispatch();
+
+    return vendorID;
+}
 
 static void noop_func(void)
 {
@@ -377,9 +393,10 @@ static struct _glapi_table
     return table;
 }
 
-PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
-                                    __GLdispatchTable *dispatch,
-                                    void *context)
+PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
+                                         __GLdispatchTable *dispatch,
+                                         void *context,
+                                         int vendorID)
 {
     __GLdispatchAPIState *curApiState = (__GLdispatchAPIState *)
         _glapi_get_current(CURRENT_API_STATE);
@@ -417,6 +434,7 @@ PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
      */
     apiState->context = context;
     apiState->dispatch = dispatch;
+    apiState->vendorID = vendorID;
 
     /*
      * Set the current state in TLS.
@@ -424,6 +442,8 @@ PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
     _glapi_set_current(context, CURRENT_CONTEXT);
     _glapi_set_current(apiState, CURRENT_API_STATE);
     _glapi_set_dispatch(dispatch->table);
+
+    return GL_TRUE;
 }
 
 PUBLIC void __glDispatchLoseCurrent(void)
@@ -438,6 +458,7 @@ PUBLIC void __glDispatchLoseCurrent(void)
 
         curApiState->dispatch = NULL;
         curApiState->context = NULL;
+        curApiState->vendorID = -1;
     }
 
     LockDispatch();
