@@ -32,6 +32,7 @@
 
 struct mapi_stub;
 
+#if !defined(STATIC_DISPATCH_ONLY)
 void
 stub_init_once(void);
 
@@ -55,5 +56,19 @@ stub_get_slot(const struct mapi_stub *stub);
 
 mapi_func
 stub_get_addr(const struct mapi_stub *stub);
+#endif // !defined(STATIC_DISPATCH_ONLY)
+
+typedef void (*stub_get_offset_hook)(void *(*)(const char *));
+
+int
+stub_allow_override(void);
+
+void
+stub_get_offsets(
+    stub_get_offset_hook get_offset_hook
+);
+
+void
+stub_restore(void);
 
 #endif /* _STUB_H_ */
