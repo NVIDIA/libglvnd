@@ -27,16 +27,27 @@
 
 lib_LTLIBRARIES = libOpenGL.la
 
-libOpenGL_la_SOURCES = \
-	OpenGL.c           \
-	glapitemp.h
+TOP = $(top_srcdir)
+MAPI = $(top_srcdir)/$(MAPI_PREFIX)
+GLAPI = $(MAPI)/glapi
 
-BUILT_SOURCES = glapitemp.h
+noinst_HEADERS =        \
+	glapitemp.h         \
+	glapi_mapi_tmp.h
+
+libOpenGL_la_SOURCES = \
+	libopengl.c        \
+	$(MAPI)/entry.c
+
+BUILT_SOURCES = glapitemp.h glapi_mapi_tmp.h
 CLEANFILES = $(BUILT_SOURCES)
 
 TOP = $(top_srcdir)
 GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
 include $(GLAPI)/gen/glapi_gen.mk
+
+glapi_mapi_tmp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
+	$(call glapi_gen_mapi,$<,vnd-glapi)
 
 glapitemp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi,$<,noop-gl)
@@ -44,5 +55,17 @@ glapitemp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 libOpenGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
 
-libOpenGL_la_LDFLAGS = -shared -Wl,--auxiliary=libGLdispatch.so.0
+if USE_DT_AUXILIARY
+DT_AUX_FLAGS = -Xlinker "--auxiliary=libGLdispatch.so.0"
+else
+DT_AUX_FLAGS =
+endif
 
+libGL_la_LDFLAGS = -shared -version-info 1 $(DT_AUX_FLAGS)
+
+AM_CPPFLAGS = \
+	-I$(TOP)/src/GLdispatch/vnd-glapi/mapi \
+	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_tmp.h\" \
+	-DSTATIC_DISPATCH_ONLY
+
+libGL_la_LIBADD = ../GLdispatch/libGLdispatch.la

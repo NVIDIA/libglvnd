@@ -70,15 +70,6 @@ extern "C" {
 
 
 /* Is this needed?  It is incomplete anyway. */
-#ifdef USE_MGL_NAMESPACE
-#define _glapi_set_dispatch _mglapi_set_dispatch
-#define _glapi_get_dispatch _mglapi_get_dispatch
-#define _glapi_set_context _mglapi_set_context
-#define _glapi_get_context _mglapi_get_context
-#define _glapi_set_current _mglapi_set_current
-#define _glapi_get_current _mglapi_get_current
-#define _glapi_Current _mglapi_Current
-#endif
 
 typedef void (*_glapi_proc)(void);
 struct _glapi_table;

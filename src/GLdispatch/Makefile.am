@@ -27,6 +27,7 @@
 
 noinst_HEADERS = \
 	GLdispatch.h \
+	GLdispatchABI.h \
 	GLdispatchPrivate.h
 
 lib_LTLIBRARIES = libGLdispatch.la

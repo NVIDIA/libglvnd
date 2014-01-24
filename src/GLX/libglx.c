@@ -27,6 +27,9 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
+/* For RTLD_DEFAULT on x86 systems */
+#define _GNU_SOURCE 1
+
 #include <X11/Xlib.h>
 #include <X11/Xlibint.h>
 #include <X11/Xproto.h>
@@ -41,6 +44,7 @@
 #include "trace.h"
 #include "GL/glxproto.h"
 #include "x11glvnd.h"
+#include "libglxgl.h"
 
 #include "lkdhash.h"
 
@@ -1110,7 +1114,11 @@ void cacheInitializeOnce(void)
 
 }
 
-static __GLXextFuncPtr getCachedProcAddress(const GLubyte *procName)
+/*
+ * This function is called externally by the libGL wrapper library to
+ * retrieve libGLX entrypoints.
+ */
+PUBLIC __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
 {
     /*
      * If this is the first time GetProcAddress has been called,
@@ -1173,7 +1181,7 @@ PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
      * a previous GetProcAddress() call or by virtue of being a function
      * exported by libGLX.
      */
-    addr = getCachedProcAddress(procName);
+    addr = __glXGetCachedProcAddress(procName);
     if (addr) {
         return addr;
     }

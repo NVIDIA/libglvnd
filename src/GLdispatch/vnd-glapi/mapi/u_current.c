@@ -92,7 +92,7 @@
 /*@{*/
 #if defined(GLX_USE_TLS)
 
-__thread void *u_current[U_CURRENT_NUM_ENTRIES]
+PUBLIC __thread void *u_current[U_CURRENT_NUM_ENTRIES]
     __attribute__((tls_model("initial-exec")))
     = {
         (void *) table_noop_array,
@@ -101,7 +101,7 @@ __thread void *u_current[U_CURRENT_NUM_ENTRIES]
 
 #else
 
-void *u_current[U_CURRENT_NUM_ENTRIES]
+PUBLIC void *u_current[U_CURRENT_NUM_ENTRIES]
     = {
         (void *) table_noop_array,
         NULL

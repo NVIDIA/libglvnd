@@ -29,11 +29,14 @@ The code in the src/ directory is organized as follows:
   wrapper around Mesa's glapi that tries to hide most of the complexity of
   managing dispatch tables. Its interface is defined in GLdispatch.h. This
   implements the guts of the core GL API libraries.
-- EGL/ and GLESv{1,2}/ are placeholders for now. GLESv{1,2}/ will be filter
-  libraries on libGLdispatch, while EGL/ will contain libEGL, which may be
-  implemented similarly to libGLX.
+- EGL/ and GLESv{1,2}/ are placeholders for now. GLESv{1,2}/ implement
+  static GL entrypoints which use the context defined in libGLdispatch, while
+  EGL/ will contain libEGL, which may be implemented similarly to libGLX.
 - GL/ and OpenGL/ respectively contain code to generate libGL and libOpenGL,
-  which are both merely filter libraries for libGLX and libGLdispatch.
+  which are both merely wrapper libraries for libGLX and libGLdispatch.
+  Ideally, these could be implemented via ELF symbol filtering, but in practice
+  they need to be implemented manually.  See the Issues section for details on
+  why this is the case.
 - util/ contains generic utility code, and arch/ contains architecture-specific
   defines.
 
@@ -94,9 +97,9 @@ See the diagram below:
 In this diagram,
 
 * `A ───▸ B` indicates that module A calls into module B.
-* `A ── DT_FILTER ──▸ B` indicates that DSO A is a filter library on DSO B, and
-  symbols exported by A are resolved via ELF symbol filtering to entrypoints in
-  B.
+* `A ── DT_FILTER ──▸ B` indicates that DSO A is (logically) a filter library on
+  DSO B.  If ELF symbol filtering is enabled, symbols exported by A are resolved
+  to entrypoints in B.
 
 libGLX manages loading GLX vendor libraries and dispatching GLX core and
 extension functions to the right vendor.
@@ -113,18 +116,17 @@ linked into libGLX, since current dispatch tables will eventually be shared
 between GLX and EGL, similarly to how glapi operates when Mesa is compiled with
 the --shared-glapi option.
 
-libOpenGL is a filter library on libGLdispatch which exposes OpenGL 4.x core and
+libOpenGL is a wrapper library to libGLdispatch which exposes OpenGL 4.x core and
 compatibility entry points. Eventually, there will be a libGLESv{1,2} which will
-also be filter libraries on libGLdispatch that expose GLES entry points.
+also be wrapper libraries to libGLdispatch that expose GLES entry points.
 
-libGL is a filter library on libGLdispatch and libGLX which is provided for
+libGL is a wrapper library on libGLdispatch and libGLX which is provided for
 backwards-compatibility with applications which link against the old ABI.
 
-NOTE: Logically, libGL should be a filter library on libOpenGL rather than
-libGLdispatch, as libGLdispatch is an implementation detail.  The current
-arrangement is in place to work around a loader bug (present on at least ld.so
-v.2.12) where symbols in libGL don't properly resolve to libGLdispatch symbols
-if it filters libOpenGL instead of libGLdispatch.
+NOTE: Logically, libGL should be a wrapper library to libOpenGL rather than
+libGLdispatch, as libGLdispatch is an implementation detail of libglvnd.
+However, we have this current arrangement for performance reasons since ELF
+symbol filtering is disabled by default (see Issues).
 
 ### GLX dispatching ###
 
@@ -182,6 +184,14 @@ map GLX API calls to the right vendor, we use the following strategy:
 
 Issues
 ------
+
+* Ideally, several components of libglvnd (namely, the `libGL` wrapper library
+  and the `libOpenGL, libGLES{v1_CM,v2}` interface libraries) could be
+  implemented via ELF symbol filtering (see [2] for a demonstration of this).
+  However, a loader bug (tracked in [3]) makes this mechanism unreliable:
+  dlopen(3)ing a shared library with `DT_FILTER` fields can crash the
+  application.  Instead, for now, ELF symbol filtering is disabled by default,
+  and an alternate approach is used to implement these libraries.
 
 * The library currently indirectly associates a drawable with a vendor,
   by first mapping a drawable to its screen, then mapping the screen to its
@@ -257,21 +267,14 @@ TODO
 
 * Implement libEGL, and libGLESv{1,2}.
 
-* Root-cause and fix the loader bug that prevents libGL from filtering libOpenGL
-  rather than libGLdispatch to pick up core GL symbols.
-
-* Currently, running "ldd libGL.so" fails with the following assertion (for ldd
-  v.2.15 on Ubuntu 12.04 LTS):
-
-    Inconsistency detected by ld.so: dl-deps.c: 592: _dl_map_object_deps:
-    Assertion `map->l_searchlist.r_list[0] == map' failed!
-
-  Root-cause and fix this bug.
-
 References
 ----------
 
 [1] https://github.com/aritger/linux-opengl-abi-proposal/blob/master/linux-opengl-abi-proposal.txt
+
+[2] https://github.com/aritger/libgl-elf-tricks-demo
+
+[3] https://sourceware.org/bugzilla/show_bug.cgi?id=16272
 
 Acknowledgements
 -------
