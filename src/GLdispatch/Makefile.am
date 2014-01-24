@@ -35,6 +35,7 @@ lib_LTLIBRARIES = libGLdispatch.la
 SUBDIRS = vnd-glapi
 
 libGLdispatch_la_CFLAGS =  -I$(srcdir)/vnd-glapi/mapi/glapi
+libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util/trace
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util/glvnd_pthread
 libGLdispatch_la_CFLAGS += -I$(srcdir)/vnd-glapi/mapi

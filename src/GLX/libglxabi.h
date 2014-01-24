@@ -270,7 +270,7 @@ typedef struct __GLX14EntryPointsRec {
 } __GLX14EntryPoints;
 
 /*!
- * This structure stores required vendor library callbacks.
+ * This structure stores required and optional vendor library callbacks.
  */
 struct __GLXvendorCallbacksRec {
     /*!
@@ -293,6 +293,17 @@ struct __GLXvendorCallbacksRec {
      * assigned to a particular GLX extension function.
      */
     void        (*setDispatchIndex)      (const GLubyte *procName, int index);
+
+    /*!
+     * (OPTIONAL) Callbacks by which the vendor library may re-write libglvnd's
+     * entrypoints at make current time, provided no other contexts are current
+     * and the TLS model supports this functionality.  This is a performance
+     * optimization that may not be available at runtime; the vendor library
+     * must not depend on this functionality for correctness.  This should
+     * point to a statically-allocated structure, or NULL if unimplemented.
+     */
+    const __GLdispatchPatchCallbacks *patchCallbacks;
+
 };
 
 typedef struct __GLXapiImportsRec {

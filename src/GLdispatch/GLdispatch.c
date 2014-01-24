@@ -114,6 +114,31 @@ static int dispatchStubListGeneration;
 static int firstUnusedVendorID = 1;
 
 /*
+ * Dispatch stub list for entrypoint rewriting.
+ */
+static struct glvnd_list dispatchStubList;
+
+/*
+ * Track the latest generation of the dispatch stub list so that vendor
+ * libraries can determine when their copies of the stub offsets need to
+ * be updated.
+ */
+static int dispatchStubListGeneration;
+
+/*
+ * The vendor ID of the current "owner" of the entrypoint code.  0 if
+ * we are using the default libglvnd stubs.
+ */
+static int stubOwnerVendorID;
+
+/*
+ * The current set of patch callbacks being used, or NULL if using the
+ * default libglvnd entrypoints.
+ */
+static const __GLdispatchPatchCallbacks *stubCurrentPatchCb;
+
+
+/*
  * The dispatch lock. This should be taken around any code that manipulates the
  * above global variables or makes calls to _glapi_add_dispatch() or
  * _glapi_get_proc_offset().
@@ -449,6 +474,7 @@ void __glDispatchUnregisterStubCallbacks(
         }
     }
 
+    dispatchStubListGeneration++;
     UnlockDispatch();
 }
 

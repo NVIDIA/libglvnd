@@ -511,6 +511,7 @@ static const __GLXapiImports dummyImports =
         .getProcAddress = dummyGetProcAddress,
         .getDispatchAddress = dummyGetDispatchAddress,
         .setDispatchIndex = dummySetDispatchIndex,
+        .patchCallbacks = NULL,
     }
 };
 
