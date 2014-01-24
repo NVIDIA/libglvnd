@@ -506,7 +506,9 @@ static Bool MakeContextCurrentInternal(Display *dpy,
             &apiState->glas,
             newVendor->glDispatch,
             (void *)context,
-            newVendor->vendorID);
+            newVendor->vendorID,
+            newVendor->staticDispatch->glxvc.patchCallbacks
+        );
 
         return ret;
     }

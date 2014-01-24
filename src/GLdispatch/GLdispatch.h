@@ -155,13 +155,20 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
  * This makes the given API state current, and assigns this API state
  * the passed-in current dispatch table, context, and vendor ID.
  *
+ * If patchCb is not NULL, GLdispatch will attempt to overwrite its
+ * entrypoints (and the entrypoints of any loaded interface libraries)
+ * using the provided callbacks.  If patchCb is NULL and the entrypoints
+ * have been previously overwritten, GLdispatch will attempt to restore
+ * the default libglvnd entrypoints.
+ *
  * This returns GL_FALSE if the make current operation failed, and GL_TRUE
  * if it succeeded.
  */
 PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
                                          __GLdispatchTable *dispatch,
                                          void *context,
-                                         int vendorID);
+                                         int vendorID,
+                                         const __GLdispatchPatchCallbacks *patchCb);
 
 /*!
  * This makes the NOP dispatch table current and sets the current context and

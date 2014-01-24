@@ -436,6 +436,65 @@ static struct _glapi_table
     return table;
 }
 
+static int CurrentEntrypointsSafeToUse(int vendorID)
+{
+    CheckDispatchLocked();
+    return !stubOwnerVendorID || (vendorID == stubOwnerVendorID);
+}
+
+static inline int PatchingIsDisabledByEnvVar(void)
+{
+    static GLboolean inited = GL_FALSE;
+    static GLboolean disallowPatch = GL_FALSE;
+
+    CheckDispatchLocked();
+
+    if (!inited) {
+        char *disallowPatchStr = getenv("__GLVND_DISALLOW_PATCHING");
+        if (disallowPatchStr) {
+            disallowPatch = atoi(disallowPatchStr);
+        }
+        inited = GL_TRUE;
+    }
+
+    return disallowPatch;
+}
+
+static inline int ContextIsCurrentInAnyOtherThread(void)
+{
+    int thisThreadsContext = !!_glapi_get_current(CURRENT_CONTEXT);
+    int otherContexts;
+
+    CheckDispatchLocked();
+
+    otherContexts = (numCurrentContexts - thisThreadsContext);
+    assert(otherContexts >= 0);
+
+    return !!otherContexts;
+}
+
+static int PatchingIsSafe(void)
+{
+    CheckDispatchLocked();
+
+    /*
+     * Can only patch entrypoints on supported TLS access models
+     */
+    if (!stub_allow_override()) {
+        return 0;
+    }
+
+    if (PatchingIsDisabledByEnvVar()) {
+        return 0;
+    }
+
+    if (ContextIsCurrentInAnyOtherThread()) {
+        return 0;
+    }
+
+    return 1;
+}
+
 typedef struct __GLdispatchStubCallbackRec {
     void (*get_offsets_func)(__GLdispatchGetOffsetHook func);
     void (*restore_func)(void);
@@ -478,10 +537,71 @@ void __glDispatchUnregisterStubCallbacks(
     UnlockDispatch();
 }
 
+
+/*
+ * Attempt to patch entrypoints with the given patch function and vendor ID.
+ * If the function pointers are NULL, then this attempts to restore the default
+ * libglvnd entrypoints.
+ *
+ * Returns 1 on success, 0 on failure.
+ */
+static int PatchEntrypoints(
+   const __GLdispatchPatchCallbacks *patchCb,
+   int vendorID
+)
+{
+    __GLdispatchStubCallback *stub;
+    CheckDispatchLocked();
+
+    if (!PatchingIsSafe()) {
+        return 0;
+    }
+
+    if (patchCb == stubCurrentPatchCb) {
+        // Entrypoints already using the requested patch; no need to do anything
+        return 1;
+    }
+
+    if (patchCb) {
+        GLboolean needOffsets;
+
+        if (!patchCb->initiatePatch(entry_type,
+                                    entry_stub_size,
+                                    dispatchStubListGeneration,
+                                    &needOffsets)) {
+            // Patching unsupported on this platform
+            return 0;
+        }
+
+        if (needOffsets) {
+            // Fetch offsets for this vendor
+            glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
+                stub->get_offsets_func(patchCb->getOffsetHook);
+            }
+        }
+
+        patchCb->finalizePatch();
+
+        stubCurrentPatchCb = patchCb;
+        stubOwnerVendorID = vendorID;
+    } else {
+        // Restore the stubs to the default implementation
+        glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
+            stub->restore_func();
+        }
+
+        stubCurrentPatchCb = NULL;
+        stubOwnerVendorID = 0;
+    }
+
+    return 1;
+}
+
 PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
                                          __GLdispatchTable *dispatch,
                                          void *context,
-                                         int vendorID)
+                                         int vendorID,
+                                         const __GLdispatchPatchCallbacks *patchCb)
 {
     __GLdispatchAPIState *curApiState = (__GLdispatchAPIState *)
         _glapi_get_current(CURRENT_API_STATE);
@@ -491,6 +611,15 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
     // initialized, or there are new dynamic entries which were
     // added since the last time make current was called.
     LockDispatch();
+
+    // Patch if necessary
+    PatchEntrypoints(patchCb, vendorID);
+
+    // If the current entrypoints are unsafe to use with this vendor, bail out.
+    if (!CurrentEntrypointsSafeToUse(vendorID)) {
+        UnlockDispatch();
+        return GL_FALSE;
+    }
 
     if (!dispatch->table ||
         (dispatch->generation < latestGeneration)) {
@@ -547,6 +676,9 @@ PUBLIC void __glDispatchLoseCurrent(void)
     }
 
     LockDispatch();
+    // Try to restore the libglvnd default stubs, if possible.
+    PatchEntrypoints(NULL, 0);
+
     numCurrentContexts--;
     UnlockDispatch();
 
