@@ -1215,10 +1215,7 @@ done:
 void __attribute__ ((constructor)) __glXInit(void)
 {
 
-    /* Initialize pthreads imports */
-    glvndSetupPthreads(RTLD_DEFAULT, &__glXPthreadFuncs);
-
-    /* Initialize GLdispatch */
+    /* Initialize GLdispatch; this will also initialize our pthreads imports */
     __glDispatchInit(&__glXPthreadFuncs);
 
     {

@@ -47,3 +47,4 @@ libGLdispatch_la_SOURCES = \
 
 libGLdispatch_la_LIBADD = vnd-glapi/libglapi.la
 libGLdispatch_la_LIBADD += ../util/trace/libtrace.la
+libGLdispatch_la_LIBADD += ../util/glvnd_pthread/libglvnd_pthread.la

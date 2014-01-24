@@ -27,8 +27,11 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
+#define _GNU_SOURCE 1
+
 #include <string.h>
 #include <pthread.h>
+#include <dlfcn.h>
 
 #include "trace.h"
 #include "glvnd_list.h"
@@ -41,7 +44,8 @@
  * Accesses to this need to be protected by the dispatch lock.
  */
 static struct glvnd_list currentDispatchList;
-static GLVNDPthreadFuncs *pthreadFuncs;
+static GLboolean initialized;
+static GLVNDPthreadFuncs pthreadFuncs;
 
 /*
  * The number of current contexts that GLdispatch is aware of
@@ -102,31 +106,46 @@ struct {
 
 static inline void LockDispatch(void)
 {
-    pthreadFuncs->mutex_lock(&dispatchLock.lock);
+    pthreadFuncs.mutex_lock(&dispatchLock.lock);
     dispatchLock.isLocked = 1;
 }
 
 static inline void UnlockDispatch(void)
 {
     dispatchLock.isLocked = 0;
-    pthreadFuncs->mutex_unlock(&dispatchLock.lock);
+    pthreadFuncs.mutex_unlock(&dispatchLock.lock);
 }
 
 #define CheckDispatchLocked() assert(dispatchLock.isLocked)
 
 void __glDispatchInit(GLVNDPthreadFuncs *funcs)
 {
-    pthreadFuncs = funcs;
-    // Call into GLAPI to see if we are multithreaded
-    // TODO: fix GLAPI to use the pthread funcs provided here?
-    _glapi_check_multithread();
+    if (!initialized) {
+        /* Initialize pthreads imports */
+        glvndSetupPthreads(RTLD_DEFAULT, &pthreadFuncs);
+        initialized = GL_TRUE;
 
-    LockDispatch();
-    glvnd_list_init(&newProcList);
-    glvnd_list_init(&extProcList);
-    glvnd_list_init(&currentDispatchList);
-    UnlockDispatch();
+        // Call into GLAPI to see if we are multithreaded
+        // TODO: fix GLAPI to use the pthread funcs provided here?
+        _glapi_check_multithread();
+
+        LockDispatch();
+        glvnd_list_init(&newProcList);
+        glvnd_list_init(&extProcList);
+        glvnd_list_init(&currentDispatchList);
+        UnlockDispatch();
+
+        initialized = GL_TRUE;
+    }
+
+    if (funcs) {
+        // If the client needs a copy of these funcs, assign them now
+        // XXX: instead of copying, we should probably just provide a pointer.
+        // However, that's a bigger change...
+        *funcs = pthreadFuncs;
+    }
 }
+
 
 static void noop_func(void)
 {
