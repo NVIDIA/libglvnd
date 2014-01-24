@@ -74,6 +74,7 @@ libGL_la_LDFLAGS = -shared -version-info 1 $(DT_AUX_FLAGS)
 AM_CPPFLAGS = \
 	-I$(TOP)/src/GLdispatch/vnd-glapi/mapi \
 	-I$(TOP)/src/GLX \
+	-I$(TOP)/src/util \
 	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_tmp.h\" \
 	-DSTATIC_DISPATCH_ONLY
 
