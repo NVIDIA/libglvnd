@@ -105,6 +105,11 @@ typedef struct GLVNDPthreadFuncsRec {
     int (*key_delete)(glvnd_key_t key);
     int (*setspecific)(glvnd_key_t key, const void *p);
     void *(*getspecific)(glvnd_key_t key);
+
+    /*
+     * Are we single-threaded?
+     */
+    int is_singlethreaded;
 } GLVNDPthreadFuncs;
 
 /*!
@@ -116,10 +121,8 @@ typedef struct GLVNDPthreadFuncsRec {
  *
  * \param [in] dlhandle A handle compatible with dlsym(3).
  * \param [in] funcs A table of pthreads funcs to initialize.
- * \return 0 if the table was filled in with singlethreaded wrappers, or
- *         1 if the table was filled in with multithreaded wrappers.
  */
-int glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs);
+void glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs);
 
 
 
