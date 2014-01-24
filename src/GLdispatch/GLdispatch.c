@@ -43,6 +43,11 @@
 static struct glvnd_list currentDispatchList;
 static GLVNDPthreadFuncs *pthreadFuncs;
 
+/*
+ * The number of current contexts that GLdispatch is aware of
+ */
+static int numCurrentContexts;
+
 typedef struct __GLdispatchProcEntryRec {
     char *procName;
 
@@ -384,6 +389,8 @@ PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
         DispatchCurrentRef(dispatch);
     }
 
+    numCurrentContexts++;
+
     UnlockDispatch();
 
     /*
@@ -413,6 +420,10 @@ PUBLIC void __glDispatchLoseCurrent(void)
         curApiState->dispatch = NULL;
         curApiState->context = NULL;
     }
+
+    LockDispatch();
+    numCurrentContexts--;
+    UnlockDispatch();
 
     _glapi_set_current(NULL, CURRENT_API_STATE);
     _glapi_set_current(NULL, CURRENT_CONTEXT);
