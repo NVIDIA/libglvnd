@@ -271,7 +271,7 @@ static void *mt_getspecific(glvnd_key_t key)
     return pthreadRealFuncs.getspecific(key);
 }
 
-int glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
+void glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
 {
     char *force_st = getenv("__GL_SINGLETHREADED");
 
@@ -299,7 +299,8 @@ int glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
     GET_MT_FUNC(funcs, dlhandle, getspecific);
 
     // Multi-threaded
-    return 1;
+    funcs->is_singlethreaded = 0;
+    return;
 fail:
     if (pthreadRealFuncs.create) {
         // Throw an error if we succeeded in looking up some,
@@ -325,5 +326,5 @@ fail:
 
 
     // Single-threaded
-    return 0;
+    funcs->is_singlethreaded = 1;
 }

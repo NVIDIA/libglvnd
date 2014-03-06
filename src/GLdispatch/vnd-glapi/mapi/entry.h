@@ -32,14 +32,28 @@
 
 typedef void (*mapi_func)(void);
 
+enum {
+    ENTRY_X86_TLS,
+    ENTRY_X86_64_TLS,
+    ENTRY_X86_TSD,
+    ENTRY_PURE_C,
+    ENTRY_NUM_TYPES
+};
+
+extern const int entry_type;
+extern const int entry_stub_size;
+
 void
-entry_patch_public(void);
+entry_init_public(void);
 
 mapi_func
 entry_get_public(int slot);
 
 mapi_func
 entry_generate(int slot);
+
+void
+entry_generate_default_code(char *entry, int slot);
 
 void
 entry_patch(mapi_func entry, int slot);

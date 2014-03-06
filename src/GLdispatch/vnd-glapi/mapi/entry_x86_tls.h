@@ -26,29 +26,23 @@
  */
 
 #include <string.h>
+#include <assert.h>
 #include "u_macros.h"
+#include "utils_misc.h"
 
-__asm__(".text");
+#define ENTRY_STUB_ALIGN 32
+#define ENTRY_STUB_SIZE ENTRY_STUB_ALIGN
+#define ENTRY_STUB_ALIGN_DIRECTIVE ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n"
 
-__asm__("x86_current_tls:\n\t"
-	"call 1f\n"
-        "1:\n\t"
-        "popl %eax\n\t"
-	"addl $_GLOBAL_OFFSET_TABLE_+[.-1b], %eax\n\t"
-	"movl " ENTRY_CURRENT_TABLE "@GOTNTPOFF(%eax), %eax\n\t"
-	"ret");
-
-#ifndef GLX_X86_READONLY_TEXT
 __asm__(".section wtext, \"awx\", @progbits");
-#endif /* GLX_X86_READONLY_TEXT */
 
-__asm__(".balign 16\n"
+__asm__(ENTRY_STUB_ALIGN_DIRECTIVE
         "x86_entry_start:");
 
 #define STUB_ASM_ENTRY(func)     \
    ".globl " func "\n"           \
    ".type " func ", @function\n" \
-   ".balign 16\n"                \
+   ENTRY_STUB_ALIGN_DIRECTIVE    \
    func ":"
 
 #define STUB_ASM_CODE(slot)      \
@@ -59,11 +53,16 @@ __asm__(".balign 16\n"
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
-#ifndef GLX_X86_READONLY_TEXT
-__asm__(".balign 16\n"
-        "x86_entry_end:");
-__asm__(".text");
-#endif /* GLX_X86_READONLY_TEXT */
+__asm__(".text\n");
+
+__asm__("x86_current_tls:\n\t"
+    ENTRY_STUB_ALIGN_DIRECTIVE
+    "call 1f\n"
+        "1:\n\t"
+        "popl %eax\n\t"
+    "addl $_GLOBAL_OFFSET_TABLE_+[.-1b], %eax\n\t"
+    "movl " ENTRY_CURRENT_TABLE "@GOTNTPOFF(%eax), %eax\n\t"
+    "ret");
 
 
 #include "u_execmem.h"
@@ -72,59 +71,68 @@ extern unsigned long
 x86_current_tls();
 
 static char x86_entry_start[];
-static char x86_entry_end[];
 
-void
-entry_patch_public(void)
+const int entry_type = ENTRY_X86_TLS;
+const int entry_stub_size = ENTRY_STUB_SIZE;
+
+void entry_generate_default_code(char *entry, int slot)
 {
-#ifndef GLX_X86_READONLY_TEXT
-   char patch[8] = {
-      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, /* movl %gs:0x0, %eax */
-      0x90, 0x90                          /* nop's */
-   };
-   char *entry;
+    unsigned int *p;
+    unsigned long tls_addr;
+    char tmpl[] = {
+        0x65, 0xa1, 0x0, 0x0, 0x0, 0x0, // movl %gs:0x0,%eax
+        0xff, 0x20,                     // jmp *(%eax)
+        0x90, 0x90, 0x90, 0x90,         // nop's
+        0x90
+    };
 
-   *((unsigned long *) (patch + 2)) = x86_current_tls();
+    STATIC_ASSERT(sizeof(mapi_func) == 4);
+    STATIC_ASSERT(ENTRY_STUB_SIZE >= sizeof(tmpl));
 
-   for (entry = x86_entry_start; entry < x86_entry_end; entry += 16)
-      memcpy(entry, patch, sizeof(patch));
-#endif
+    tls_addr = x86_current_tls();
+
+    p = (unsigned int *)&tmpl[2];
+    *p = (unsigned int)tls_addr;
+
+    p = (unsigned int *)&tmpl[8];
+    *p = (unsigned int)(4 * slot);
+
+    memcpy(entry, tmpl, sizeof(tmpl));
 }
 
-#if !defined(STATIC_DISPATCH_ONLY)
+void
+entry_init_public(void)
+{
+    int slot;
+
+    // Patch the stubs with a more optimal code sequence
+    for (slot = 0; slot < MAPI_TABLE_NUM_STATIC; i++)
+       entry_generate_default_code(entry, slot);
+}
+
 mapi_func
 entry_get_public(int slot)
 {
    return (mapi_func) (x86_entry_start + slot * 16);
 }
 
+#if !defined(STATIC_DISPATCH_ONLY)
 void
 entry_patch(mapi_func entry, int slot)
 {
-   char *code = (char *) entry;
-   *((unsigned long *) (code + 8)) = slot * sizeof(mapi_func);
+    entry_generate_default_code((char *)entry, slot);
 }
 
 mapi_func
 entry_generate(int slot)
 {
-   const char code_templ[16] = {
-      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, /* movl %gs:0x0, %eax */
-      0xff, 0xa0, 0x34, 0x12, 0x00, 0x00, /* jmp *0x1234(%eax) */
-      0x90, 0x90, 0x90, 0x90              /* nop's */
-   };
    void *code;
-   mapi_func entry;
 
-   code = u_execmem_alloc(sizeof(code_templ));
+   code = u_execmem_alloc(ENTRY_STUB_SIZE);
    if (!code)
       return NULL;
 
-   memcpy(code, code_templ, sizeof(code_templ));
-
-   *((unsigned long *) (code + 2)) = x86_current_tls();
-   entry = (mapi_func) code;
-   entry_patch(entry, slot);
+   entry_generate_default_code(code, slot);
 
    return entry;
 }

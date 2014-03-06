@@ -297,7 +297,9 @@ int main(int argc, char **argv)
 
         XInitThreads();
 
-        if (!glvndSetupPthreads(RTLD_DEFAULT, &pImp)) {
+        glvndSetupPthreads(RTLD_DEFAULT, &pImp);
+
+        if (pImp.is_singlethreaded) {
             exit(1);
         }
 

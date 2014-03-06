@@ -36,4 +36,21 @@
 
 #define ARRAY_LEN(_arr) (sizeof(_arr)/sizeof((_arr)[0]))
 
+#if (201104 <= __STDC_VERSION__ \
+     || (4 < __GNUC__) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 6)))
+# define STATIC_ASSERT(x) _Static_assert((x), #x)
+#else
+# define STATIC_ASSERT(x) do {             \
+    (void) sizeof(char [1 - 2*(!(x))]); \
+} while (0)
+#endif
+
+#if ((2 < __GNUC__) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 93)))
+# define UNUSED __attribute__((__unused__))
+#else
+# define UNUSED 
+#endif
+
+#define ASSERT_CODE(x) x
+
 #endif // !defined(__UTILS_MISC_H)

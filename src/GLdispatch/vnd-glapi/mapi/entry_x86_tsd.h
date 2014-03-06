@@ -25,6 +25,7 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include <assert.h>
 #include "u_macros.h"
 
 #define X86_ENTRY_SIZE 32
@@ -61,18 +62,27 @@ __asm__(".balign 32\n"
 static const char x86_entry_start[];
 static const char x86_entry_end[];
 
+const int entry_type = ENTRY_X86_TSD;
+const int entry_stub_size = 0;
+
 void
-entry_patch_public(void)
+entry_init_public(void)
 {
 }
 
-#if !defined(STATIC_DISPATCH_ONLY)
+void
+entry_generate_default_code(char *entry, int slot)
+{
+    assert(0);
+}
+
 mapi_func
 entry_get_public(int slot)
 {
    return (mapi_func) (x86_entry_start + slot * X86_ENTRY_SIZE);
 }
 
+#if !defined(STATIC_DISPATCH_ONLY)
 void
 entry_patch(mapi_func entry, int slot)
 {

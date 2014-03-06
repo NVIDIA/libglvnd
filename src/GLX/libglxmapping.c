@@ -302,6 +302,7 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
     __GLXdispatchTableDynamic *dynDispatch;
     __GLXvendorInfo *vendor = NULL;
     Bool locked = False;
+    int vendorID = -1;
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, __glXVendorNameHash);
     HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
@@ -340,9 +341,13 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             __glXPthreadFuncs.once(&glxExportsTableOnceControl,
                                    InitExportsTable);
 
+            vendorID = __glDispatchNewVendorID();
+            assert(vendorID >= 0);
+
             dispatch = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
                                       &glxExportsTable,
-                                      vendorName);
+                                      vendorName,
+                                      vendorID);
             if (!dispatch) {
                 goto fail;
             }
@@ -354,6 +359,8 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             }
 
             pEntry->name = vendor->name = strdup(vendorName);
+            vendor->vendorID = vendorID;
+
             if (!vendor->name) {
                 goto fail;
             }
@@ -378,8 +385,8 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             LKDHASH_INIT(__glXPthreadFuncs, dynDispatch->hash);
             dynDispatch->vendor = vendor;
 
-            HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendorName,
-                            strlen(vendorName), pEntry);
+            HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendor->name,
+                            strlen(vendor->name), pEntry);
         } else {
             /* Some other thread added a vendor */
             vendor = pEntry->vendor;

@@ -268,8 +268,9 @@ int main(int argc, char **argv)
         void *one_ret;
 
         XInitThreads();
+        glvndSetupPthreads(RTLD_DEFAULT, &pImp);
 
-        if (!glvndSetupPthreads(RTLD_DEFAULT, &pImp)) {
+        if (pImp.is_singlethreaded) {
             exit(1);
         }
         for (i = 0; i < t.threads; i++) {

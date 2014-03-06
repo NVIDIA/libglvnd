@@ -71,6 +71,10 @@ enum {
  * a context current). This is done to conserve TLS space.
  */
 typedef struct __GLdispatchAPIStateRec {
+    /*************************************************************************
+     * Winsys-managed variables: fixed for lifetime of state
+     *************************************************************************/
+
     /*!
      * Namespace of the state: either API_GLX or API_EGL
      */
@@ -81,6 +85,15 @@ typedef struct __GLdispatchAPIStateRec {
      * to) thread id
      */
     void *id;
+
+    /*************************************************************************
+     * GLdispatch-managed variables: Modified by MakeCurrent()
+     *************************************************************************/
+
+    /*!
+     * ID of the current vendor for this state
+     */
+    int vendorID;
 
     /*!
      * The current (high-level) __GLdispatch table
@@ -94,9 +107,21 @@ typedef struct __GLdispatchAPIStateRec {
 } __GLdispatchAPIState;
 
 /*!
+ * Offset hook type used by GLdispatch wrapper libraries to implement entrypoint
+ * rewriting.
+ */
+typedef void (*__GLdispatchGetOffsetHook)(void *(*lookupStubOffset)(const char *));
+
+/*!
  * Initialize GLdispatch with pthreads functions needed for locking.
  */
 PUBLIC void __glDispatchInit(GLVNDPthreadFuncs *funcs);
+
+/*!
+ * This returns a process-unique ID that is suitable for use with a new GL
+ * vendor.
+ */
+PUBLIC int __glDispatchNewVendorID(void);
 
 /*!
  * Get a dispatch stub suitable for returning to the application from
@@ -128,11 +153,22 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
 
 /*!
  * This makes the given API state current, and assigns this API state
- * the passed-in current dispatch table and context.
+ * the passed-in current dispatch table, context, and vendor ID.
+ *
+ * If patchCb is not NULL, GLdispatch will attempt to overwrite its
+ * entrypoints (and the entrypoints of any loaded interface libraries)
+ * using the provided callbacks.  If patchCb is NULL and the entrypoints
+ * have been previously overwritten, GLdispatch will attempt to restore
+ * the default libglvnd entrypoints.
+ *
+ * This returns GL_FALSE if the make current operation failed, and GL_TRUE
+ * if it succeeded.
  */
-PUBLIC void __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
-                                    __GLdispatchTable *dispatch,
-                                    void *context);
+PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
+                                         __GLdispatchTable *dispatch,
+                                         void *context,
+                                         int vendorID,
+                                         const __GLdispatchPatchCallbacks *patchCb);
 
 /*!
  * This makes the NOP dispatch table current and sets the current context and
@@ -177,5 +213,23 @@ PUBLIC GLint __glDispatchGetOffset(const GLubyte *procName);
  */
 PUBLIC void __glDispatchSetEntry(__GLdispatchTable *dispatch,
                                  GLint offset, __GLdispatchProc addr);
+
+/*!
+ * This registers stubs with GLdispatch to be overwritten if a vendor library
+ * explicitly requests custom entrypoint code.  This is used by the wrapper
+ * interface libraries.
+ */
+PUBLIC void __glDispatchRegisterStubCallbacks(
+    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
+    void (*restore_func)(void)
+);
+
+/*!
+ * This unregisters the GLdispatch stubs, and performs any necessary cleanup.
+ */
+PUBLIC void __glDispatchUnregisterStubCallbacks(
+    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
+    void (*restore_func)(void)
+);
 
 #endif

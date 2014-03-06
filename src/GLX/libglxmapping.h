@@ -37,6 +37,7 @@
  * Structure containing relevant per-vendor information.
  */
 typedef struct __GLXvendorInfoRec {
+    int vendorID; //< unique GLdispatch ID
     char *name; //< name of the vendor
     void *dlhandle; //< shared library handle
     const __GLXdispatchTableStatic *staticDispatch; //< static GLX dispatch table

@@ -54,6 +54,45 @@ typedef void (*__GLdispatchProc)(void);
 typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
                                             int isClientAPI);
 
+/*
+ * Thread-local implementation used by libglvnd.  This is passed into
+ * the patch function callback via the type parameter.
+ */
+enum {
+    __GLDISPATCH_STUB_X86_TLS,
+    __GLDISPATCH_STUB_X86_64_TLS,
+    __GLDISPATCH_STUB_X86_TSD,
+    __GLDISPATCH_STUB_PURE_C,
+    __GLDISPATCH_STUB_NUM_TYPES
+};
+
+typedef struct __GLdispatchPatchCallbacksRec {
+    /*
+     * Called by libglvnd to request that a vendor library patch its top-level
+     * entrypoints.  The vendor should return GL_TRUE if patching is supported
+     * with this type and stub size, or GL_FALSE otherwise.  If this is the first
+     * time libglvnd calls into the vendor with the given stubGeneration argument,
+     * the vendor is expected to set the boolean pointed to by needOffsets to
+     * GL_TRUE; otherwise, it should be set to GL_FALSE.
+     */
+    GLboolean (*initiatePatch)(int type,
+                               int stubSize,
+                               int stubGeneration,
+                               GLboolean *needOffsets);
+
+    /*
+     * Hook by which the vendor library may request stub offsets if it set
+     * *needOffsets == GL_TRUE above.
+     */
+    void (*getOffsetHook)(void *(*lookupStubOffset)(const char *funcName));
+
+    /*
+     * Called by libglvnd to finish the top-level entrypoint patch.  libglvnd
+     * must have called the __GLdispatchInitiatePatch callback first!
+     */
+    void (*finalizePatch)(void);
+} __GLdispatchPatchCallbacks;
+
 #if defined(__cplusplus)
 }
 #endif

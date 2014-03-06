@@ -25,6 +25,7 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include <assert.h>
 #include <stdlib.h>
 
 static INLINE const struct mapi_table *
@@ -39,12 +40,20 @@ entry_current_get(void)
 #define MAPI_TMP_PUBLIC_ENTRIES
 #include "mapi_tmp.h"
 
+const int entry_type = ENTRY_PURE_C;
+const int entry_stub_size = 0;
+
 void
-entry_patch_public(void)
+entry_init_public(void)
 {
 }
 
-#if !defined(STATIC_DISPATCH_ONLY)
+void
+entry_generate_default_code(char *entry, int slot)
+{
+    assert(0);
+}
+
 mapi_func
 entry_get_public(int slot)
 {
@@ -52,6 +61,7 @@ entry_get_public(int slot)
    return public_entries[slot];
 }
 
+#if !defined(STATIC_DISPATCH_ONLY)
 mapi_func
 entry_generate(int slot)
 {

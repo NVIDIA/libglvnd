@@ -36,6 +36,7 @@
 #include "table.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+#define MAPI_LAST_SLOT (MAPI_TABLE_NUM_STATIC + MAPI_TABLE_NUM_DYNAMIC - 1)
 
 struct mapi_stub {
    const void *name;
@@ -46,25 +47,6 @@ struct mapi_stub {
 /* define public_string_pool and public_stubs */
 #define MAPI_TMP_PUBLIC_STUBS
 #include "mapi_tmp.h"
-
-static struct mapi_stub dynamic_stubs[MAPI_TABLE_NUM_DYNAMIC];
-static int num_dynamic_stubs;
-static int next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
-
-void
-stub_init_once(void)
-{
-#ifdef HAVE_PTHREAD
-   static pthread_once_t once = PTHREAD_ONCE_INIT;
-   pthread_once(&once, entry_patch_public);
-#else
-   static int first = 1;
-   if (first) {
-      first = 0;
-      entry_patch_public();
-   }
-#endif
-}
 
 static int
 stub_compare(const void *key, const void *elem)
@@ -88,6 +70,26 @@ stub_find_public(const char *name)
          ARRAY_SIZE(public_stubs), sizeof(public_stubs[0]), stub_compare);
 }
 
+#if !defined(STATIC_DISPATCH_ONLY)
+static struct mapi_stub dynamic_stubs[MAPI_TABLE_NUM_DYNAMIC];
+static int num_dynamic_stubs;
+static int next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
+
+void
+stub_init_once(void)
+{
+#ifdef HAVE_PTHREAD
+   static pthread_once_t once = PTHREAD_ONCE_INIT;
+   pthread_once(&once, entry_init_public);
+#else
+   static int first = 1;
+   if (first) {
+      first = 0;
+      entry_init_public();
+   }
+#endif
+}
+
 /**
  * Add a dynamic stub.
  */
@@ -105,8 +107,7 @@ stub_add_dynamic(const char *name)
    stub = &dynamic_stubs[idx];
 
    /* dispatch to the last slot, which is reserved for no-op */
-   stub->addr = entry_generate(
-         MAPI_TABLE_NUM_STATIC + MAPI_TABLE_NUM_DYNAMIC - 1);
+   stub->addr = entry_generate(MAPI_LAST_SLOT);
    if (!stub->addr)
       return NULL;
 
@@ -190,6 +191,7 @@ stub_fix_dynamic(struct mapi_stub *stub, const struct mapi_stub *alias)
    entry_patch(stub->addr, slot);
    stub->slot = slot;
 }
+#endif // !defined(STATIC_DISPATCH_ONLY)
 
 /**
  * Return the name of a stub.
@@ -225,4 +227,62 @@ stub_get_addr(const struct mapi_stub *stub)
 {
    assert(stub->addr || (unsigned int) stub->slot < MAPI_TABLE_NUM_STATIC);
    return (stub->addr) ? stub->addr : entry_get_public(stub->slot);
+}
+
+int
+stub_allow_override(void)
+{
+    return !!entry_stub_size;
+}
+
+void *stub_get_addr_by_name(const char *name)
+{
+    const struct mapi_stub *stub;
+
+    stub = stub_find_public(name);
+
+#if !defined(STATIC_DISPATCH_ONLY)
+    if (!stub) {
+        stub = stub_find_dynamic(name, 0);
+    }
+#endif // !defined(STATIC_DISPATCH_ONLY)
+
+    if (!stub) {
+        return NULL;
+    }
+
+    return stub_get_addr(stub);
+}
+
+void
+stub_get_offsets(
+    stub_get_offset_hook get_offset_hook
+)
+{
+    get_offset_hook(stub_get_addr_by_name);
+}
+
+void
+stub_restore(void)
+{
+    int i, slot;
+    const struct mapi_stub *stub;
+
+    assert(stub_allow_override());
+
+    for (stub = public_stubs, i = 0;
+         i < MAPI_TABLE_NUM_STATIC;
+         stub++, i++) {
+        slot = (stub->slot == -1) ? MAPI_LAST_SLOT : stub->slot;
+        entry_generate_default_code((char *)stub_get_addr(stub), slot);
+    }
+
+#if !defined(STATIC_DISPATCH_ONLY)
+    for (stub = dynamic_stubs, i = 0;
+         i < num_dynamic_stubs;
+         stub++, i++) {
+        slot = (stub->slot == -1) ? MAPI_LAST_SLOT : stub->slot;
+        entry_generate_default_code((char *)stub_get_addr(stub), slot);
+    }
+#endif // !defined(STATIC_DISPATCH_ONLY)
 }

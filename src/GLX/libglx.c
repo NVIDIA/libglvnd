@@ -232,6 +232,8 @@ static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
 
     apiState->glas.tag = GLDISPATCH_API_GLX;
     apiState->glas.id = malloc(sizeof(glvnd_thread_t));
+    apiState->glas.vendorID = -1;
+
     *((glvnd_thread_t *)apiState->glas.id) = tid;
 
     HASH_ADD_KEYPTR(hh, _LH(__glXAPIStateHash), apiState->glas.id,
@@ -471,6 +473,8 @@ static Bool MakeContextCurrentInternal(Display *dpy,
 
         return True;
     } else {
+        assert(newVendor);
+
         /* Update the current display and drawable(s) in this apiState */
         apiState->currentDisplay = dpy;
         apiState->currentDraw = draw;
@@ -498,12 +502,16 @@ static Bool MakeContextCurrentInternal(Display *dpy,
          * Call into GLdispatch to set up the current context and
          * GL dispatch table.
          */
-        __glDispatchMakeCurrent(&apiState->glas,
-                                newVendor->glDispatch,
-                                (void *)context);
-    }
+        ret = __glDispatchMakeCurrent(
+            &apiState->glas,
+            newVendor->glDispatch,
+            (void *)context,
+            newVendor->vendorID,
+            newVendor->staticDispatch->glxvc.patchCallbacks
+        );
 
-    return True;
+        return ret;
+    }
 }
 
 static void SaveCurrentValues(GLXDrawable *pDraw,
@@ -1215,10 +1223,7 @@ done:
 void __attribute__ ((constructor)) __glXInit(void)
 {
 
-    /* Initialize pthreads imports */
-    glvndSetupPthreads(RTLD_DEFAULT, &__glXPthreadFuncs);
-
-    /* Initialize GLdispatch */
+    /* Initialize GLdispatch; this will also initialize our pthreads imports */
     __glDispatchInit(&__glXPthreadFuncs);
 
     {
