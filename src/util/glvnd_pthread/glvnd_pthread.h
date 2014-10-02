@@ -66,6 +66,7 @@ typedef struct _glvnd_thread_t {
 } glvnd_thread_t;
 
 typedef pthread_attr_t glvnd_thread_attr_t;
+typedef pthread_mutexattr_t glvnd_mutexattr_t;
 typedef pthread_rwlockattr_t glvnd_rwlockattr_t;
 
 typedef pthread_key_t glvnd_key_t;
@@ -87,9 +88,13 @@ typedef struct GLVNDPthreadFuncsRec {
     int (*equal)(glvnd_thread_t t1, glvnd_thread_t t2);
 
     /* Locking primitives */
+    int (*mutex_init)(glvnd_mutex_t *mutex, const glvnd_mutexattr_t *attr);
+    int (*mutex_destroy)(glvnd_mutex_t *mutex);
     int (*mutex_lock)(glvnd_mutex_t *mutex);
     int (*mutex_unlock)(glvnd_mutex_t *mutex);
+
     int (*rwlock_init)(glvnd_rwlock_t *rwlock, const glvnd_rwlockattr_t *attr);
+    int (*rwlock_destroy)(glvnd_rwlock_t *rwlock);
     int (*rwlock_rdlock)(glvnd_rwlock_t *rwlock);
     int (*rwlock_wrlock)(glvnd_rwlock_t *rwlock);
     int (*rwlock_unlock)(glvnd_rwlock_t *rwlock);
