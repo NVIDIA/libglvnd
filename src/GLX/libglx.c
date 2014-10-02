@@ -88,6 +88,13 @@ static void ThreadDestroyed(void *tsdCtx)
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
     UntrackCurrentContext(tsdCtx);
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+
+    /*
+     * Call into GLdispatch to lose current to this thread.  XXX
+     * should we check for ownership of the API state before doing
+     * this?
+     */
+    __glDispatchLoseCurrent();
 }
 
 static void ThreadCreateTSDContextOnce(void)
