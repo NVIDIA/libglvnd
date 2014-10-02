@@ -295,7 +295,6 @@ static char *ConstructVendorLibraryFilename(const char *vendorName)
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 {
     __GLXvendorNameHash *pEntry = NULL;
-    char *filename;
     void *dlhandle = NULL;
     __PFNGLXMAINPROC glxMainProc;
     const __GLXdispatchTableStatic *dispatch;
@@ -318,6 +317,8 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
         // Do another lookup to check uniqueness
         HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
         if (!pEntry) {
+            char *filename;
+
             // Previously unseen vendor. dlopen() the new vendor and add it to the
             // hash table.
             pEntry = calloc(1, sizeof(*pEntry));
@@ -326,7 +327,9 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             }
 
             filename = ConstructVendorLibraryFilename(vendorName);
-            dlhandle = dlopen(filename, RTLD_LAZY);
+            if (filename) {
+                dlhandle = dlopen(filename, RTLD_LAZY);
+            }
             free(filename);
             if (!dlhandle) {
                 goto fail;
