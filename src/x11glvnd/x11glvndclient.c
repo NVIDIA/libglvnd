@@ -90,6 +90,17 @@ void XGLVRegisterCloseDisplayCallback(void (*callback)(Display *))
     glvnd_list_add(&hook->entry, &closeDisplayHookList);
 }
 
+void XGLVUnregisterCloseDisplayCallbacks(void)
+{
+    CloseDisplayHook *curHook, *tmpHook;
+    glvnd_list_for_each_entry_safe(curHook, tmpHook, &closeDisplayHookList, entry) {
+        glvnd_list_del(&curHook->entry);
+        free(curHook);
+    }
+    assert(glvnd_list_is_empty(&closeDisplayHookList));
+    closeDisplayHookListInitialized = False;
+}
+
 static XEXT_GENERATE_CLOSE_DISPLAY(close_display_internal, xglv_ext_info);
 
 static XEXT_CLOSE_DISPLAY_PROTO(close_display)

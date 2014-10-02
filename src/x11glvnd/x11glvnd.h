@@ -67,4 +67,9 @@ char *XGLVQueryScreenVendorMapping(
  */
 void XGLVRegisterCloseDisplayCallback(void (*callback)(Display *));
 
+/*
+ * Unregisters all registered callbacks.
+ */
+void XGLVUnregisterCloseDisplayCallbacks(void);
+
 #endif // __X11GLVND_H__
