@@ -312,8 +312,9 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
 }
 
 /*
- * Adds a context to the current context list. Note: __glXCurrentContextHash
- * must be write-locked before calling this function!
+ * Adds a context to the current context list, and updates this thread's context
+ * TSD entry. Note: __glXCurrentContextHash must be write-locked before calling
+ * this function!
  *
  * Returns True on success.
  */
@@ -371,8 +372,7 @@ static Bool IsContextCurrentToAnyOtherThread(GLXContext ctx)
 
 /*
  * Removes a context from the current context list, and removes any context ->
- * screen mappings if necessary. TODO: need to handle the corner case where the
- * thread is terminated and we haven't lost current to this context
+ * screen mappings if necessary.
  *
  * Note: The __glXCurrentContextHash must be write-locked before calling this
  * function!
@@ -393,9 +393,6 @@ static void UntrackCurrentContext(GLXContext ctx)
     needsUnmap = pEntry->needsUnmap;
     HASH_DELETE(hh, _LH(__glXCurrentContextHash), pEntry);
     free(pEntry);
-
-    // Clear the TSD entry
-    __glXPthreadFuncs.setspecific(tsdContextKey, NULL);
 
     if (needsUnmap) {
         __glXRemoveScreenContextMapping(ctx);
@@ -594,6 +591,8 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
             UntrackCurrentContext(oldContext);
         } else {
             UntrackCurrentContext(context);
+            ret = TrackCurrentContext(oldContext);
+            assert(ret);
         }
     }
 
