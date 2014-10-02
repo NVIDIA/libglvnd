@@ -35,6 +35,8 @@
 #include <X11/Xproto.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "libglxthread.h"
 #include "libglxabipriv.h"
@@ -107,6 +109,8 @@ static void ThreadCreateTSDContextOnce(void)
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
     return pDispatch->glx14ep.chooseVisual(dpy, screen, attrib_list);
@@ -133,6 +137,8 @@ PUBLIC void glXCopyContext(Display *dpy, GLXContext src, GLXContext dst,
 PUBLIC GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis,
                             GLXContext share_list, Bool direct)
 {
+    __glXThreadInitialize();
+
     const int screen = vis->screen;
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -146,6 +152,8 @@ PUBLIC GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis,
 
 PUBLIC void glXDestroyContext(Display *dpy, GLXContext context)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromContext(context);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -157,6 +165,8 @@ PUBLIC void glXDestroyContext(Display *dpy, GLXContext context)
 
 PUBLIC GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixmap)
 {
+    __glXThreadInitialize();
+
     const int screen = vis->screen;
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -170,6 +180,8 @@ PUBLIC GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixma
 
 PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromDrawable(dpy, pix);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -181,6 +193,8 @@ PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
 
 PUBLIC int glXGetConfig(Display *dpy, XVisualInfo *vis, int attrib, int *value)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch;
 
     if (!dpy || !vis || !value) {
@@ -194,12 +208,16 @@ PUBLIC int glXGetConfig(Display *dpy, XVisualInfo *vis, int attrib, int *value)
 
 PUBLIC GLXContext glXGetCurrentContext(void)
 {
+    __glXThreadInitialize();
+
     return __glXGetCurrentContext();
 }
 
 
 PUBLIC GLXDrawable glXGetCurrentDrawable(void)
 {
+    __glXThreadInitialize();
+
     __GLXAPIState *apiState = __glXGetCurrentAPIState();
     return apiState->currentDraw;
 }
@@ -207,6 +225,8 @@ PUBLIC GLXDrawable glXGetCurrentDrawable(void)
 
 PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromContext(context);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -247,6 +267,12 @@ static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
                     sizeof(glvnd_thread_t), apiState);
 
     return apiState;
+}
+
+/* NOTE this assumes the __glXAPIStateHash lock is taken! */
+static void CleanupAPIStateEntry(void *unused, __GLXAPIState *apiState)
+{
+    free(apiState->glas.id);
 }
 
 /* NOTE this assumes the __glXAPIStateHash lock is taken! */
@@ -529,6 +555,8 @@ static void SaveCurrentValues(GLXDrawable *pDraw,
 
 PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext context)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch;
     Bool ret;
     GLXDrawable oldDraw, oldRead;
@@ -604,6 +632,8 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
 
 PUBLIC Bool glXQueryExtension(Display *dpy, int *error_base, int *event_base)
 {
+    __glXThreadInitialize();
+
     /*
      * There isn't enough information to dispatch to a vendor's
      * implementation, so handle the request here.
@@ -624,6 +654,8 @@ PUBLIC Bool glXQueryExtension(Display *dpy, int *error_base, int *event_base)
 
 PUBLIC Bool glXQueryVersion(Display *dpy, int *major, int *minor)
 {
+    __glXThreadInitialize();
+
     /*
      * There isn't enough information to dispatch to a vendor's
      * implementation, so handle the request here.
@@ -681,6 +713,8 @@ PUBLIC Bool glXQueryVersion(Display *dpy, int *major, int *minor)
 
 PUBLIC void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromDrawable(dpy, drawable);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -690,6 +724,8 @@ PUBLIC void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 
 PUBLIC void glXUseXFont(Font font, int first, int count, int list_base)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch = __glXGetCurrentDispatch();
 
     pDispatch->glx14ep.useXFont(font, first, count, list_base);
@@ -698,6 +734,8 @@ PUBLIC void glXUseXFont(Font font, int first, int count, int list_base)
 
 PUBLIC void glXWaitGL(void)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch = __glXGetCurrentDispatch();
 
     pDispatch->glx14ep.waitGL();
@@ -706,6 +744,8 @@ PUBLIC void glXWaitGL(void)
 
 PUBLIC void glXWaitX(void)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch = __glXGetCurrentDispatch();
 
     pDispatch->glx14ep.waitX();
@@ -716,6 +756,8 @@ PUBLIC void glXWaitX(void)
 
 PUBLIC const char *glXGetClientString(Display *dpy, int name)
 {
+    __glXThreadInitialize();
+
     int num_screens = XScreenCount(dpy);
     int screen;
     size_t n = CLIENT_STRING_BUFFER_SIZE - 1;
@@ -757,6 +799,8 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
 
 PUBLIC const char *glXQueryServerString(Display *dpy, int screen, int name)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
     return pDispatch->glx14ep.queryServerString(dpy, screen, name);
@@ -765,6 +809,8 @@ PUBLIC const char *glXQueryServerString(Display *dpy, int screen, int name)
 
 PUBLIC const char *glXQueryExtensionsString(Display *dpy, int screen)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
     return pDispatch->glx14ep.queryExtensionsString(dpy, screen);
@@ -773,6 +819,8 @@ PUBLIC const char *glXQueryExtensionsString(Display *dpy, int screen)
 
 PUBLIC Display *glXGetCurrentDisplay(void)
 {
+    __glXThreadInitialize();
+
     __GLXAPIState *apiState = __glXGetCurrentAPIState();
     return apiState->currentDisplay;
 }
@@ -781,6 +829,8 @@ PUBLIC Display *glXGetCurrentDisplay(void)
 PUBLIC GLXFBConfig *glXChooseFBConfig(Display *dpy, int screen,
                                       const int *attrib_list, int *nelements)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
     GLXFBConfig *fbconfigs =
         pDispatch->glx14ep.chooseFBConfig(dpy, screen, attrib_list, nelements);
@@ -800,6 +850,8 @@ PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
                                int render_type, GLXContext share_list,
                                Bool direct)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -814,6 +866,8 @@ PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
 PUBLIC GLXPbuffer glXCreatePbuffer(Display *dpy, GLXFBConfig config,
                             const int *attrib_list)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -828,6 +882,8 @@ PUBLIC GLXPbuffer glXCreatePbuffer(Display *dpy, GLXFBConfig config,
 PUBLIC GLXPixmap glXCreatePixmap(Display *dpy, GLXFBConfig config,
                           Pixmap pixmap, const int *attrib_list)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -843,6 +899,8 @@ PUBLIC GLXPixmap glXCreatePixmap(Display *dpy, GLXFBConfig config,
 PUBLIC GLXWindow glXCreateWindow(Display *dpy, GLXFBConfig config,
                           Window win, const int *attrib_list)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -857,6 +915,8 @@ PUBLIC GLXWindow glXCreateWindow(Display *dpy, GLXFBConfig config,
 
 PUBLIC void glXDestroyPbuffer(Display *dpy, GLXPbuffer pbuf)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromDrawable(dpy, pbuf);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -868,6 +928,8 @@ PUBLIC void glXDestroyPbuffer(Display *dpy, GLXPbuffer pbuf)
 
 PUBLIC void glXDestroyPixmap(Display *dpy, GLXPixmap pixmap)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromDrawable(dpy, pixmap);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -879,6 +941,8 @@ PUBLIC void glXDestroyPixmap(Display *dpy, GLXPixmap pixmap)
 
 PUBLIC void glXDestroyWindow(Display *dpy, GLXWindow win)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromDrawable(dpy, win);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -890,6 +954,8 @@ PUBLIC void glXDestroyWindow(Display *dpy, GLXWindow win)
 
 PUBLIC GLXDrawable glXGetCurrentReadDrawable(void)
 {
+    __glXThreadInitialize();
+
     __GLXAPIState *apiState = __glXGetCurrentAPIState();
     return apiState->currentRead;
 }
@@ -898,6 +964,8 @@ PUBLIC GLXDrawable glXGetCurrentReadDrawable(void)
 PUBLIC int glXGetFBConfigAttrib(Display *dpy, GLXFBConfig config,
                          int attribute, int *value)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -907,6 +975,8 @@ PUBLIC int glXGetFBConfigAttrib(Display *dpy, GLXFBConfig config,
 
 PUBLIC GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
     GLXFBConfig *fbconfigs = pDispatch->glx14ep.getFBConfigs(dpy, screen, nelements);
     int i;
@@ -924,6 +994,8 @@ PUBLIC GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
 PUBLIC void glXGetSelectedEvent(Display *dpy, GLXDrawable draw,
                          unsigned long *event_mask)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromDrawable(dpy, draw);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -933,6 +1005,8 @@ PUBLIC void glXGetSelectedEvent(Display *dpy, GLXDrawable draw,
 
 PUBLIC XVisualInfo *glXGetVisualFromFBConfig(Display *dpy, GLXFBConfig config)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -942,6 +1016,8 @@ PUBLIC XVisualInfo *glXGetVisualFromFBConfig(Display *dpy, GLXFBConfig config)
 PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
                                   GLXDrawable read, GLXContext context)
 {
+    __glXThreadInitialize();
+
     const __GLXdispatchTableStatic *pDispatch;
     Bool ret;
     GLXDrawable oldDraw, oldRead;
@@ -1018,6 +1094,8 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
 
 PUBLIC int glXQueryContext(Display *dpy, GLXContext context, int attribute, int *value)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromContext(context);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -1028,6 +1106,8 @@ PUBLIC int glXQueryContext(Display *dpy, GLXContext context, int attribute, int 
 PUBLIC void glXQueryDrawable(Display *dpy, GLXDrawable draw,
                       int attribute, unsigned int *value)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromDrawable(dpy, draw);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -1037,6 +1117,8 @@ PUBLIC void glXQueryDrawable(Display *dpy, GLXDrawable draw,
 
 PUBLIC void glXSelectEvent(Display *dpy, GLXDrawable draw, unsigned long event_mask)
 {
+    __glXThreadInitialize();
+
     const int screen = __glXScreenFromDrawable(dpy, draw);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
@@ -1128,6 +1210,11 @@ void cacheInitializeOnce(void)
 
 }
 
+static void CleanupProcAddressEntry(void *unused, __GLXprocAddressHash *pEntry)
+{
+    free(pEntry->procName);
+}
+
 /*
  * This function is called externally by the libGL wrapper library to
  * retrieve libGLX entrypoints.
@@ -1183,11 +1270,15 @@ static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
 
 PUBLIC __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
 {
+    __glXThreadInitialize();
+
     return glXGetProcAddress(procName);
 }
 
 PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
 {
+    __glXThreadInitialize();
+
     __GLXextFuncPtr addr = NULL;
 
     /*
@@ -1225,6 +1316,124 @@ done:
     return addr;
 }
 
+int AtomicIncrement(int volatile *val)
+{
+    return __sync_add_and_fetch(val, 1);
+}
+
+int AtomicSwap(int volatile *val, int newVal)
+{
+    return __sync_lock_test_and_set(val, newVal);
+}
+
+int AtomicCompareAndSwap(int volatile *val, int oldVal, int newVal)
+{
+    return __sync_val_compare_and_swap(val, oldVal, newVal);
+}
+
+int AtomicDecrementClampAtZero(int volatile *val)
+{
+    int oldVal, newVal;
+
+    oldVal = *val;
+    newVal = oldVal;
+
+    do {
+        if (oldVal <= 0) {
+            assert(oldVal == 0);
+        } else {
+            newVal = oldVal - 1;
+            if (newVal < 0) {
+                newVal = 0;
+            }
+            oldVal = AtomicCompareAndSwap(val, oldVal, newVal);
+        }
+    } while ((oldVal > 0) && (newVal != oldVal - 1));
+
+    return newVal;
+}
+
+static void __glXResetOnFork(void);
+
+/*
+ * Perform checks that need to occur when entering any GLX entrypoint.
+ * Currently, this only detects whether a fork occurred since the last
+ * entrypoint was called, and performs recovery as needed.
+ */
+void __glXThreadInitialize(void)
+{
+    volatile static int g_threadsInCheck = 0;
+    volatile static int g_lastPid = -1;
+
+    int lastPid;
+    int pid = getpid();
+
+    AtomicIncrement(&g_threadsInCheck);
+
+    lastPid = AtomicSwap(&g_lastPid, pid);
+
+    if ((lastPid != -1) &&
+        (lastPid != pid)) {
+
+        DBG_PRINTF(0, "Fork detected\n");
+
+        __glXResetOnFork();
+
+        // Force g_threadsInCheck to 0 to unblock other threads waiting here.
+        g_threadsInCheck = 0;
+    } else {
+        AtomicDecrementClampAtZero(&g_threadsInCheck);
+        while (g_threadsInCheck > 0) {
+            // Wait for other threads to finish checking for a fork.
+            //
+            // If a fork happens while g_threadsInCheck > 0 the _first_ thread
+            // to enter __glXThreadInitialize() will see the fork, handle it, and force
+            // g_threadsInCheck to 0, unblocking any other threads stuck here.
+            sched_yield();
+        }
+    }
+}
+
+static void __glXAPITeardown(Bool doReset)
+{
+    /* Clear the current TSD context */
+    __glXPthreadFuncs.setspecific(tsdContextKey, NULL);
+
+    /*
+     * XXX: This will leave dangling screen-context mappings, but they will be
+     * cleared separately in __glXMappingTeardown().
+     */
+    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXcurrentContextHash,
+                     __glXCurrentContextHash, NULL, NULL, doReset);
+
+    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXAPIState,
+                     __glXAPIStateHash, CleanupAPIStateEntry,
+                     NULL, doReset);
+
+    if (doReset) {
+        /*
+         * XXX: We should be able to get away with just resetting the proc address
+         * hash lock, and not throwing away cached addresses.
+         */
+        __glXPthreadFuncs.rwlock_init(&__glXProcAddressHash.lock, NULL);
+    } else {
+        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXprocAddressHash,
+                         __glXProcAddressHash, CleanupProcAddressEntry,
+                         NULL, False);
+    }
+}
+
+static void __glXResetOnFork(void)
+{
+    /* Reset all GLX API state */
+    __glXAPITeardown(True);
+
+    /* Reset all mapping state */
+    __glXMappingTeardown(True);
+
+    /* Reset GLdispatch */
+    __glDispatchReset();
+}
 
 void __attribute__ ((constructor)) __glXInit(void)
 {
@@ -1244,6 +1453,8 @@ void __attribute__ ((constructor)) __glXInit(void)
         }
     }
 
+    /* TODO install fork handlers using __register_atfork */
+
     /* Register our XCloseDisplay() callback */
     XGLVRegisterCloseDisplayCallback(DisplayClosed);
 
@@ -1253,7 +1464,32 @@ void __attribute__ ((constructor)) __glXInit(void)
 
 void __attribute__ ((destructor)) __glXFini(void)
 {
-    // TODO teardown code here
+    /* Check for a fork before going further. */
+    __glXThreadInitialize();
+
+    /*
+     * If libGLX owns the current API state, lose current
+     * in GLdispatch before going further.
+     */
+    __GLdispatchAPIState *glas =
+        __glDispatchGetCurrentAPIState();
+
+    if (glas && glas->tag == GLDISPATCH_API_GLX) {
+        __glDispatchLoseCurrent();
+    }
+
+
+    /* Unregister all XCloseDisplay() callbacks */
+    XGLVUnregisterCloseDisplayCallbacks();
+
+    /* Tear down all GLX API state */
+    __glXAPITeardown(False);
+
+    /* Tear down all mapping state */
+    __glXMappingTeardown(False);
+
+    /* Tear down GLdispatch if necessary */
+    __glDispatchFini();
 }
 
 __GLXdispatchTableDynamic *__glXGetCurrentDynDispatch(void)

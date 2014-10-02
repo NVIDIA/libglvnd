@@ -149,7 +149,16 @@ static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
     return GL_TRUE;
 }
 
-/*
+/*!
+ * Callback function used when freeing the dispatch index hash table.
+ */
+static void CleanupDispatchIndexEntry(void *unused, __GLXdispatchIndexHash *pEntry)
+{
+    assert(pEntry);
+    free(pEntry->procName);
+}
+
+/*!
  * This function queries each loaded vendor to determine if there is
  * a vendor-implemented dispatch function. The dispatch function
  * uses the vendor <-> API library ABI to determine the screen given
@@ -292,6 +301,26 @@ static char *ConstructVendorLibraryFilename(const char *vendorName)
     return filename;
 }
 
+void TeardownVendor(__GLXvendorInfo *vendor, Bool doLibraryUnload)
+{
+    free(vendor->name);
+    if (vendor->glDispatch) {
+        __glDispatchDestroyTable(vendor->glDispatch);
+    }
+
+    /* Clean up the dynamic dispatch table */
+    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdispatchFuncHash,
+                     vendor->dynDispatch->hash, NULL, NULL, True);
+
+    free(vendor->dynDispatch);
+
+    if (doLibraryUnload) {
+        dlclose(vendor->dlhandle);
+    }
+
+    free(vendor);
+}
+
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 {
     __GLXvendorNameHash *pEntry = NULL;
@@ -407,17 +436,16 @@ fail:
         dlclose(dlhandle);
     }
     if (vendor) {
-        free(vendor->name);
-        if (vendor->glDispatch) {
-            __glDispatchDestroyTable(vendor->glDispatch);
-        }
-        free(vendor->dynDispatch);
-    }
-    if (pEntry) {
-        free(pEntry->vendor);
+        TeardownVendor(vendor, False/* doLibraryUnload */);
     }
     free(pEntry);
     return NULL;
+}
+
+static void CleanupVendorNameEntry(void *unused,
+                                   __GLXvendorNameHash *pEntry)
+{
+    TeardownVendor(pEntry->vendor, True/* doLibraryUnload */);
 }
 
 __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
@@ -525,6 +553,8 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen)
 
 __GLXdispatchTableDynamic *__glXGetDynDispatch(Display *dpy, const int screen)
 {
+    __glXThreadInitialize();
+
     __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
     if (vendor) {
@@ -760,4 +790,46 @@ void __glXRemoveScreenDrawableMapping(GLXDrawable drawable)
 int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable)
 {
     return ScreenFromXID(dpy, drawable);
+}
+
+/*!
+ * This handles freeing all mapping state during library teardown
+ * and fork recovery.
+ */
+void __glXMappingTeardown(Bool doReset)
+{
+    /* Tear down all hashtables used in this file */
+    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdispatchIndexHash,
+                     __glXDispatchIndexHash, CleanupDispatchIndexEntry,
+                     NULL, doReset);
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+    __glXNextUnusedHashIndex = 0;
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+
+    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorScreenHash,
+                     __glXVendorScreenHash, NULL, NULL, doReset);
+
+    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenPointerMappingHash,
+                     __glXScreenPointerMappingHash, NULL, NULL, doReset);
+
+    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenXIDMappingHash,
+                     __glXScreenXIDMappingHash, NULL, NULL, doReset);
+
+    if (doReset) {
+        /*
+         * If we're just doing fork recovery, we don't actually want to unload
+         * any currently loaded vendors.  Just reset the corresponding lock.
+         */
+        __glXPthreadFuncs.rwlock_init(&__glXVendorNameHash.lock, NULL);
+    } else {
+        /*
+         * This implicitly unloads vendor libraries that were loaded when
+         * they were added to this hashtable.
+         */
+        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorNameHash,
+                         __glXVendorNameHash, CleanupVendorNameEntry,
+                         NULL, False);
+    }
+
 }
