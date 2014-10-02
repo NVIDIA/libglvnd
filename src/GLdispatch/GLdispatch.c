@@ -45,7 +45,15 @@
  * Accesses to this need to be protected by the dispatch lock.
  */
 static struct glvnd_list currentDispatchList;
-static GLboolean initialized;
+
+/*
+ * Number of clients using GLdispatch.
+ */
+static int clientRefcount;
+
+/*
+ * Threading imports used for locking.
+ */
 static GLVNDPthreadFuncs pthreadFuncs;
 
 /*
@@ -157,10 +165,9 @@ static inline void UnlockDispatch(void)
 
 void __glDispatchInit(GLVNDPthreadFuncs *funcs)
 {
-    if (!initialized) {
+    if (clientRefcount == 0) {
         /* Initialize pthreads imports */
         glvndSetupPthreads(RTLD_DEFAULT, &pthreadFuncs);
-        initialized = GL_TRUE;
 
         // Call into GLAPI to see if we are multithreaded
         // TODO: fix GLAPI to use the pthread funcs provided here?
@@ -176,9 +183,9 @@ void __glDispatchInit(GLVNDPthreadFuncs *funcs)
         // Register GLdispatch's static entrypoints for rewriting
         __glDispatchRegisterStubCallbacks(stub_get_offsets,
                                           stub_restore);
-
-        initialized = GL_TRUE;
     }
+
+    clientRefcount++;
 
     if (funcs) {
         // If the client needs a copy of these funcs, assign them now
