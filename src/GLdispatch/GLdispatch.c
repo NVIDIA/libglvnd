@@ -119,13 +119,6 @@ static int firstUnusedVendorID = 1;
 static struct glvnd_list dispatchStubList;
 
 /*
- * Track the latest generation of the dispatch stub list so that vendor
- * libraries can determine when their copies of the stub offsets need to
- * be updated.
- */
-static int dispatchStubListGeneration;
-
-/*
  * The vendor ID of the current "owner" of the entrypoint code.  0 if
  * we are using the default libglvnd stubs.
  */
