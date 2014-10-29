@@ -794,35 +794,42 @@ int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable)
 
 /*!
  * This handles freeing all mapping state during library teardown
- * and fork recovery.
+ * or resetting locks on fork recovery.
  */
 void __glXMappingTeardown(Bool doReset)
 {
-    /* Tear down all hashtables used in this file */
-    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdispatchIndexHash,
-                     __glXDispatchIndexHash, CleanupDispatchIndexEntry,
-                     NULL, doReset);
-
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
-    __glXNextUnusedHashIndex = 0;
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
-
-    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorScreenHash,
-                     __glXVendorScreenHash, NULL, NULL, doReset);
-
-    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenPointerMappingHash,
-                     __glXScreenPointerMappingHash, NULL, NULL, doReset);
-
-    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenXIDMappingHash,
-                     __glXScreenXIDMappingHash, NULL, NULL, doReset);
 
     if (doReset) {
         /*
          * If we're just doing fork recovery, we don't actually want to unload
-         * any currently loaded vendors.  Just reset the corresponding lock.
+         * any currently loaded vendors _or_ remove any mappings (they should
+         * still be valid in the new process, and may be needed if the child
+         * tries using pointers/XIDs that were created in the parent).  Just
+         * reset the corresponding locks.
          */
+        __glXPthreadFuncs.rwlock_init(&__glXDispatchIndexHash.lock, NULL);
+        __glXPthreadFuncs.rwlock_init(&__glXVendorScreenHash.lock, NULL);
+        __glXPthreadFuncs.rwlock_init(&__glXScreenPointerMappingHash.lock, NULL);
+        __glXPthreadFuncs.rwlock_init(&__glXScreenXIDMappingHash.lock, NULL);
         __glXPthreadFuncs.rwlock_init(&__glXVendorNameHash.lock, NULL);
     } else {
+        /* Tear down all hashtables used in this file */
+        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdispatchIndexHash,
+                         __glXDispatchIndexHash, CleanupDispatchIndexEntry,
+                         NULL, False);
+
+        LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+        __glXNextUnusedHashIndex = 0;
+        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+
+        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorScreenHash,
+                         __glXVendorScreenHash, NULL, NULL, False);
+
+        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenPointerMappingHash,
+                         __glXScreenPointerMappingHash, NULL, NULL, False);
+
+        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenXIDMappingHash,
+                         __glXScreenXIDMappingHash, NULL, NULL, False);
         /*
          * This implicitly unloads vendor libraries that were loaded when
          * they were added to this hashtable.
