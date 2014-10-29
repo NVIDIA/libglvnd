@@ -62,8 +62,6 @@ static glvnd_key_t tsdContextKey;
 static Bool tsdContextKeyInitialized;
 static glvnd_once_t threadCreateTSDContextOnceControl = GLVND_ONCE_INIT;
 
-static void UntrackCurrentContext(GLXContext ctx);
-
 /*
  * Hashtable tracking current contexts for the purpose of determining whether
  * glXDestroyContext() should remove the context -> screen mapping immediately,
@@ -78,8 +76,15 @@ typedef struct __GLXcurrentContextHashRec {
 static DEFINE_INITIALIZED_LKDHASH(__GLXcurrentContextHash,
                                   __glXCurrentContextHash);
 
+static Bool UpdateCurrentContext(GLXContext newCtx,
+                                 GLXContext tsdCtx,
+                                 Bool needsUnmapNew,
+                                 Bool *needsUnmapOld);
+
+
 static void ThreadDestroyed(void *tsdCtx)
 {
+    Bool needsUnmap;
     /*
      * If a GLX context is current in this thread, remove it from the
      * current context hash before destroying the thread.
@@ -88,8 +93,12 @@ static void ThreadDestroyed(void *tsdCtx)
      * to the current context.
      */
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-    UntrackCurrentContext(tsdCtx);
+    UpdateCurrentContext(NULL, tsdCtx, False, &needsUnmap);
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+
+    if (needsUnmap) {
+        __glXRemoveScreenContextMapping(tsdCtx);
+    }
 
     /*
      * Call into GLdispatch to lose current to this thread.  XXX
@@ -337,47 +346,99 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
 
 }
 
-/*
- * Adds a context to the current context list, and updates this thread's context
- * TSD entry. Note: __glXCurrentContextHash must be write-locked before calling
- * this function!
+/*!
+ * Updates the current context.  This function handles:
+ *
+ * - Adding the new current context newCtx to the process-global
+ *   __glXCurrentContextHash and updating this thread's TSD entry to
+ *   contain this context
+ * - Removing the old current context oldCtx from __glXCurrentContextHash
+ *
+ * \param[in] ctx The context to make current
+ * \param[in] tsdCtx If this function is called from the tsdContextKey
+ * destructor, this should point to the old context to use.  Otherwise, this
+ * should be set to NULL.
+ * \param[in] needsUnmapNew True when the new context's screen mapping
+ * should be removed when it is no longer current (this can happen if the make
+ * current operation failed and we are restoring a context which will be
+ * destroyed when it loses current) or False otherwise.
+ * \param[out] needsUnmapOld If non-NULL, points to a boolean which is set to
+ * indicate whether the old context's screen mapping needs to be removed
+ * (because the old context is about to be destroyed).
+ *
+ * Returns True on success, False otherwise.
+ *
+ * Note: __glXCurrentContextHash must be write-locked before calling this
+ * function!
  *
  * Returns True on success.
  */
-static Bool TrackCurrentContext(GLXContext ctx)
+static Bool UpdateCurrentContext(GLXContext newCtx,
+                                 GLXContext tsdCtx,
+                                 Bool needsUnmapNew,
+                                 Bool *needsUnmapOld)
 {
-    __GLXcurrentContextHash *pEntry = NULL;
-    GLXContext tsdCtx;
+    __GLXcurrentContextHash *pOldEntry,
+                            *pTmpEntry,
+                            *pNewEntry;
+    GLXContext oldCtx;
+
+    if (needsUnmapOld) {
+        *needsUnmapOld = False;
+    }
+
+    // Attempt the allocation first, so we can bail out early
+    // on failure.
+    if (newCtx) {
+        pNewEntry = malloc(sizeof(*pNewEntry));
+        if (!pNewEntry) {
+            return False;
+        }
+        pNewEntry->ctx = newCtx;
+        pNewEntry->needsUnmap = needsUnmapNew;
+    } else {
+        pNewEntry = NULL;
+    }
 
     // Initialize the TSD entry (if we haven't already)
     __glXPthreadFuncs.once(&threadCreateTSDContextOnceControl,
                            ThreadCreateTSDContextOnce);
 
-    assert(tsdContextKeyInitialized);
-
-    // Update the TSD entry to reflect the correct current context
-    tsdCtx = (GLXContext)__glXPthreadFuncs.getspecific(tsdContextKey);
-    __glXPthreadFuncs.setspecific(tsdContextKey, ctx);
-
-    if (!ctx) {
-        // Don't track NULL contexts
-        return True;
-    }
-
-    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
-
-    assert(!pEntry);
-
-    pEntry = malloc(sizeof(*pEntry));
-    if (!pEntry) {
-        // Restore the original TSD entry
-        __glXPthreadFuncs.setspecific(tsdContextKey, tsdCtx);
+    if (!tsdContextKeyInitialized) {
         return False;
     }
 
-    pEntry->ctx = ctx;
-    pEntry->needsUnmap = False;
-    HASH_ADD(hh, _LH(__glXCurrentContextHash), ctx, sizeof(ctx), pEntry);
+    // Update the TSD entry to reflect the correct current context.  It's
+    // possible that this may be called from tsdContextKey's destructor.  In
+    // that case, the NULL value has already been associated with the key and
+    // pthread_getspecific() will return the wrong value, so use the value
+    // passed in as tsdCtx instead.  In the case where this is called from a
+    // destructor and tsdCtx == NULL, oldCtx will (correctly) be set to NULL.
+    if (tsdCtx) {
+        oldCtx = tsdCtx;
+    } else {
+        oldCtx = (GLXContext)__glXPthreadFuncs.getspecific(tsdContextKey);
+    }
+    __glXPthreadFuncs.setspecific(tsdContextKey, newCtx);
+
+    if (oldCtx) {
+        // Remove the old context from the hash table, if not NULL
+        HASH_FIND(hh, _LH(__glXCurrentContextHash), &oldCtx, sizeof(oldCtx), pOldEntry);
+
+        assert(pOldEntry);
+
+        if (needsUnmapOld) {
+            *needsUnmapOld = pOldEntry->needsUnmap;
+        }
+        HASH_DELETE(hh, _LH(__glXCurrentContextHash), pOldEntry);
+        free(pOldEntry);
+    }
+
+    if (pNewEntry) {
+        HASH_FIND(hh, _LH(__glXCurrentContextHash), &newCtx, sizeof(newCtx), pTmpEntry);
+        assert(!pTmpEntry);
+        HASH_ADD(hh, _LH(__glXCurrentContextHash), ctx, sizeof(newCtx), pNewEntry);
+    }
 
     return True;
 }
@@ -558,9 +619,10 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
     __glXThreadInitialize();
 
     const __GLXdispatchTableStatic *pDispatch;
-    Bool ret;
+    Bool tmpRet, ret;
     GLXDrawable oldDraw, oldRead;
     GLXContext oldContext;
+    Bool oldContextNeedsUnmap;
 
     SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
 
@@ -573,7 +635,7 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
     }
 
     if (oldContext != context) {
-        if (!TrackCurrentContext(context)) {
+        if (!UpdateCurrentContext(context, NULL, False, &oldContextNeedsUnmap)) {
             /*
              * Fail here. Continuing on would mess up our accounting.
              */
@@ -612,15 +674,13 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
 
     if (oldContext != context) {
         /*
-         * Only untrack the old context if the make current operation succeeded.
-         * Otherwise, untrack the new context.
+         * If the make current operation failed, restore the original context.
          */
-        if (ret) {
-            UntrackCurrentContext(oldContext);
-        } else {
-            UntrackCurrentContext(context);
-            ret = TrackCurrentContext(oldContext);
-            assert(ret);
+        if (!ret) {
+            tmpRet = UpdateCurrentContext(oldContext, NULL, oldContextNeedsUnmap, NULL);
+            assert(tmpRet);
+        } else if (oldContextNeedsUnmap) {
+            __glXRemoveScreenContextMapping(oldContext);
         }
     }
 
@@ -1019,9 +1079,10 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
     __glXThreadInitialize();
 
     const __GLXdispatchTableStatic *pDispatch;
-    Bool ret;
+    Bool tmpRet, ret;
     GLXDrawable oldDraw, oldRead;
     GLXContext oldContext;
+    Bool oldContextNeedsUnmap;
 
     SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
 
@@ -1034,7 +1095,7 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
     }
 
     if (oldContext != context) {
-        if (!TrackCurrentContext(context)) {
+        if (!UpdateCurrentContext(context, NULL, False, &oldContextNeedsUnmap)) {
             /*
              * Fail here. Continuing on would mess up our accounting.
              */
@@ -1076,13 +1137,13 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
 
     if (oldContext != context) {
         /*
-         * Only untrack the old context if the make current operation succeeded.
-         * Otherwise, untrack the new context.
+         * If the make current operation failed, restore the original context.
          */
-        if (ret) {
-            UntrackCurrentContext(oldContext);
-        } else {
-            UntrackCurrentContext(context);
+        if (!ret) {
+            tmpRet = UpdateCurrentContext(oldContext, NULL, oldContextNeedsUnmap, NULL);
+            assert(tmpRet);
+        } else if (oldContextNeedsUnmap) {
+            __glXRemoveScreenContextMapping(oldContext);
         }
     }
 
@@ -1394,6 +1455,13 @@ void __glXThreadInitialize(void)
     }
 }
 
+void CurrentContextHashCleanup(void *unused, __GLXcurrentContextHash *pEntry)
+{
+    if (pEntry->needsUnmap) {
+        __glXRemoveScreenContextMapping(pEntry->ctx);
+    }
+}
+
 static void __glXAPITeardown(Bool doReset)
 {
     /* Clear the current TSD context */
@@ -1404,7 +1472,7 @@ static void __glXAPITeardown(Bool doReset)
      * cleared separately in __glXMappingTeardown().
      */
     LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXcurrentContextHash,
-                     __glXCurrentContextHash, NULL, NULL, doReset);
+                     __glXCurrentContextHash, CurrentContextHashCleanup, NULL, doReset);
 
     LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXAPIState,
                      __glXAPIStateHash, CleanupAPIStateEntry,
