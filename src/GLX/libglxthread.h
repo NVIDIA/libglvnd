@@ -34,4 +34,6 @@
 
 extern GLVNDPthreadFuncs __glXPthreadFuncs;
 
+void __glXThreadInitialize();
+
 #endif

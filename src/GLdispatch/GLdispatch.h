@@ -118,6 +118,17 @@ typedef void (*__GLdispatchGetOffsetHook)(void *(*lookupStubOffset)(const char *
 PUBLIC void __glDispatchInit(GLVNDPthreadFuncs *funcs);
 
 /*!
+ * Tears down GLdispatch state.
+ */
+PUBLIC void __glDispatchFini(void);
+
+/*!
+ * Called when the client library has detected a fork, and GLdispatch state
+ * needs to be reset to handle the fork.
+ */
+PUBLIC void __glDispatchReset(void);
+
+/*!
  * This returns a process-unique ID that is suitable for use with a new GL
  * vendor.
  */

@@ -88,9 +88,8 @@ void __glXNotifyContextDestroyed(GLXContext ctx);
 
 /*
  * Close the vendor library and perform any relevant teardown. This should
- * be called on each vendor when the API library is unloaded.
- * TODO implement me
+ * be called when the API library is unloaded.
  */
-void __glXUnloadVendor(__GLXvendorInfo *vendor);
+void __glXMappingTeardown(Bool doReset);
 
 #endif /* __LIB_GLX_MAPPING_H */

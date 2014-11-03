@@ -37,7 +37,7 @@
 #include "libglxmapping.h"
 #include "libglxnoop.h"
 #include "GLdispatch.h"
-#include "uthash.h"
+#include "lkdhash.h"
 
 /*
  * Define current API library state here. An API state is per-thread, per-winsys

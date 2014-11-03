@@ -45,7 +45,15 @@
  * Accesses to this need to be protected by the dispatch lock.
  */
 static struct glvnd_list currentDispatchList;
-static GLboolean initialized;
+
+/*
+ * Number of clients using GLdispatch.
+ */
+static int clientRefcount;
+
+/*
+ * Threading imports used for locking.
+ */
 static GLVNDPthreadFuncs pthreadFuncs;
 
 /*
@@ -119,13 +127,6 @@ static int firstUnusedVendorID = 1;
 static struct glvnd_list dispatchStubList;
 
 /*
- * Track the latest generation of the dispatch stub list so that vendor
- * libraries can determine when their copies of the stub offsets need to
- * be updated.
- */
-static int dispatchStubListGeneration;
-
-/*
  * The vendor ID of the current "owner" of the entrypoint code.  0 if
  * we are using the default libglvnd stubs.
  */
@@ -164,10 +165,9 @@ static inline void UnlockDispatch(void)
 
 void __glDispatchInit(GLVNDPthreadFuncs *funcs)
 {
-    if (!initialized) {
+    if (clientRefcount == 0) {
         /* Initialize pthreads imports */
         glvndSetupPthreads(RTLD_DEFAULT, &pthreadFuncs);
-        initialized = GL_TRUE;
 
         // Call into GLAPI to see if we are multithreaded
         // TODO: fix GLAPI to use the pthread funcs provided here?
@@ -183,9 +183,9 @@ void __glDispatchInit(GLVNDPthreadFuncs *funcs)
         // Register GLdispatch's static entrypoints for rewriting
         __glDispatchRegisterStubCallbacks(stub_get_offsets,
                                           stub_restore);
-
-        initialized = GL_TRUE;
     }
+
+    clientRefcount++;
 
     if (funcs) {
         // If the client needs a copy of these funcs, assign them now
@@ -409,9 +409,12 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback get
 
 PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch)
 {
-    // NOTE this assumes the table is not current!
-    // TODO: delete the global lists
-    // TODO: this is currently unused...
+    /*
+     * XXX: Technically, dispatch->currentThreads should be 0 if we're calling
+     * into this function, but buggy apps may unload libGLX without losing
+     * current, in which case this won't be true when the dispatch table
+     * is destroyed.
+     */
     LockDispatch();
     free(dispatch->table);
     free(dispatch);
@@ -537,6 +540,19 @@ void __glDispatchUnregisterStubCallbacks(
     UnlockDispatch();
 }
 
+void UnregisterAllStubCallbacks(void)
+{
+    __GLdispatchStubCallback *curStub, *tmpStub;
+    CheckDispatchLocked();
+
+    glvnd_list_for_each_entry_safe(curStub, tmpStub, &dispatchStubList, entry) {
+        glvnd_list_del(&curStub->entry);
+        free(curStub);
+    }
+
+    dispatchStubListGeneration++;
+}
+
 
 /*
  * Attempt to patch entrypoints with the given patch function and vendor ID.
@@ -639,7 +655,9 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
         DispatchCurrentRef(dispatch);
     }
 
-    numCurrentContexts++;
+    if (!curApiState || !curApiState->context) {
+        numCurrentContexts++;
+    }
 
     UnlockDispatch();
 
@@ -665,6 +683,16 @@ PUBLIC void __glDispatchLoseCurrent(void)
     __GLdispatchAPIState *curApiState =
         (__GLdispatchAPIState *)_glapi_get_current(CURRENT_API_STATE);
 
+
+    LockDispatch();
+    // Try to restore the libglvnd default stubs, if possible.
+    PatchEntrypoints(NULL, 0);
+
+    if (curApiState && curApiState->context) {
+        numCurrentContexts--;
+    }
+    UnlockDispatch();
+
     if (curApiState) {
         LockDispatch();
         DispatchCurrentUnref(curApiState->dispatch);
@@ -675,14 +703,79 @@ PUBLIC void __glDispatchLoseCurrent(void)
         curApiState->vendorID = -1;
     }
 
-    LockDispatch();
-    // Try to restore the libglvnd default stubs, if possible.
-    PatchEntrypoints(NULL, 0);
-
-    numCurrentContexts--;
-    UnlockDispatch();
-
     _glapi_set_current(NULL, CURRENT_API_STATE);
     _glapi_set_current(NULL, CURRENT_CONTEXT);
     _glapi_set_dispatch(NULL);
 }
+
+/*
+ * Handles resetting GLdispatch state after a fork.
+ */
+void __glDispatchReset(void)
+{
+    /* Reset the dispatch lock */
+    pthreadFuncs.mutex_init(&dispatchLock.lock, NULL);
+    dispatchLock.isLocked = 0;
+
+    LockDispatch();
+    /*
+     * Clear out the current dispatch list.
+     */
+    __GLdispatchTable *cur, *tmp;
+
+    glvnd_list_for_each_entry_safe(cur, tmp, &currentDispatchList, entry) {
+        cur->currentThreads = 0;
+        glvnd_list_del(&cur->entry);
+    }
+    UnlockDispatch();
+
+    /* Clear GLAPI TLS entries. */
+    _glapi_set_current(NULL, CURRENT_API_STATE);
+    _glapi_set_current(NULL, CURRENT_CONTEXT);
+    _glapi_set_dispatch(NULL);
+}
+
+/*
+ * Handles cleanup on library unload.
+ */
+void __glDispatchFini(void)
+{
+    __GLdispatchProcEntry *curProc, *tmpProc;
+    assert(clientRefcount > 0);
+
+    clientRefcount--;
+
+    LockDispatch();
+    /* This frees the dispatchStubList */
+    UnregisterAllStubCallbacks();
+
+    /* 
+     * Before we get here, client libraries should
+     * have cleared out the current dispatch list.
+     */
+    assert(glvnd_list_is_empty(&currentDispatchList));
+
+    /*
+     * Clear out the getProcAddress lists.
+     */
+    glvnd_list_for_each_entry_safe(curProc, tmpProc, &newProcList, entry) {
+        glvnd_list_del(&curProc->entry);
+        free(curProc->procName);
+        free(curProc);
+    }
+
+    glvnd_list_for_each_entry_safe(curProc, tmpProc, &extProcList, entry) {
+        // XXX: is there any glapi-specific cleanup that needs to happen
+        // here?
+        glvnd_list_del(&curProc->entry);
+        free(curProc->procName);
+        free(curProc);
+    }
+
+    UnlockDispatch();
+
+    // Clean up GLAPI thread state
+    _glapi_destroy_multithread();
+}
+
+

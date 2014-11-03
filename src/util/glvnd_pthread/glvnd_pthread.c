@@ -47,9 +47,13 @@ typedef struct GLVNDPthreadRealFuncsRec {
     int (*equal)(pthread_t t1, pthread_t t2);
 
     /* Locking primitives */
+    int (*mutex_init)(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
+    int (*mutex_destroy)(pthread_mutex_t *mutex);
     int (*mutex_lock)(pthread_mutex_t *mutex);
     int (*mutex_unlock)(pthread_mutex_t *mutex);
+
     int (*rwlock_init)(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr);
+    int (*rwlock_destroy)(pthread_rwlock_t *rwlock);
     int (*rwlock_rdlock)(pthread_rwlock_t *rwlock);
     int (*rwlock_wrlock)(pthread_rwlock_t *rwlock);
     int (*rwlock_unlock)(pthread_rwlock_t *rwlock);
@@ -124,16 +128,32 @@ static int st_equal(glvnd_thread_t t1, glvnd_thread_t t2)
     return 0;
 }
 
+static int st_mutex_init(glvnd_mutex_t *mutex, const glvnd_mutexattr_t *attr)
+{
+    return 0;
+}
+
+static int st_mutex_destroy(glvnd_mutex_t *mutex)
+{
+    return 0;
+}
+
 static int st_mutex_lock(glvnd_mutex_t *mutex)
 {
     return 0;
 }
+
 static int st_mutex_unlock(glvnd_mutex_t *mutex)
 {
     return 0;
 }
 
 int st_rwlock_init(glvnd_rwlock_t *rwlock, const glvnd_rwlockattr_t *attr)
+{
+    return 0;
+}
+
+int st_rwlock_destroy(glvnd_rwlock_t *rwlock)
 {
     return 0;
 }
@@ -217,18 +237,34 @@ static int mt_equal(glvnd_thread_t t1, glvnd_thread_t t2)
     return pthreadRealFuncs.equal(t1.tid, t2.tid);
 }
 
+static int mt_mutex_init(glvnd_mutex_t *mutex, const glvnd_mutexattr_t *attr)
+{
+    return pthreadRealFuncs.mutex_init(mutex, attr);
+}
+
+static int mt_mutex_destroy(glvnd_mutex_t *mutex)
+{
+    return pthreadRealFuncs.mutex_destroy(mutex);
+}
+
 static int mt_mutex_lock(glvnd_mutex_t *mutex)
 {
     return pthreadRealFuncs.mutex_lock(mutex);
 }
+
 static int mt_mutex_unlock(glvnd_mutex_t *mutex)
 {
     return pthreadRealFuncs.mutex_unlock(mutex);
 }
 
-int mt_rwlock_init(glvnd_rwlock_t *rwlock, const glvnd_rwlockattr_t *attr)
+static int mt_rwlock_init(glvnd_rwlock_t *rwlock, const glvnd_rwlockattr_t *attr)
 {
     return pthreadRealFuncs.rwlock_init(rwlock, attr);
+}
+
+static int mt_rwlock_destroy(glvnd_rwlock_t *rwlock)
+{
+    return pthreadRealFuncs.rwlock_destroy(rwlock);
 }
 
 static int mt_rwlock_rdlock(glvnd_rwlock_t *rwlock)
@@ -283,12 +319,15 @@ void glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
     GET_MT_FUNC(funcs, dlhandle, join);
     GET_MT_FUNC(funcs, dlhandle, self);
     GET_MT_FUNC(funcs, dlhandle, equal);
+    GET_MT_FUNC(funcs, dlhandle, mutex_init);
+    GET_MT_FUNC(funcs, dlhandle, mutex_destroy);
     GET_MT_FUNC(funcs, dlhandle, mutex_lock);
     GET_MT_FUNC(funcs, dlhandle, mutex_unlock);
 
     // TODO: these can fall back on internal implementations
     // if they're not available in pthreads
     GET_MT_FUNC(funcs, dlhandle, rwlock_init);
+    GET_MT_FUNC(funcs, dlhandle, rwlock_destroy);
     GET_MT_FUNC(funcs, dlhandle, rwlock_rdlock);
     GET_MT_FUNC(funcs, dlhandle, rwlock_wrlock);
     GET_MT_FUNC(funcs, dlhandle, rwlock_unlock);
@@ -312,9 +351,12 @@ fail:
     GET_ST_FUNC(funcs, join);
     GET_ST_FUNC(funcs, self);
     GET_ST_FUNC(funcs, equal);
+    GET_ST_FUNC(funcs, mutex_init);
+    GET_ST_FUNC(funcs, mutex_destroy);
     GET_ST_FUNC(funcs, mutex_lock);
     GET_ST_FUNC(funcs, mutex_unlock);
     GET_ST_FUNC(funcs, rwlock_init);
+    GET_ST_FUNC(funcs, rwlock_destroy);
     GET_ST_FUNC(funcs, rwlock_rdlock);
     GET_ST_FUNC(funcs, rwlock_wrlock);
     GET_ST_FUNC(funcs, rwlock_unlock);
