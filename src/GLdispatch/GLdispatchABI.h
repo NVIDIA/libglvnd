@@ -87,10 +87,19 @@ typedef struct __GLdispatchPatchCallbacksRec {
     void (*getOffsetHook)(void *(*lookupStubOffset)(const char *funcName));
 
     /*
-     * Called by libglvnd to finish the top-level entrypoint patch.  libglvnd
-     * must have called the __GLdispatchInitiatePatch callback first!
+     * Called by libglvnd to finish the initial top-level entrypoint patch.
+     * libglvnd must have called the __GLdispatchInitiatePatch callback first!
+     * After this function is called, the vendor "owns" the top-level
+     * entrypoints and may change them at will until GLdispatch calls the
+     * releasePatch callback below.
      */
     void (*finalizePatch)(void);
+
+    /*
+     * Called by libglvnd to notify the current vendor that it no longer owns
+     * the top-level entrypoints.
+     */
+    void (*releasePatch)(void);
 } __GLdispatchPatchCallbacks;
 
 #if defined(__cplusplus)
