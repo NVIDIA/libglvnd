@@ -443,20 +443,6 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
     return True;
 }
 
-/*
- * Note: __glXCurrentContextHash must be (read or write)-locked before calling
- * this function!
- */
-static Bool IsContextCurrentToAnyOtherThread(GLXContext ctx)
-{
-    GLXContext current = glXGetCurrentContext();
-    __GLXcurrentContextHash *pEntry = NULL;
-
-    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
-
-    return !!pEntry && (current != ctx);
-}
-
 static Bool MakeContextCurrentInternal(Display *dpy,
                                        GLXDrawable draw,
                                        GLXDrawable read,
@@ -598,12 +584,6 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
     SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-
-    if (IsContextCurrentToAnyOtherThread(context)) {
-        // XXX throw BadAccess?
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-        return False;
-    }
 
     if (oldContext != context) {
         if (!UpdateCurrentContext(context, NULL, False, &oldContextNeedsUnmap)) {
@@ -1058,12 +1038,6 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
     SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-
-    if (IsContextCurrentToAnyOtherThread(context)) {
-        // XXX throw BadAccess?
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-        return False;
-    }
 
     if (oldContext != context) {
         if (!UpdateCurrentContext(context, NULL, False, &oldContextNeedsUnmap)) {
