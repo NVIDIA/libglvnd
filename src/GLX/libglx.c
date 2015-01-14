@@ -855,7 +855,7 @@ PUBLIC void glXWaitX(void)
 }
 
 #define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
-#define CLIENT_STRING_BUFFER_SIZE 256
+#define CLIENT_STRING_BUFFER_SIZE 1024
 
 PUBLIC const char *glXGetClientString(Display *dpy, int name)
 {
