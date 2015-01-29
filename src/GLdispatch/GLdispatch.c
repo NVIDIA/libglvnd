@@ -578,6 +578,12 @@ static int PatchEntrypoints(
         return 1;
     }
 
+    if (stubCurrentPatchCb) {
+        // Notify the previous vendor that it no longer owns these
+        // entrypoints.
+        stubCurrentPatchCb->releasePatch();
+    }
+
     if (patchCb) {
         GLboolean needOffsets;
 
