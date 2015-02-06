@@ -31,7 +31,7 @@
 #define __X11GLVND_PROTO_H__
 
 /*!
- * File describing protocol for the XGLVendor extension.
+ * File describing protocol for the x11glvnd extension.
  */
 
 #include "X11/Xmd.h"

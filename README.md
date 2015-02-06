@@ -52,7 +52,7 @@ There are a few good starting points for familiarizing oneself with the code:
   updated by the API library.
 - Look at `libglxmapping.c:__glXLookupVendorBy{Name,Screen}()` to see how
   vendor library names are queried. At the same time, look at
-  x11glvnd{client,server}.c to see how the "GLVendor" extension which
+  x11glvnd{client,server}.c to see how the "x11glvnd" extension which
   retrieves the appropriate mappings is implemented.
 
 The tests/ directory contains several unit tests which verify that dispatching
@@ -81,7 +81,7 @@ See the diagram below:
           │     └─────┬─────┘             │                    │              │
           │        DT_FILTER              │                    │              │
           │     ┌─────▾──────────┐ ┌──────▾────────┐           │ ┌──────────┐ │
-          │     │                │ │               │           └─│GLVendor  │─┘
+          │     │                │ │               │           └─│x11glvnd  │─┘
           │     │ [mapi/glapi]   ◂─▸               │             │extension │
           │     │ libGLdispatch  │ │   libGLX      ├─────────────▸──────────┘
           │     │                │ │               ◂──────────┬─────────────────┐
@@ -104,7 +104,7 @@ In this diagram,
 libGLX manages loading GLX vendor libraries and dispatching GLX core and
 extension functions to the right vendor.
 
-GLVendor is a simple X extension which allows libGLX to determine the number of
+x11glvnd is a simple X extension which allows libGLX to determine the number of
 the screen belonging to an arbitrary drawable XID, and also the GL vendor to use
 for a given screen.
 

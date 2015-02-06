@@ -33,13 +33,13 @@
 #include <X11/Xlib.h>
 
 /*
- * Describes the client-side functions implemented by the XGLVendor extension.
+ * Describes the client-side functions implemented by the x11glvnd extension.
  * This is a simple extension to query the X server for XID -> screen and screen
  * -> vendor mappings, used by libGLX. This may eventually be replaced by a
  *  server-side GLX extension which does the same thing.
  */
 
-#define XGLV_EXTENSION_NAME "XGLVendor"
+#define XGLV_EXTENSION_NAME "x11glvnd"
 
 /*!
  * Returns the screen associated with this XID, or -1 if there was an error.

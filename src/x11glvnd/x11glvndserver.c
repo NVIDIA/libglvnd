@@ -38,6 +38,7 @@
 #include <dixstruct.h>
 #include <extnsionst.h>
 #include <xf86.h>
+#include <ctype.h>
 
 #include "x11glvnd.h"
 #include "x11glvndproto.h"
@@ -181,6 +182,7 @@ static char *GetVendorForThisScreen(ScreenPtr pScreen)
 {
     ScrnInfoPtr pScrnInfo = xf86Screens[pScreen->myNum];
     const char *str;
+    char *processedStr;
     OptionInfoRec options[2];
 
     options[0].token = OPTION_GL_VENDOR;
@@ -213,7 +215,16 @@ static char *GetVendorForThisScreen(ScreenPtr pScreen)
         str = "unknown";
     }
 
-    return strdup(str);
+    processedStr = strdup(str);
+    if (processedStr) {
+        size_t i;
+        size_t len = strlen(processedStr);
+        for (i = 0; i < len; i++) {
+            processedStr[i] = tolower(processedStr[i]);
+        }
+    }
+
+    return processedStr;
 }
 
 static Bool xglvScreenInit(ScreenPtr pScreen)
