@@ -77,7 +77,7 @@ typedef struct __GLdispatchPatchCallbacksRec {
      */
     GLboolean (*initiatePatch)(int type,
                                int stubSize,
-                               int stubGeneration,
+                               GLint64 stubGeneration,
                                GLboolean *needOffsets);
 
     /*

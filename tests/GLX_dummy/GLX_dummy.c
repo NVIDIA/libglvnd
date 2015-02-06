@@ -541,12 +541,12 @@ static void patch_x86_tls(char *entry,
 
 static int dummyStubType;
 static int dummyStubSize;
-static int dummyStubGeneration;
+static GLint64 dummyStubGeneration;
 static char *dummyVertex3fvAddrs[3];
 
 static GLboolean dummyInitiatePatch(int type,
                                     int stubSize,
-                                    int stubGeneration,
+                                    GLint64 stubGeneration,
                                     GLboolean *needOffsets)
 {
     assert(needOffsets);

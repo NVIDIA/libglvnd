@@ -112,8 +112,13 @@ static struct glvnd_list dispatchStubList;
  * Track the latest generation of the dispatch stub list so that vendor
  * libraries can determine when their copies of the stub offsets need to
  * be updated.
+ *
+ * Note: wrapping is theoretically an issue here, but encountering this
+ * situation would require loading and unloading an API library that registers
+ * its entrypoints with GLdispatch 2^63-1 times, so it is unlikely to be an
+ * issue in practice.
  */
-static int dispatchStubListGeneration;
+static GLint64 dispatchStubListGeneration;
 
 /*
  * Used when generating new vendor IDs for GLdispatch clients.  Valid vendor
