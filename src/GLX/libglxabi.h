@@ -295,13 +295,6 @@ struct __GLXvendorCallbacksRec {
     void        (*setDispatchIndex)      (const GLubyte *procName, int index);
 
     /*!
-     * This notifies the vendor library when an X error should be generated
-     * due to a detected error in the GLX API stream.
-     */
-    void        (*notifyError)  (Display *dpy, char error,
-                                 char opcode, XID resid);
-
-    /*!
      * (OPTIONAL) Callbacks by which the vendor library may re-write libglvnd's
      * entrypoints at make current time, provided no other contexts are current
      * and the TLS model supports this functionality.  This is a performance

@@ -443,79 +443,10 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
     return True;
 }
 
-/*
- * Note: __glXCurrentContextHash must be (read or write)-locked before calling
- * this function!
- */
-static Bool IsContextCurrentToAnyOtherThread(GLXContext ctx)
-{
-    GLXContext current = glXGetCurrentContext();
-    __GLXcurrentContextHash *pEntry = NULL;
-
-    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
-
-    return !!pEntry && (current != ctx);
-}
-
-/*!
- * Given the Make{Context,}Current arguments passed in, tries to find the
- * screen of an appropriate vendor to notify when an X error occurs.  It's
- * possible none of the arguments in this list will produce a valid screen
- * number, so this will fall back to screen 0 if all else fails.
- */
-int FindAnyValidScreenFromMakeCurrent(Display *dpy,
-                                      GLXDrawable draw,
-                                      GLXDrawable read,
-                                      GLXContext context)
-{
-    int screen;
-
-    screen = __glXScreenFromContext(__glXGetCurrentContext());
-
-    if (screen < 0) {
-        screen = __glXScreenFromContext(context);
-    }
-
-    if (screen < 0) {
-        screen = __glXScreenFromDrawable(dpy, draw);
-    }
-
-    if (screen < 0) {
-        screen = __glXScreenFromDrawable(dpy, read);
-    }
-
-    if (screen < 0) {
-        /* If no screens were found, fall back to 0 */
-        screen = 0;
-    }
-
-    return screen;
-}
-
-void NotifyVendorOfXError(int screen,
-                          Display *dpy,
-                          char errorOpcode,
-                          char minorOpcode,
-                          XID resid)
-{
-    /*
-     * XXX: For now, libglvnd doesn't handle generating X errors directly.
-     * Instead, it tries to pass the error off to an available vendor library
-     * so the vendor can handle generating the X error.
-     */
-    const __GLXdispatchTableStatic *pDispatch =
-        __glXGetStaticDispatch(dpy, screen);
-
-    if (pDispatch->glxvc.notifyError) {
-        pDispatch->glxvc.notifyError(dpy, errorOpcode, minorOpcode, resid);
-    }
-}
-
 static Bool MakeContextCurrentInternal(Display *dpy,
                                        GLXDrawable draw,
                                        GLXDrawable read,
                                        GLXContext context,
-                                       char callerOpcode,
                                        const __GLXdispatchTableStatic **ppDispatch)
 {
     __GLXAPIState *apiState;
@@ -525,9 +456,6 @@ static Bool MakeContextCurrentInternal(Display *dpy,
 
     DBG_PRINTF(0, "dpy = %p, draw = %x, read = %x, context = %p\n",
                dpy, (unsigned)draw, (unsigned)read, context);
-
-    assert(callerOpcode == X_GLXMakeCurrent ||
-           callerOpcode == X_GLXMakeContextCurrent);
 
     apiState = __glXGetCurrentAPIState();
     oldVendor = apiState->currentVendor;
@@ -541,20 +469,6 @@ static Bool MakeContextCurrentInternal(Display *dpy,
          * context again.  This is incorrect application behavior, but we should
          * attempt to handle this failure gracefully.
          */
-        return False;
-    }
-
-    if ((!context && (draw != None || read != None)) ||
-        (context && (draw == None || read == None))) {
-        int errorScreen =
-            FindAnyValidScreenFromMakeCurrent(dpy, draw, read, context);
-        /*
-         * If <ctx> is NULL and <draw> and <read> are not None, or
-         * if <draw> or <read> are set to None and <ctx> is not NULL,
-         * then a BadMatch error will be generated. GLX 1.4 section 3.3.7
-         * (p. 27).
-         */
-        NotifyVendorOfXError(errorScreen, dpy, BadMatch, callerOpcode, 0);
         return False;
     }
 
@@ -585,6 +499,10 @@ static Bool MakeContextCurrentInternal(Display *dpy,
     *ppDispatch = newVendor ? newVendor->staticDispatch : NULL;
 
     if (!context) {
+        if (draw != None || read != None) {
+            return False;
+        }
+
         /*
          * Call into GLdispatch to lose current and update the context and GL
          * dispatch table
@@ -667,12 +585,6 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 
-    if (IsContextCurrentToAnyOtherThread(context)) {
-        // XXX throw BadAccess?
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-        return False;
-    }
-
     if (oldContext != context) {
         if (!UpdateCurrentContext(context, NULL, False, &oldContextNeedsUnmap)) {
             /*
@@ -687,7 +599,6 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
                                      drawable,
                                      drawable,
                                      context,
-                                     X_GLXMakeCurrent,
                                      &pDispatch);
     if (ret) {
         assert(!context || pDispatch);
@@ -695,19 +606,18 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
             ret = pDispatch->glx14ep.makeCurrent(dpy, drawable, context);
             if (!ret) {
                 // Restore the original current values
-                tmpRet = MakeContextCurrentInternal(dpy,
-                                                    oldDraw,
-                                                    oldRead,
-                                                    oldContext,
-                                                    X_GLXMakeCurrent,
-                                                    &pDispatch);
-                assert(tmpRet);
+                ret = MakeContextCurrentInternal(dpy,
+                                                 oldDraw,
+                                                 oldRead,
+                                                 oldContext,
+                                                 &pDispatch);
+                assert(ret);
                 if (pDispatch) {
-                    tmpRet = pDispatch->glx14ep.makeContextCurrent(dpy,
+                    ret = pDispatch->glx14ep.makeContextCurrent(dpy,
                                                                 oldDraw,
                                                                 oldRead,
                                                                 oldContext);
-                    assert(tmpRet);
+                    assert(ret);
                 }
             }
         }
@@ -1129,12 +1039,6 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 
-    if (IsContextCurrentToAnyOtherThread(context)) {
-        // XXX throw BadAccess?
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-        return False;
-    }
-
     if (oldContext != context) {
         if (!UpdateCurrentContext(context, NULL, False, &oldContextNeedsUnmap)) {
             /*
@@ -1149,7 +1053,6 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
                                      draw,
                                      read,
                                      context,
-                                     X_GLXMakeContextCurrent,
                                      &pDispatch);
     if (ret) {
         assert(!context || pDispatch);
@@ -1160,19 +1063,18 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
                                                         context);
             if (!ret) {
                 // Restore the original current values
-                tmpRet = MakeContextCurrentInternal(dpy,
-                                                    oldDraw,
-                                                    oldRead,
-                                                    oldContext,
-                                                    X_GLXMakeContextCurrent,
-                                                    &pDispatch);
-                assert(tmpRet);
+                ret = MakeContextCurrentInternal(dpy,
+                                                 oldDraw,
+                                                 oldRead,
+                                                 oldContext,
+                                                 &pDispatch);
+                assert(ret);
                 if (pDispatch) {
-                    tmpRet = pDispatch->glx14ep.makeContextCurrent(dpy,
+                    ret = pDispatch->glx14ep.makeContextCurrent(dpy,
                                                                 oldDraw,
                                                                 oldRead,
                                                                 oldContext);
-                    assert(tmpRet);
+                    assert(ret);
                 }
             }
         }
