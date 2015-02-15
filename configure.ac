@@ -128,6 +128,14 @@ if test "x$enable_asm" = xyes; then
     esac
 fi
 
+dnl Test X.Org X server sysconfigdir variable
+AC_MSG_CHECKING([for X.Org X server sysconfigdir variable])
+PKG_CHECK_VAR([sysconfigdir], [xorg-server], [sysconfigdir])
+AC_MSG_RESULT([$sysconfigdir])
+AC_SUBST([sysconfigdir])
+
+AM_CONDITIONAL([HAVE_XORG_SUBDIR], [])
+
 dnl Various conditionals.
 AM_CONDITIONAL([GCC], [test x$GCC = xyes ])
 
