@@ -544,16 +544,18 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         return False;
     }
 
-    if ((!context && (draw != None || read != None)) ||
-        (context && (draw == None || read == None))) {
+    /*
+     * If <ctx> is NULL and <draw> and <read> are not None, or if <draw> or
+     * <read> are set to None and <ctx> is not NULL, then a BadMatch error will
+     * be generated. GLX 1.4 section 3.3.7 (p. 27).
+     *
+     * However, GLX_ARB_create_context specifies that GL 3.0+ contexts may be
+     * made current without a default framebuffer, so the "or if..." part above
+     * is ignored here.
+     */
+    if (!context && (draw != None || read != None)) {
         int errorScreen =
             FindAnyValidScreenFromMakeCurrent(dpy, draw, read, context);
-        /*
-         * If <ctx> is NULL and <draw> and <read> are not None, or
-         * if <draw> or <read> are set to None and <ctx> is not NULL,
-         * then a BadMatch error will be generated. GLX 1.4 section 3.3.7
-         * (p. 27).
-         */
         NotifyVendorOfXError(errorScreen, dpy, BadMatch, callerOpcode, 0);
         return False;
     }
