@@ -71,7 +71,7 @@ BUILT_SOURCES = g_libglxnoop.c
 EXTRA_DIST = gen_stubs.pl glx_funcs.spec
 
 g_libglxnoop.c : gen_stubs.pl glx_funcs.spec
-	$(AM_V_GEN)$(PERL) gen_stubs.pl "noop" glx_funcs.spec > $@
+	$(AM_V_GEN)$(PERL) $(srcdir)/gen_stubs.pl "noop" $(srcdir)/glx_funcs.spec > $@
 
 libGLX_la_SOURCES = \
 	libglx.c \
