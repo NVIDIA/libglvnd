@@ -51,6 +51,7 @@ __asm__(ENTRY_STUB_ALIGN_DIRECTIVE
    "jmp *(4 * " slot ")(%eax)"
 
 #define MAPI_TMP_STUB_ASM_GCC
+#define MAPI_TMP_TABLE
 #include "mapi_tmp.h"
 
 __asm__(".text\n");
@@ -106,14 +107,14 @@ entry_init_public(void)
     int slot;
 
     // Patch the stubs with a more optimal code sequence
-    for (slot = 0; slot < MAPI_TABLE_NUM_STATIC; i++)
-       entry_generate_default_code(entry, slot);
+    for (slot = 0; slot < MAPI_TABLE_NUM_STATIC; slot++)
+       entry_generate_default_code((char *) entry_get_public(slot), slot);
 }
 
 mapi_func
 entry_get_public(int slot)
 {
-   return (mapi_func) (x86_entry_start + slot * 16);
+   return (mapi_func) (x86_entry_start + slot * ENTRY_STUB_SIZE);
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)
@@ -134,7 +135,7 @@ entry_generate(int slot)
 
    entry_generate_default_code(code, slot);
 
-   return entry;
+   return (mapi_func) code;
 }
 #endif // !defined(STATIC_DISPATCH_ONLY)
 
