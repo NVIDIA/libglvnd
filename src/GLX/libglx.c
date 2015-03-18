@@ -866,7 +866,7 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
     size_t n = CLIENT_STRING_BUFFER_SIZE - 1;
     int index = name - 1;
 
-    glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
+    static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
     static struct {
         int initialized;
         char string[CLIENT_STRING_BUFFER_SIZE];
