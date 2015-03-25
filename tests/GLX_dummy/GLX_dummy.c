@@ -598,11 +598,16 @@ static void dummyFinalizePatch(void)
     }
 }
 
+static void dummyReleasePatch(void)
+{
+}
+
 static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 {
     .initiatePatch = dummyInitiatePatch,
     .getOffsetHook = dummyGetOffsetHook,
-    .finalizePatch = dummyFinalizePatch
+    .finalizePatch = dummyFinalizePatch,
+    .releasePatch = dummyReleasePatch,
 };
 #endif // defined(PATCH_ENTRYPOINTS)
 
