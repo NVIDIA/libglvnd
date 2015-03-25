@@ -26,6 +26,7 @@
  */
 
 #include <assert.h>
+#include <stdint.h>
 #include "u_macros.h"
 
 #define X86_ENTRY_SIZE 32
@@ -96,16 +97,20 @@ mapi_func
 entry_generate(int slot)
 {
    const char *code_templ = x86_entry_end - X86_ENTRY_SIZE;
-   void *code;
+   char *code;
    mapi_func entry;
 
-   code = u_execmem_alloc(X86_ENTRY_SIZE);
+   code = (char *) u_execmem_alloc(X86_ENTRY_SIZE);
    if (!code)
       return NULL;
 
    memcpy(code, code_templ, X86_ENTRY_SIZE);
    entry = (mapi_func) code;
    entry_patch(entry, slot);
+
+   // Adjust the offset of the CALL instruction.
+   assert(*((uint8_t *) (code + 15)) == 0xE8);
+   *((uint32_t *) (code + 16)) += (code_templ - code);
 
    return entry;
 }
