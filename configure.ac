@@ -143,7 +143,7 @@ AM_CONDITIONAL(HAVE_X86_64_ASM, echo "$DEFINES" | grep 'X86_64_ASM' >/dev/null 2
 AM_CONDITIONAL(HAVE_SPARC_ASM, echo "$DEFINES" | grep 'SPARC_ASM' >/dev/null 2>&1)
 
 dnl Checks for libraries.
-AX_PTHREAD([true])
+AX_PTHREAD()
 
 PKG_CHECK_MODULES([X11], [x11])
 PKG_CHECK_MODULES([XEXT], [xext])
@@ -171,11 +171,16 @@ AC_FUNC_STRNLEN
 AC_CHECK_FUNCS([getpagesize gettimeofday memmove memset strdup strerror])
 
 dnl TLS detection
+dnl Note: The x86 TLS build doesn't work yet. Fall back to the TSD version until it does.
 AC_MSG_CHECKING([for initial-exec TLS])
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-   __thread int foo __attribute__((tls_model("initial-exec")));
-])],
-[GLX_USE_TLS=yes],[GLX_USE_TLS=no])
+if test "x$asm_arch" != xx86; then
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+       __thread int foo __attribute__((tls_model("initial-exec")));
+    ])],
+    [GLX_USE_TLS=yes],[GLX_USE_TLS=no])
+else
+    GLX_USE_TLS=no
+fi
 
 AC_MSG_RESULT($GLX_USE_TLS)
 AS_IF([test "x$GLX_USE_TLS" = "xyes"],
