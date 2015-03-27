@@ -187,6 +187,51 @@ AS_IF([test "x$GLX_USE_TLS" = "xyes"],
       [AC_DEFINE([GLX_USE_TLS], 1,
       [Define to 1 if ELF TLS with initial-exec addressing is available.])])
 
+AC_MSG_CHECKING([for constructor attributes])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+void __attribute__ ((constructor)) foo(void)
+{
+}
+void __attribute__ ((destructor)) bar(void)
+{
+}
+])],
+[USE_ATTRIBUTE_CONSTRUCTOR=yes],[USE_ATTRIBUTE_CONSTRUCTOR=no])
+AC_MSG_RESULT($USE_ATTRIBUTE_CONSTRUCTOR)
+AS_IF([test "x$USE_ATTRIBUTE_CONSTRUCTOR" = "xyes"],
+      [AC_DEFINE([USE_ATTRIBUTE_CONSTRUCTOR], 1,
+      [Define to 1 if the compiler constructor attributes.])])
+
+AC_MSG_CHECKING([for pthreads rwlocks])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+#include <pthread.h>
+void foo(void)
+{
+    pthread_rwlock_t lock;
+    pthread_rwlock_init(&lock, NULL);
+}
+])],
+[HAVE_PTHREAD_RWLOCK_T=yes],[HAVE_PTHREAD_RWLOCK_T=no])
+AC_MSG_RESULT($HAVE_PTHREAD_RWLOCK_T)
+AS_IF([test "x$HAVE_PTHREAD_RWLOCK_T" = "xyes"],
+      [AC_DEFINE([HAVE_PTHREAD_RWLOCK_T], 1,
+      [Define to 1 if the compiler supports pthreads rwlocks.])])
+
+AC_MSG_CHECKING([for sync intrinsics])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+int foo(int volatile *val, int oldVal, int newVal)
+{
+    return __sync_add_and_fetch(val, 1);
+    return __sync_lock_test_and_set(val, newVal);
+    return __sync_val_compare_and_swap(val, oldVal, newVal);
+}
+])],
+[HAVE_SYNC_INTRINSICS=yes],[HAVE_SYNC_INTRINSICS=no])
+AC_MSG_RESULT($HAVE_SYNC_INTRINSICS)
+AS_IF([test "x$HAVE_SYNC_INTRINSICS" = "xyes"],
+      [AC_DEFINE([HAVE_SYNC_INTRINSICS], 1,
+      [Define to 1 if the compiler supports pthreads rwlocks.])])
+
 dnl default CFLAGS
 CFLAGS="$CFLAGS -Wall -Werror -std=gnu99 -include config.h -fvisibility=hidden $DEFINES"
 

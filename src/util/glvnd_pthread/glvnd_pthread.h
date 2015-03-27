@@ -48,10 +48,19 @@
  * to be wrapped.
  */
 typedef pthread_mutex_t glvnd_mutex_t;
+typedef pthread_mutexattr_t glvnd_mutexattr_t;
+
+#if defined(HAVE_PTHREAD_RWLOCK_T)
 typedef pthread_rwlock_t glvnd_rwlock_t;
+typedef pthread_rwlockattr_t glvnd_rwlockattr_t;
+#define GLVND_RWLOCK_INITIALIZER PTHREAD_RWLOCK_INITIALIZER
+#else
+typedef pthread_mutex_t glvnd_rwlock_t;
+typedef pthread_mutexattr_t glvnd_rwlockattr_t;
+#define GLVND_RWLOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
+#endif
 
 #define GLVND_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
-#define GLVND_RWLOCK_INITIALIZER PTHREAD_RWLOCK_INITIALIZER
 
 typedef struct _glvnd_once_t {
     pthread_once_t once;
@@ -66,8 +75,6 @@ typedef struct _glvnd_thread_t {
 } glvnd_thread_t;
 
 typedef pthread_attr_t glvnd_thread_attr_t;
-typedef pthread_mutexattr_t glvnd_mutexattr_t;
-typedef pthread_rwlockattr_t glvnd_rwlockattr_t;
 
 typedef pthread_key_t glvnd_key_t;
 #define GLVND_KEYS_MAX PTHREAD_KEYS_MAX
