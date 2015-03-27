@@ -65,6 +65,8 @@ typedef struct _glvnd_thread_t {
     int singlethreaded;
 } glvnd_thread_t;
 
+#define GLVND_THREAD_NULL_INIT {}
+
 typedef pthread_attr_t glvnd_thread_attr_t;
 typedef pthread_mutexattr_t glvnd_mutexattr_t;
 typedef pthread_rwlockattr_t glvnd_rwlockattr_t;

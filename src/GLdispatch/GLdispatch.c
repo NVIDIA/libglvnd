@@ -54,7 +54,7 @@ static int clientRefcount;
 /*
  * Threading imports used for locking.
  */
-static GLVNDPthreadFuncs pthreadFuncs;
+GLVNDPthreadFuncs pthreadFuncs;
 
 /*
  * The number of current contexts that GLdispatch is aware of

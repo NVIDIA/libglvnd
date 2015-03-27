@@ -151,7 +151,7 @@ u_mutex_declare_static(ThreadCheckMutex);
 void
 u_current_init(void)
 {
-   static unsigned long knownID;
+   static u_thread_t knownID = U_THREAD_INIT;
    static int firstCall = 1;
 
    if (ThreadSafe)
@@ -164,7 +164,7 @@ u_current_init(void)
       knownID = u_thread_self();
       firstCall = 0;
    }
-   else if (knownID != u_thread_self()) {
+   else if (!u_thread_equal(knownID, u_thread_self())) {
       ThreadSafe = 1;
       u_current_set(NULL);
       u_current_set_user(NULL);
