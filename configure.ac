@@ -200,7 +200,7 @@ void __attribute__ ((destructor)) bar(void)
 AC_MSG_RESULT($USE_ATTRIBUTE_CONSTRUCTOR)
 AS_IF([test "x$USE_ATTRIBUTE_CONSTRUCTOR" = "xyes"],
       [AC_DEFINE([USE_ATTRIBUTE_CONSTRUCTOR], 1,
-      [Define to 1 if the compiler constructor attributes.])])
+      [Define to 1 if the compiler supports constructor attributes.])])
 
 AC_MSG_CHECKING([for pthreads rwlocks])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([
@@ -230,7 +230,7 @@ int foo(int volatile *val, int oldVal, int newVal)
 AC_MSG_RESULT($HAVE_SYNC_INTRINSICS)
 AS_IF([test "x$HAVE_SYNC_INTRINSICS" = "xyes"],
       [AC_DEFINE([HAVE_SYNC_INTRINSICS], 1,
-      [Define to 1 if the compiler supports pthreads rwlocks.])])
+      [Define to 1 if the compiler supports __sync intrinsic functions.])])
 
 dnl default CFLAGS
 CFLAGS="$CFLAGS -Wall -Werror -std=gnu99 -include config.h -fvisibility=hidden $DEFINES"

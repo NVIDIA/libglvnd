@@ -1426,7 +1426,7 @@ int AtomicIncrement(int volatile *val)
 {
 #if defined(HAVE_SYNC_INTRINSICS)
     return __sync_add_and_fetch(val, 1);
-#else
+#elif defined(USE_X86_ASM) || defined(USE_X86_64_ASM)
     int result;
     int delta = 1;
 
@@ -1435,6 +1435,8 @@ int AtomicIncrement(int volatile *val)
                         : "0" (delta), "m" (*val));
 
     return result + delta;
+#else
+#error "Not implemented"
 #endif
 }
 
@@ -1442,7 +1444,7 @@ int AtomicSwap(int volatile *val, int newVal)
 {
 #if defined(HAVE_SYNC_INTRINSICS)
     return __sync_lock_test_and_set(val, newVal);
-#else
+#elif defined(USE_X86_ASM) || defined(USE_X86_64_ASM)
     int result;
 
     __asm __volatile__ ("xchgl %0, %1"
@@ -1450,6 +1452,8 @@ int AtomicSwap(int volatile *val, int newVal)
                         : "0" (newVal), "m" (*val));
 
     return result;
+#else
+#error "Not implemented"
 #endif
 }
 
@@ -1457,7 +1461,7 @@ int AtomicCompareAndSwap(int volatile *val, int oldVal, int newVal)
 {
 #if defined(HAVE_SYNC_INTRINSICS)
     return __sync_val_compare_and_swap(val, oldVal, newVal);
-#else
+#elif defined(USE_X86_ASM) || defined(USE_X86_64_ASM)
     int result;
 
     __asm __volatile__ ("lock; cmpxchgl %2, %1"
@@ -1465,6 +1469,8 @@ int AtomicCompareAndSwap(int volatile *val, int oldVal, int newVal)
                         : "r" (newVal), "m" (*val), "0" (oldVal));
 
     return result;
+#else
+#error "Not implemented"
 #endif
 }
 

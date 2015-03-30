@@ -302,6 +302,9 @@ int glvnd_asprintf(char **strp, const char *fmt, ...)
 
         while (1) {
             str = malloc(current_len);
+            if (str == NULL) {
+                break;
+            }
 
             va_start(ap, fmt);
             len = vsnprintf(str, current_len, fmt, ap);

@@ -38,7 +38,7 @@
 #include "x11glvnd.h"
 #include "x11glvndproto.h"
 
-char xglv_ext_name[] = XGLV_EXTENSION_NAME;
+const char *xglv_ext_name = XGLV_EXTENSION_NAME;
 static XExtensionInfo *xglv_ext_info = NULL;
 
 static int close_display(Display *dpy, XExtCodes *codes);
