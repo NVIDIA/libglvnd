@@ -37,7 +37,11 @@
 #include "GLdispatch.h"
 
 // Initialize GLX imports
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__((constructor)) __libGLInit(void)
+#else
+void _init(void)
+#endif
 {
     // Fix up the static GL entrypoints, if necessary
     entry_init_public();
@@ -52,7 +56,11 @@ void __attribute__((constructor)) __libGLInit(void)
     __glXWrapperInit(__glXGetCachedProcAddress);
 }
 
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__((destructor)) __libGLFini(void)
+#else
+void _fini(void)
+#endif
 {
     // Unregister the GLdispatch entrypoints
     __glDispatchUnregisterStubCallbacks(stub_get_offsets, stub_restore);

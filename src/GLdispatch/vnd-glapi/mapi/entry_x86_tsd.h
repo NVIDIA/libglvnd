@@ -80,7 +80,7 @@ entry_generate_default_code(char *entry, int slot)
 mapi_func
 entry_get_public(int slot)
 {
-   return (mapi_func) (x86_entry_start + slot * X86_ENTRY_SIZE);
+   return (mapi_func) ((char *)x86_entry_start + slot * X86_ENTRY_SIZE);
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)

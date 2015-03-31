@@ -1424,17 +1424,54 @@ done:
 
 int AtomicIncrement(int volatile *val)
 {
+#if defined(HAVE_SYNC_INTRINSICS)
     return __sync_add_and_fetch(val, 1);
+#elif defined(USE_X86_ASM) || defined(USE_X86_64_ASM)
+    int result;
+    int delta = 1;
+
+    __asm __volatile__ ("lock; xaddl %0, %1"
+                        : "=r" (result), "=m" (*val)
+                        : "0" (delta), "m" (*val));
+
+    return result + delta;
+#else
+#error "Not implemented"
+#endif
 }
 
 int AtomicSwap(int volatile *val, int newVal)
 {
+#if defined(HAVE_SYNC_INTRINSICS)
     return __sync_lock_test_and_set(val, newVal);
+#elif defined(USE_X86_ASM) || defined(USE_X86_64_ASM)
+    int result;
+
+    __asm __volatile__ ("xchgl %0, %1"
+                        : "=r" (result), "=m" (*val)
+                        : "0" (newVal), "m" (*val));
+
+    return result;
+#else
+#error "Not implemented"
+#endif
 }
 
 int AtomicCompareAndSwap(int volatile *val, int oldVal, int newVal)
 {
+#if defined(HAVE_SYNC_INTRINSICS)
     return __sync_val_compare_and_swap(val, oldVal, newVal);
+#elif defined(USE_X86_ASM) || defined(USE_X86_64_ASM)
+    int result;
+
+    __asm __volatile__ ("lock; cmpxchgl %2, %1"
+                        : "=a" (result), "=m" (*val)
+                        : "r" (newVal), "m" (*val), "0" (oldVal));
+
+    return result;
+#else
+#error "Not implemented"
+#endif
 }
 
 int AtomicDecrementClampAtZero(int volatile *val)
@@ -1548,7 +1585,11 @@ static void __glXResetOnFork(void)
     __glDispatchReset();
 }
 
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__ ((constructor)) __glXInit(void)
+#else
+void _init(void)
+#endif
 {
 
     /* Initialize GLdispatch; this will also initialize our pthreads imports */
@@ -1575,7 +1616,11 @@ void __attribute__ ((constructor)) __glXInit(void)
 
 }
 
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__ ((destructor)) __glXFini(void)
+#else
+void _fini(void)
+#endif
 {
     /* Check for a fork before going further. */
     __glXThreadInitialize();
