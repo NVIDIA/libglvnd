@@ -36,7 +36,11 @@
 #include "GLdispatch.h"
 
 // Initialize OpenGL imports
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__((constructor)) __libGLInit(void)
+#else
+void _init(void)
+#endif
 {
     // Fix up the static GL entrypoints, if necessary
     entry_init_public();
@@ -48,7 +52,11 @@ void __attribute__((constructor)) __libGLInit(void)
     __glDispatchRegisterStubCallbacks(stub_get_offsets, stub_restore);
 }
 
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__((destructor)) __libOpenGLFini(void)
+#else
+void _fini(void)
+#endif
 {
     // Unregister the GLdispatch entrypoints
     __glDispatchUnregisterStubCallbacks(stub_get_offsets, stub_restore);
