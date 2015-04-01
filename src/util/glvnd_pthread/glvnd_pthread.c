@@ -52,11 +52,13 @@ typedef struct GLVNDPthreadRealFuncsRec {
     int (*mutex_lock)(pthread_mutex_t *mutex);
     int (*mutex_unlock)(pthread_mutex_t *mutex);
 
+#if defined(HAVE_PTHREAD_RWLOCK_T)
     int (*rwlock_init)(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr);
     int (*rwlock_destroy)(pthread_rwlock_t *rwlock);
     int (*rwlock_rdlock)(pthread_rwlock_t *rwlock);
     int (*rwlock_wrlock)(pthread_rwlock_t *rwlock);
     int (*rwlock_unlock)(pthread_rwlock_t *rwlock);
+#endif
 
     /* Other used functions */
     int (*once)(pthread_once_t *once_control, void (*init_routine)(void));
@@ -84,6 +86,14 @@ static GLVNDPthreadRealFuncs pthreadRealFuncs;
     }                                              \
     (obj)->func = mt_ ## func;                     \
 } while (0)
+
+#if defined(HAVE_PTHREAD_RWLOCK_T)
+# define GET_MT_RWLOCK_FUNC(obj, handle, func) \
+    GET_MT_FUNC(obj, handle, func)
+#else
+# define GET_MT_RWLOCK_FUNC(obj, handle, func) \
+    (obj)->func = mt_ ## func;
+#endif
 
 #define GET_ST_FUNC(obj, func) do { \
     (obj)->func = st_ ## func;      \
@@ -259,27 +269,47 @@ static int mt_mutex_unlock(glvnd_mutex_t *mutex)
 
 static int mt_rwlock_init(glvnd_rwlock_t *rwlock, const glvnd_rwlockattr_t *attr)
 {
+#if defined(HAVE_PTHREAD_RWLOCK_T)
     return pthreadRealFuncs.rwlock_init(rwlock, attr);
+#else
+    return pthreadRealFuncs.mutex_init(rwlock, attr);
+#endif
 }
 
 static int mt_rwlock_destroy(glvnd_rwlock_t *rwlock)
 {
+#if defined(HAVE_PTHREAD_RWLOCK_T)
     return pthreadRealFuncs.rwlock_destroy(rwlock);
+#else
+    return pthreadRealFuncs.mutex_destroy(rwlock);
+#endif
 }
 
 static int mt_rwlock_rdlock(glvnd_rwlock_t *rwlock)
 {
+#if defined(HAVE_PTHREAD_RWLOCK_T)
     return pthreadRealFuncs.rwlock_rdlock(rwlock);
+#else
+    return pthreadRealFuncs.mutex_lock(rwlock);
+#endif
 }
 
 static int mt_rwlock_wrlock(glvnd_rwlock_t *rwlock)
 {
+#if defined(HAVE_PTHREAD_RWLOCK_T)
     return pthreadRealFuncs.rwlock_wrlock(rwlock);
+#else
+    return pthreadRealFuncs.mutex_lock(rwlock);
+#endif
 }
 
 static int mt_rwlock_unlock(glvnd_rwlock_t *rwlock)
 {
+#if defined(HAVE_PTHREAD_RWLOCK_T)
     return pthreadRealFuncs.rwlock_unlock(rwlock);
+#else
+    return pthreadRealFuncs.mutex_unlock(rwlock);
+#endif
 }
 
 static int mt_once(glvnd_once_t *once_control, void (*init_routine)(void))
@@ -324,13 +354,12 @@ void glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
     GET_MT_FUNC(funcs, dlhandle, mutex_lock);
     GET_MT_FUNC(funcs, dlhandle, mutex_unlock);
 
-    // TODO: these can fall back on internal implementations
-    // if they're not available in pthreads
-    GET_MT_FUNC(funcs, dlhandle, rwlock_init);
-    GET_MT_FUNC(funcs, dlhandle, rwlock_destroy);
-    GET_MT_FUNC(funcs, dlhandle, rwlock_rdlock);
-    GET_MT_FUNC(funcs, dlhandle, rwlock_wrlock);
-    GET_MT_FUNC(funcs, dlhandle, rwlock_unlock);
+    GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_init);
+    GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_destroy);
+    GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_rdlock);
+    GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_wrlock);
+    GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_unlock);
+
     GET_MT_FUNC(funcs, dlhandle, once);
     GET_MT_FUNC(funcs, dlhandle, key_create);
     GET_MT_FUNC(funcs, dlhandle, key_delete);
@@ -355,11 +384,13 @@ fail:
     GET_ST_FUNC(funcs, mutex_destroy);
     GET_ST_FUNC(funcs, mutex_lock);
     GET_ST_FUNC(funcs, mutex_unlock);
+
     GET_ST_FUNC(funcs, rwlock_init);
     GET_ST_FUNC(funcs, rwlock_destroy);
     GET_ST_FUNC(funcs, rwlock_rdlock);
     GET_ST_FUNC(funcs, rwlock_wrlock);
     GET_ST_FUNC(funcs, rwlock_unlock);
+
     GET_ST_FUNC(funcs, once);
     GET_ST_FUNC(funcs, key_create);
     GET_ST_FUNC(funcs, key_delete);
