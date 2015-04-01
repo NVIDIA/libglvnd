@@ -54,6 +54,8 @@ typedef struct XGLVScreenPrivRec {
 
 DevPrivateKeyRec glvXGLVScreenPrivKey;
 
+#define XGLV_ABI_HAS_LOAD_EXTENSION_LIST \
+    (GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 17)
 #define XGLV_SET_SCREEN_PRIVATE(pScreen, priv) \
     dixSetPrivate(&(pScreen)->devPrivates, &glvXGLVScreenPrivKey, priv)
 #define XGLV_SCREEN_PRIVATE(pScreen) \
@@ -90,7 +92,11 @@ static ExtensionModule glvExtensionModule = {
 static XF86ModuleVersionInfo x11glvndVersionInfo =
 {
     "x11glvnd",
+#ifdef XVENDORNAME
+    XVENDORNAME,
+#else
     "NVIDIA Corporation",
+#endif
     MODINFOSTRING1,
     MODINFOSTRING2,
     XORG_VERSION_NUMERIC(4,0,2,0,0),
@@ -128,7 +134,11 @@ static void *glvSetup(void *module, void *opts, int *errmaj, int *errmin)
         return NULL;
     }
 
+#if XGLV_ABI_HAS_LOAD_EXTENSION_LIST
+    LoadExtensionList(&glvExtensionModule, 1, False);
+#else
     LoadExtension(&glvExtensionModule, False);
+#endif
 
     return (pointer)1;
 }
