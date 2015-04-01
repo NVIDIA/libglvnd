@@ -789,4 +789,11 @@ void __glDispatchFini(void)
     _glapi_destroy_multithread();
 }
 
+void __glDispatchCheckMultithreaded(void)
+{
+    if (!pthreadFuncs.is_singlethreaded)
+    {
+        _glapi_check_multithread();
+    }
+}
 

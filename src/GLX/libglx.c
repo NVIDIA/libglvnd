@@ -1535,6 +1535,8 @@ void __glXThreadInitialize(void)
             sched_yield();
         }
     }
+
+    __glDispatchCheckMultithreaded();
 }
 
 void CurrentContextHashCleanup(void *unused, __GLXcurrentContextHash *pEntry)
