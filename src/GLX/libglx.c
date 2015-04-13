@@ -872,6 +872,14 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
         char string[CLIENT_STRING_BUFFER_SIZE];
     } clientStringData[GLX_CLIENT_STRING_LAST_ATTRIB];
 
+    if (num_screens == 1) {
+        // There's only one screen, so we don't have to mess around with
+        // merging the strings from multiple vendors.
+
+        const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, 0);
+        return pDispatch->glx14ep.getClientString(dpy, name);
+    }
+
     __glXPthreadFuncs.mutex_lock(&clientStringLock);
 
     if (clientStringData[index].initialized) {
