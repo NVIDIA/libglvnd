@@ -42,6 +42,7 @@
 #include "libglxabipriv.h"
 #include "libglxmapping.h"
 #include "libglxcurrent.h"
+#include "libglxstring.h"
 #include "utils_misc.h"
 #include "trace.h"
 #include "GL/glxproto.h"
@@ -61,6 +62,11 @@ GLVNDPthreadFuncs __glXPthreadFuncs;
 static glvnd_key_t tsdContextKey;
 static Bool tsdContextKeyInitialized;
 static glvnd_once_t threadCreateTSDContextOnceControl = GLVND_ONCE_INIT;
+
+#define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
+
+static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
+static char *clientStrings[GLX_CLIENT_STRING_LAST_ATTRIB] = { NULL };
 
 /*
  * Hashtable tracking current contexts for the purpose of determining whether
@@ -854,8 +860,162 @@ PUBLIC void glXWaitX(void)
     pDispatch->glx14ep.waitX();
 }
 
-#define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
-#define CLIENT_STRING_BUFFER_SIZE 1024
+/**
+ * Queries a client string for each screen in a display.
+ *
+ * The returned array will have one element for each screen. The caller must
+ * free the array by calling free.
+ *
+ * \param dpy The display connection.
+ * \param name The string to query (GLX_VENDOR, GLX_VERSION, or GLX_EXTENSION).
+ * \return An array of strings, or NULL on error.
+ */
+static const char **GetVendorClientStrings(Display *dpy, int name)
+{
+    int num_screens = XScreenCount(dpy);
+    const char **result = malloc(num_screens * sizeof(const char *));
+    int screen;
+    if (result == NULL) {
+        return NULL;
+    }
+
+    for (screen = 0; screen < num_screens; screen++) {
+        const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+        result[screen] = pDispatch->glx14ep.getClientString(dpy, name);
+        if (result[screen] == NULL) {
+            free(result);
+            return NULL;
+        }
+    }
+    return result;
+}
+
+/**
+ * Merges two GLX_EXTENSIONS strings.
+ *
+ * If \p newString is a subset of \c currentString, then \c currentString will
+ * be returned unmodified. Otherwise, \c currentString will be re-allocated
+ * with enough space to hold the union of both string.
+ *
+ * If an error occurrs, then \c currentString will be freed before returning.
+ *
+ * \param currentString The current string, which must have been allocated with malloc.
+ * \param newString The extension string to add.
+ * \return A new extension string.
+ */
+static char *MergeExtensionStrings(char *currentString, const char *newString)
+{
+    size_t origLen;
+    size_t newLen;
+    const char *name;
+    size_t nameLen;
+    char *buf, *ptr;
+
+    // Calculate the length of the new string.
+    origLen = newLen = strlen(currentString);
+
+    // The code below assumes that currentString is not empty, so if it is
+    // empty, then just copy the new string.
+    if (origLen == 0) {
+        newLen = strlen(newString);
+        if (newLen > 0) {
+            buf = (char *) realloc(currentString, newLen + 1);
+            if (buf == NULL) {
+                free(currentString);
+                return NULL;
+            }
+            memcpy(buf, newString, newLen + 1);
+        }
+        return buf;
+    }
+
+    name = newString;
+    nameLen = 0;
+    while (FindNextExtensionName(&name, &nameLen)) {
+        if (!IsExtensionInString(currentString, name, nameLen)) {
+            newLen += nameLen + 1;
+        }
+    }
+    if (origLen == newLen) {
+        // No new extensions to add.
+        return currentString;
+    }
+
+    buf = (char *) realloc(currentString, newLen + 1);
+    if (buf == NULL) {
+        free(currentString);
+        return NULL;
+    }
+
+    ptr = buf + origLen;
+    name = newString;
+    nameLen = 0;
+    while (FindNextExtensionName(&name, &nameLen)) {
+        if (!IsExtensionInString(currentString, name, nameLen)) {
+            *ptr++ = ' ';
+            memcpy(ptr, name, nameLen);
+            ptr += nameLen;
+        }
+    }
+    *ptr = '\0';
+    assert((size_t) (ptr - buf) == newLen);
+    return buf;
+}
+
+/**
+ * Merges two GLX_VERSION strings.
+ *
+ * The merged string will specify the higher version number of \p currentString
+ * and \p newString, up to the version specified by \c GLX_MAJOR_VERSION and
+ * \c GLX_MINOR_VERSION.
+ *
+ * \param currentString The current string, which must have been allocated with malloc.
+ * \param newString The version string to merge.
+ * \return A new version string.
+ */
+static char *MergeVersionStrings(char *currentString, const char *newString)
+{
+    int major, minor;
+    const char *vendorInfo;
+    int newMajor, newMinor;
+    const char *newVendorInfo;
+    char *buf;
+    int ret;
+
+    if (ParseClientVersionString(currentString, &major, &minor, &vendorInfo) != 0) {
+        return currentString;
+    }
+    if (ParseClientVersionString(newString, &newMajor, &newMinor, &newVendorInfo) != 0) {
+        return currentString;
+    }
+
+    // Report the highest version number of any vendor library, but no higher
+    // than what this version of libglvnd supports.
+    if (newMajor > major || (newMajor == major && newMinor > minor)) {
+        major = newMajor;
+        minor = newMinor;
+    }
+    if (major > GLX_MAJOR_VERSION || (major == GLX_MAJOR_VERSION && minor > GLX_MINOR_VERSION)) {
+        major = GLX_MAJOR_VERSION;
+        minor = GLX_MINOR_VERSION;
+    }
+
+    if (vendorInfo != NULL && newVendorInfo != NULL) {
+        ret = glvnd_asprintf(&buf, "%d.%d %s, %s", major, minor, vendorInfo, newVendorInfo);
+    } else if (vendorInfo != NULL || newVendorInfo != NULL) {
+        const char *info = (vendorInfo != NULL ? vendorInfo : newVendorInfo);
+        ret = glvnd_asprintf(&buf, "%d.%d %s", major, minor, info);
+    } else {
+        ret = glvnd_asprintf(&buf, "%d.%d", major, minor);
+    }
+    free(currentString);
+
+    if (ret > 0) {
+        return buf;
+    } else {
+        return NULL;
+    }
+}
 
 PUBLIC const char *glXGetClientString(Display *dpy, int name)
 {
@@ -863,14 +1023,8 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
 
     int num_screens = XScreenCount(dpy);
     int screen;
-    size_t n = CLIENT_STRING_BUFFER_SIZE - 1;
     int index = name - 1;
-
-    static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
-    static struct {
-        int initialized;
-        char string[CLIENT_STRING_BUFFER_SIZE];
-    } clientStringData[GLX_CLIENT_STRING_LAST_ATTRIB];
+    const char **vendorStrings = NULL;
 
     if (num_screens == 1) {
         // There's only one screen, so we don't have to mess around with
@@ -880,33 +1034,54 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
         return pDispatch->glx14ep.getClientString(dpy, name);
     }
 
+    if (name != GLX_VENDOR && name != GLX_VERSION && name != GLX_EXTENSIONS) {
+        return NULL;
+    }
+
     __glXPthreadFuncs.mutex_lock(&clientStringLock);
 
-    if (clientStringData[index].initialized) {
-        __glXPthreadFuncs.mutex_unlock(&clientStringLock);
-        return clientStringData[index].string;
+    if (clientStrings[index] != NULL) {
+        goto done;
     }
 
-    for (screen = 0; (screen < num_screens) && (n > 0); screen++) {
-        const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    vendorStrings = GetVendorClientStrings(dpy, name);
+    if (vendorStrings == NULL) {
+        goto done;
+    }
 
-        const char *screenClientString = pDispatch->glx14ep.getClientString(dpy,
-                                                                            name);
-        if (!screenClientString) {
-            // Error!
-            return NULL;
+    clientStrings[index] = strdup(vendorStrings[0]);
+    if (clientStrings[index] == NULL) {
+        goto done;
+    }
+    for (screen = 1; screen < num_screens; screen++) {
+        if (name == GLX_VENDOR) {
+            char *newBuf;
+            if (glvnd_asprintf(&newBuf, "%s, %s", clientStrings[index], vendorStrings[screen]) < 0) {
+                newBuf = NULL;
+            }
+            free(clientStrings[index]);
+            clientStrings[index] = newBuf;
+        } else if (name == GLX_VERSION) {
+            clientStrings[index] = MergeVersionStrings(clientStrings[index], vendorStrings[screen]);
+        } else if (name == GLX_EXTENSIONS) {
+            clientStrings[index] = MergeExtensionStrings(clientStrings[index], vendorStrings[screen]);
+        } else {
+            assert(!"Can't happen: Invalid string name");
+            free(clientStrings[index]);
+            clientStrings[index] = NULL;
         }
-        strncat(clientStringData[index].string, screenClientString, n);
-        n = CLIENT_STRING_BUFFER_SIZE -
-            (1 + strlen(clientStringData[index].string));
+        if (clientStrings[index] == NULL) {
+            goto done;
+        }
     }
 
-    clientStringData[index].initialized = 1;
-
+done:
     __glXPthreadFuncs.mutex_unlock(&clientStringLock);
-    return clientStringData[index].string;
+    if (vendorStrings != NULL) {
+        free(vendorStrings);
+    }
+    return clientStrings[index];
 }
-
 
 PUBLIC const char *glXQueryServerString(Display *dpy, int screen, int name)
 {
@@ -1630,6 +1805,8 @@ void __attribute__ ((destructor)) __glXFini(void)
 void _fini(void)
 #endif
 {
+    int i;
+
     /* Check for a fork before going further. */
     __glXThreadInitialize();
 
@@ -1656,6 +1833,13 @@ void _fini(void)
 
     /* Tear down GLdispatch if necessary */
     __glDispatchFini();
+
+    for (i=0; i<GLX_CLIENT_STRING_LAST_ATTRIB; i++) {
+        if (clientStrings[i] != NULL) {
+            free(clientStrings[i]);
+            clientStrings[i] = NULL;
+        }
+    }
 }
 
 __GLXdispatchTableDynamic *__glXGetCurrentDynDispatch(void)

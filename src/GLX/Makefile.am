@@ -76,4 +76,5 @@ g_libglxnoop.c : gen_stubs.pl glx_funcs.spec
 libGLX_la_SOURCES = \
 	libglx.c \
 	libglxmapping.c \
+	libglxstring.c \
 	g_libglxnoop.c
