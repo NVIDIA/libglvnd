@@ -33,6 +33,8 @@
 #include "libglxabipriv.h"
 #include "GLdispatch.h"
 
+#define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
+
 /*!
  * Structure containing relevant per-vendor information.
  */
@@ -44,6 +46,13 @@ typedef struct __GLXvendorInfoRec {
     __GLXdispatchTableDynamic *dynDispatch; //< dynamic GLX dispatch table
     __GLdispatchTable *glDispatch; //< GL dispatch table
 } __GLXvendorInfo;
+
+/*!
+ * Structure containing per-display information.
+ */
+typedef struct __GLXdisplayInfoRec {
+    char *clientStrings[GLX_CLIENT_STRING_LAST_ATTRIB];
+} __GLXdisplayInfo;
 
 /*!
  * Accessor functions used to retrieve the "current" dispatch table for each of
@@ -80,6 +89,17 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
  */
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName);
 __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen);
+
+/*!
+ * Looks up the __GLXdisplayInfo structure for a display, creating it if
+ * necessary.
+ */
+__GLXdisplayInfo *__glXLookupDisplay(Display *dpy);
+
+/*!
+ * Frees the __GLXdisplayInfo structure for a display, if one exists.
+ */
+void __glXFreeDisplay(Display *dpy);
 
 /*!
  * Notifies libglvnd that a context has been marked for destruction.

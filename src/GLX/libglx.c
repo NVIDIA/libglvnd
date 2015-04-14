@@ -63,10 +63,7 @@ static glvnd_key_t tsdContextKey;
 static Bool tsdContextKeyInitialized;
 static glvnd_once_t threadCreateTSDContextOnceControl = GLVND_ONCE_INIT;
 
-#define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
-
 static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
-static char *clientStrings[GLX_CLIENT_STRING_LAST_ATTRIB] = { NULL };
 
 /*
  * Hashtable tracking current contexts for the purpose of determining whether
@@ -253,6 +250,7 @@ static DEFINE_INITIALIZED_LKDHASH(__GLXAPIState, __glXAPIStateHash);
 void DisplayClosed(Display *dpy)
 {
     __GLXAPIState *apiState, *tmp;
+    __glXFreeDisplay(dpy);
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXAPIStateHash);
     HASH_ITER(hh, _LH(__glXAPIStateHash), apiState, tmp) {
         /*
@@ -1021,6 +1019,7 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
 {
     __glXThreadInitialize();
 
+    __GLXdisplayInfo *dpyInfo = NULL;
     int num_screens = XScreenCount(dpy);
     int screen;
     int index = name - 1;
@@ -1038,9 +1037,14 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
         return NULL;
     }
 
+    dpyInfo = __glXLookupDisplay(dpy);
+    if (dpyInfo == NULL) {
+        return NULL;
+    }
+
     __glXPthreadFuncs.mutex_lock(&clientStringLock);
 
-    if (clientStrings[index] != NULL) {
+    if (dpyInfo->clientStrings[index] != NULL) {
         goto done;
     }
 
@@ -1049,28 +1053,28 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
         goto done;
     }
 
-    clientStrings[index] = strdup(vendorStrings[0]);
-    if (clientStrings[index] == NULL) {
+    dpyInfo->clientStrings[index] = strdup(vendorStrings[0]);
+    if (dpyInfo->clientStrings[index] == NULL) {
         goto done;
     }
     for (screen = 1; screen < num_screens; screen++) {
         if (name == GLX_VENDOR) {
             char *newBuf;
-            if (glvnd_asprintf(&newBuf, "%s, %s", clientStrings[index], vendorStrings[screen]) < 0) {
+            if (glvnd_asprintf(&newBuf, "%s, %s", dpyInfo->clientStrings[index], vendorStrings[screen]) < 0) {
                 newBuf = NULL;
             }
-            free(clientStrings[index]);
-            clientStrings[index] = newBuf;
+            free(dpyInfo->clientStrings[index]);
+            dpyInfo->clientStrings[index] = newBuf;
         } else if (name == GLX_VERSION) {
-            clientStrings[index] = MergeVersionStrings(clientStrings[index], vendorStrings[screen]);
+            dpyInfo->clientStrings[index] = MergeVersionStrings(dpyInfo->clientStrings[index], vendorStrings[screen]);
         } else if (name == GLX_EXTENSIONS) {
-            clientStrings[index] = MergeExtensionStrings(clientStrings[index], vendorStrings[screen]);
+            dpyInfo->clientStrings[index] = MergeExtensionStrings(dpyInfo->clientStrings[index], vendorStrings[screen]);
         } else {
             assert(!"Can't happen: Invalid string name");
-            free(clientStrings[index]);
-            clientStrings[index] = NULL;
+            free(dpyInfo->clientStrings[index]);
+            dpyInfo->clientStrings[index] = NULL;
         }
-        if (clientStrings[index] == NULL) {
+        if (dpyInfo->clientStrings[index] == NULL) {
             goto done;
         }
     }
@@ -1080,7 +1084,7 @@ done:
     if (vendorStrings != NULL) {
         free(vendorStrings);
     }
-    return clientStrings[index];
+    return dpyInfo->clientStrings[index];
 }
 
 PUBLIC const char *glXQueryServerString(Display *dpy, int screen, int name)
@@ -1805,8 +1809,6 @@ void __attribute__ ((destructor)) __glXFini(void)
 void _fini(void)
 #endif
 {
-    int i;
-
     /* Check for a fork before going further. */
     __glXThreadInitialize();
 
@@ -1833,13 +1835,6 @@ void _fini(void)
 
     /* Tear down GLdispatch if necessary */
     __glDispatchFini();
-
-    for (i=0; i<GLX_CLIENT_STRING_LAST_ATTRIB; i++) {
-        if (clientStrings[i] != NULL) {
-            free(clientStrings[i]);
-            clientStrings[i] = NULL;
-        }
-    }
 }
 
 __GLXdispatchTableDynamic *__glXGetCurrentDynDispatch(void)

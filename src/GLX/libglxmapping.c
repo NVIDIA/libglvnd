@@ -122,6 +122,14 @@ typedef struct __GLXvendorNameHashRec {
 
 static DEFINE_INITIALIZED_LKDHASH(__GLXvendorNameHash, __glXVendorNameHash);
 
+typedef struct __GLXdisplayInfoHashRec {
+    Display *dpy;
+    __GLXdisplayInfo info;
+    UT_hash_handle hh;
+} __GLXdisplayInfoHash;
+
+static DEFINE_INITIALIZED_LKDHASH(__GLXdisplayInfoHash, __glXDisplayInfoHash);
+
 static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
                                     const GLubyte *procName)
 {
@@ -567,6 +575,59 @@ __GLXdispatchTableDynamic *__glXGetDynDispatch(Display *dpy, const int screen)
     }
 }
 
+__GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
+{
+    __GLXdisplayInfoHash *pEntry = NULL;
+
+    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+
+    if (pEntry != NULL) {
+        return &pEntry->info;
+    }
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
+    if (pEntry == NULL) {
+        pEntry = (__GLXdisplayInfoHash *) malloc(sizeof(*pEntry));
+        if (pEntry != NULL) {
+            memset(pEntry, 0, sizeof(*pEntry));
+            pEntry->dpy = dpy;
+            HASH_ADD_PTR(_LH(__glXDisplayInfoHash), dpy, pEntry);
+        }
+    }
+
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    if (pEntry != NULL) {
+        return &pEntry->info;
+    } else {
+        return NULL;
+    }
+}
+
+void __glXFreeDisplay(Display *dpy)
+{
+    __GLXdisplayInfoHash *pEntry = NULL;
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
+    if (pEntry != NULL) {
+        HASH_DEL(_LH(__glXDisplayInfoHash), pEntry);
+    }
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+
+    if (pEntry != NULL) {
+        int i;
+        for (i=0; i<GLX_CLIENT_STRING_LAST_ATTRIB; i++) {
+            if (pEntry->info.clientStrings[i] != NULL) {
+                free(pEntry->info.clientStrings[i]);
+            }
+        }
+        free(pEntry);
+    }
+}
+
 /****************************************************************************/
 /*
  * __glXScreenPointerMappingHash is a hash table that maps a void*
@@ -814,6 +875,7 @@ void __glXMappingTeardown(Bool doReset)
         __glXPthreadFuncs.rwlock_init(&__glXScreenPointerMappingHash.lock, NULL);
         __glXPthreadFuncs.rwlock_init(&__glXScreenXIDMappingHash.lock, NULL);
         __glXPthreadFuncs.rwlock_init(&__glXVendorNameHash.lock, NULL);
+        __glXPthreadFuncs.rwlock_init(&__glXDisplayInfoHash.lock, NULL);
     } else {
         /* Tear down all hashtables used in this file */
         LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdispatchIndexHash,
@@ -826,6 +888,8 @@ void __glXMappingTeardown(Bool doReset)
 
         LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorScreenHash,
                          __glXVendorScreenHash, NULL, NULL, False);
+        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdisplayInfoHash,
+                         __glXDisplayInfoHash, NULL, NULL, False);
 
         LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenPointerMappingHash,
                          __glXScreenPointerMappingHash, NULL, NULL, False);
