@@ -183,10 +183,6 @@ _glapi_init_table_from_callback(struct _glapi_table *table,
                                                        int isClientAPI));
 
 
-_GLAPI_EXPORT unsigned long
-_glthread_GetID(void);
-
-
 /*
  * These stubs are kept so that the old DRI drivers still load.
  */

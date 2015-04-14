@@ -243,4 +243,10 @@ PUBLIC void __glDispatchUnregisterStubCallbacks(
     void (*restore_func)(void)
 );
 
+/**
+ * Checks to see if multiple threads are being used. This should be called
+ * periodically from places like glXMakeCurrent.
+ */
+PUBLIC void __glDispatchCheckMultithreaded(void);
+
 #endif

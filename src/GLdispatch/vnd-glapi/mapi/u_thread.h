@@ -48,6 +48,7 @@
 
 #if defined(HAVE_PTHREAD)
 #include <pthread.h> /* POSIX threads headers */
+#include "glvnd_pthread/glvnd_pthread.h"
 #endif
 #ifdef _WIN32
 #include <windows.h>
@@ -90,32 +91,42 @@ extern "C" {
  */
 #if defined(HAVE_PTHREAD)
 
+extern GLVNDPthreadFuncs pthreadFuncs;
+
 struct u_tsd {
-   pthread_key_t key;
+   glvnd_key_t key;
    unsigned initMagic;
 };
 
-typedef pthread_mutex_t u_mutex;
+typedef glvnd_mutex_t u_mutex;
 
 #define u_mutex_declare_static(name) \
-   static u_mutex name = PTHREAD_MUTEX_INITIALIZER
+   static u_mutex name = GLVND_MUTEX_INITIALIZER
 
-#define u_mutex_init(name)    pthread_mutex_init(&(name), NULL)
-#define u_mutex_destroy(name) pthread_mutex_destroy(&(name))
-#define u_mutex_lock(name)    (void) pthread_mutex_lock(&(name))
-#define u_mutex_unlock(name)  (void) pthread_mutex_unlock(&(name))
+#define u_mutex_init(name)    pthreadFuncs.mutex_init(&(name), NULL)
+#define u_mutex_destroy(name) pthreadFuncs.mutex_destroy(&(name))
+#define u_mutex_lock(name)    (void) pthreadFuncs.mutex_lock(&(name))
+#define u_mutex_unlock(name)  (void) pthreadFuncs.mutex_unlock(&(name))
 
-static INLINE unsigned long
+typedef glvnd_thread_t u_thread_t;
+#define U_THREAD_INIT GLVND_THREAD_NULL_INIT
+
+static INLINE u_thread_t
 u_thread_self(void)
 {
-   return (unsigned long) pthread_self();
+   return pthreadFuncs.self();
 }
 
+static INLINE int
+u_thread_equal(u_thread_t t1, u_thread_t t2)
+{
+    return pthreadFuncs.equal(t1, t2);
+}
 
 static INLINE void
 u_tsd_init(struct u_tsd *tsd)
 {
-   if (pthread_key_create(&tsd->key, NULL/*free*/) != 0) {
+   if (pthreadFuncs.key_create(&tsd->key, NULL/*free*/) != 0) {
       perror(INIT_TSD_ERROR);
       exit(-1);
    }
@@ -129,7 +140,7 @@ u_tsd_get(struct u_tsd *tsd)
    if (tsd->initMagic != INIT_MAGIC) {
       u_tsd_init(tsd);
    }
-   return pthread_getspecific(tsd->key);
+   return pthreadFuncs.getspecific(tsd->key);
 }
 
 
@@ -139,7 +150,7 @@ u_tsd_set(struct u_tsd *tsd, void *ptr)
    if (tsd->initMagic != INIT_MAGIC) {
       u_tsd_init(tsd);
    }
-   if (pthread_setspecific(tsd->key, ptr) != 0) {
+   if (pthreadFuncs.setspecific(tsd->key, ptr) != 0) {
       perror(SET_TSD_ERROR);
       exit(-1);
    }
@@ -171,12 +182,20 @@ typedef CRITICAL_SECTION u_mutex;
 #define u_mutex_lock(name)    EnterCriticalSection(&name)
 #define u_mutex_unlock(name)  LeaveCriticalSection(&name)
 
-static INLINE unsigned long
+typedef unsigned long u_thread_t;
+#define U_THREAD_INIT 0
+
+static INLINE u_thread_t
 u_thread_self(void)
 {
    return GetCurrentThreadId();
 }
 
+static INLINE int
+u_thread_equal(u_thread_t t1, u_thread_t t2)
+{
+    return (int) (t1 == t2);
+}
 
 static INLINE void
 u_tsd_init(struct u_tsd *tsd)
@@ -245,16 +264,24 @@ typedef unsigned u_mutex;
 #define u_mutex_lock(name)             (void) name
 #define u_mutex_unlock(name)           (void) name
 
+typedef unsigned long u_thread_t;
+#define U_THREAD_INIT 0
+
 /*
  * no-op functions
  */
 
-static INLINE unsigned long
+static INLINE u_thread_t
 u_thread_self(void)
 {
    return 0;
 }
 
+static INLINE int
+u_thread_equal(u_thread_t t1, u_thread_t t2)
+{
+    return (int) (t1 == t2);
+}
 
 static INLINE void
 u_tsd_init(struct u_tsd *tsd)

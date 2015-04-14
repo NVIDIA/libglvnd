@@ -151,8 +151,11 @@ u_mutex_declare_static(ThreadCheckMutex);
 void
 u_current_init(void)
 {
-   static unsigned long knownID;
+   // TODO: Move the initialization code (and maybe stub_init_once) to
+   // __glDispatchInit.
+   static u_thread_t knownID = U_THREAD_INIT;
    static int firstCall = 1;
+   int i;
 
    if (ThreadSafe)
       return;
@@ -164,10 +167,11 @@ u_current_init(void)
       knownID = u_thread_self();
       firstCall = 0;
    }
-   else if (knownID != u_thread_self()) {
+   else if (!u_thread_equal(knownID, u_thread_self())) {
       ThreadSafe = 1;
-      u_current_set(NULL);
-      u_current_set_user(NULL);
+      for (i = 0; i < U_CURRENT_NUM_ENTRIES; i++) {
+         u_current[i] = NULL;
+      }
    }
    u_mutex_unlock(ThreadCheckMutex);
 }
@@ -191,8 +195,6 @@ u_current_init(void)
 void
 u_current_set_user(const void *ptr)
 {
-   u_current_init();
-
 #if defined(GLX_USE_TLS)
    u_current[U_CURRENT_USER0] = (void *) ptr;
 #elif defined(THREADS)
@@ -230,8 +232,6 @@ u_current_get_user_internal(void)
 void
 u_current_set(const struct mapi_table *tbl)
 {
-   u_current_init();
-
    stub_init_once();
 
    if (!tbl)
@@ -289,9 +289,6 @@ u_current_get_index(int index)
 #if defined(GLX_USE_TLS)
             return u_current[index];
 #elif defined(THREADS)
-            if (u_current[index]) {
-                return u_current[index];
-            }
             return (ThreadSafe) ? u_tsd_get(&u_current_tsd[index]) :
                 u_current[index];
 #else

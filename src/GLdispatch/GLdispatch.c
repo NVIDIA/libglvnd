@@ -54,7 +54,7 @@ static int clientRefcount;
 /*
  * Threading imports used for locking.
  */
-static GLVNDPthreadFuncs pthreadFuncs;
+GLVNDPthreadFuncs pthreadFuncs;
 
 /*
  * The number of current contexts that GLdispatch is aware of
@@ -789,4 +789,11 @@ void __glDispatchFini(void)
     _glapi_destroy_multithread();
 }
 
+void __glDispatchCheckMultithreaded(void)
+{
+    if (!pthreadFuncs.is_singlethreaded)
+    {
+        _glapi_check_multithread();
+    }
+}
 
