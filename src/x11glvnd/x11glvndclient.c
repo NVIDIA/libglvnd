@@ -129,6 +129,38 @@ static XEXT_CLOSE_DISPLAY_PROTO(close_display)
    } while (0)
 
 
+Status XGLVQueryVersion(Display *dpy, int *major, int *minor)
+{
+    XExtDisplayInfo *info = find_display(dpy);
+    xglvQueryVersionReq *req;
+    xglvQueryVersionReply rep;
+
+    LockDisplay(dpy);
+
+    if (!XextHasExtension(info)) {
+        return 0;
+    }
+
+    GetReq(glvQueryVersion, req);
+
+    req->reqType = info->codes->major_opcode;
+    req->glvndReqType = X_glvQueryVersion;
+    req->majorVersion = XGLV_EXT_MAJOR;
+    req->minorVersion = XGLV_EXT_MINOR;
+
+    if (!_XReply(dpy, (xReply*)&rep, 0, xTrue)) {
+        UnlockDisplay(dpy);
+        SyncHandle();
+        return 0;
+    }
+
+    *major = rep.majorVersion;
+    *minor = rep.minorVersion;
+    UnlockDisplay(dpy);
+    SyncHandle();
+    return 1;
+}
+
 /*
  * Returns the screen associated with this XID, or -1 if there was an error.
  */

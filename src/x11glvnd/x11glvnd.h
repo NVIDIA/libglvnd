@@ -42,6 +42,13 @@
 #define XGLV_EXTENSION_NAME "x11glvnd"
 
 /*!
+ * Returns the version of the x11glvnd extension supported by the server.
+ *
+ * Returns nonzero if the server supports a compatible version of x11glvnd.
+ */
+Status XGLVQueryVersion(Display *dpy, int *major, int *minor);
+
+/*!
  * Returns the screen associated with this XID, or -1 if there was an error.
  */
 int XGLVQueryXIDScreenMapping(

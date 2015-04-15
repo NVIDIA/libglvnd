@@ -39,12 +39,13 @@
 #define XGLV_NUM_EVENTS 0
 #define XGLV_NUM_ERRORS 0
 
-#define XGLV_EXT_MAJOR 0
+#define XGLV_EXT_MAJOR 1
 #define XGLV_EXT_MINOR 0
 
 // TODO: X_glvQueryXIDVendorMapping?
-#define X_glvQueryXIDScreenMapping      0
-#define X_glvQueryScreenVendorMapping   1
+#define X_glvQueryVersion               0
+#define X_glvQueryXIDScreenMapping      1
+#define X_glvQueryScreenVendorMapping   2
 #define X_glvLastRequest  (X_glvQueryScreenVendorMapping+1)
 
 #define GLVND_PAD(x) (((x)+3) & ~3)
@@ -86,6 +87,21 @@ static const size_t sz_xglv ## name ## Req =  \
     } xglv ## name ## Reply;                   \
 static const size_t sz_xglv ## name ## Reply = \
     32 // sizeof(xReply)
+
+__GLV_DEFINE_REQ(QueryVersion,
+    CARD32 majorVersion B32;
+    CARD32 minorVersion B32;
+);
+
+__GLV_DEFINE_REPLY(QueryVersion,
+    CARD32 majorVersion B32;
+    CARD32 minorVersion B32;
+    CARD32 padl4;
+    CARD32 padl5;
+    CARD32 padl6;
+    CARD32 padl7;
+    CARD32 padl8;
+);
 
 __GLV_DEFINE_REQ(QueryXIDScreenMapping,
     CARD32 xid B32;

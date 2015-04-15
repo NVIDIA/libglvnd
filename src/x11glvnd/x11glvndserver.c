@@ -85,12 +85,14 @@ typedef ProcVectorFunc *ProcVectorFuncPtr;
 #define PROC_VECTOR_ENTRY(foo) [X_glv ## foo] = ProcGLV ## foo
 #define PROC_PROTO(foo) static int ProcGLV ## foo (ClientPtr client)
 
+PROC_PROTO(QueryVersion);
 PROC_PROTO(QueryXIDScreenMapping);
 PROC_PROTO(QueryScreenVendorMapping);
 
 static ProcVectorFuncPtr glvProcVector[X_glvLastRequest] = {
     PROC_VECTOR_ENTRY(QueryXIDScreenMapping),
     PROC_VECTOR_ENTRY(QueryScreenVendorMapping),
+    PROC_VECTOR_ENTRY(QueryVersion),
 };
 
 #undef PROC_VECTOR_ENTRY
@@ -277,6 +279,29 @@ static Bool xglvScreenInit(ScreenPtr pScreen)
     return True;
 }
 
+static int ProcGLVQueryVersion(ClientPtr client)
+{
+    xglvQueryVersionReply rep;
+    REQUEST(xglvQueryVersionReq);
+
+    REQUEST_SIZE_MATCH(*stuff);
+
+    // Write the reply
+    GLVND_REPLY_HEADER(rep, 0);
+    rep.majorVersion = XGLV_EXT_MAJOR;
+    rep.minorVersion = XGLV_EXT_MINOR;
+
+    if (client->swapped) {
+        swaps(&rep.sequenceNumber);
+        swapl(&rep.length);
+        swapl(&rep.majorVersion);
+        swapl(&rep.minorVersion);
+    }
+
+    WriteToClient(client, sz_xglvQueryVersionReply, (char *)&rep);
+    return client->noClientException;
+}
+
 // TODO: make sense to do this instead?
 //
 //static int ProcGLVQueryXIDVendorMapping(ClientPtr client)
@@ -298,6 +323,12 @@ static int ProcGLVQueryXIDScreenMapping(ClientPtr client)
     // Write the reply
     GLVND_REPLY_HEADER(rep, 0);
     rep.screen = scrnum;
+
+    if (client->swapped) {
+        swaps(&rep.sequenceNumber);
+        swapl(&rep.length);
+        swapl(&rep.screen);
+    }
 
     WriteToClient(client, sz_xglvQueryXIDScreenMappingReply, (char *)&rep);
     return client->noClientException;
@@ -337,6 +368,12 @@ static int ProcGLVQueryScreenVendorMapping(ClientPtr client)
         GLVND_REPLY_HEADER(rep, length);
         rep.n = n;
 
+        if (client->swapped) {
+            swaps(&rep.sequenceNumber);
+            swapl(&rep.length);
+            swapl(&rep.n);
+        }
+
         WriteToClient(client, sz_xglvQueryScreenVendorMappingReply, (char *)&rep);
         WriteToClient(client, (int)(length << 2), buf);
 
@@ -344,6 +381,11 @@ static int ProcGLVQueryScreenVendorMapping(ClientPtr client)
     } else {
         GLVND_REPLY_HEADER(rep, 0);
         rep.n = 0;
+        if (client->swapped) {
+            swaps(&rep.sequenceNumber);
+            swapl(&rep.length);
+            swapl(&rep.n);
+        }
         WriteToClient(client, sz_xglvQueryScreenVendorMappingReply, (char *)&rep);
     }
 
