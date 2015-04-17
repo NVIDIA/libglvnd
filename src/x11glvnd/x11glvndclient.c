@@ -129,7 +129,19 @@ static XEXT_CLOSE_DISPLAY_PROTO(close_display)
    } while (0)
 
 
-Status XGLVQueryVersion(Display *dpy, int *major, int *minor)
+Bool XGLVQueryExtension(Display *dpy, int *event_base_return, int *error_base_return)
+{
+    XExtDisplayInfo *info = find_display(dpy);
+    if (XextHasExtension(info)) {
+        *event_base_return = info->codes->first_event;
+        *error_base_return = info->codes->first_error;
+        return False;
+    } else {
+        return False;
+    }
+}
+
+Bool XGLVQueryVersion(Display *dpy, int *major, int *minor)
 {
     XExtDisplayInfo *info = find_display(dpy);
     xglvQueryVersionReq *req;
@@ -137,9 +149,7 @@ Status XGLVQueryVersion(Display *dpy, int *major, int *minor)
 
     LockDisplay(dpy);
 
-    if (!XextHasExtension(info)) {
-        return 0;
-    }
+    CHECK_EXTENSION(dpy, info, -1);
 
     GetReq(glvQueryVersion, req);
 

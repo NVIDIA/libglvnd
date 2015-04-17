@@ -96,11 +96,10 @@ __GLV_DEFINE_REQ(QueryVersion,
 __GLV_DEFINE_REPLY(QueryVersion,
     CARD32 majorVersion B32;
     CARD32 minorVersion B32;
-    CARD32 padl4;
-    CARD32 padl5;
-    CARD32 padl6;
-    CARD32 padl7;
-    CARD32 padl8;
+    CARD32 padl4 B32;
+    CARD32 padl5 B32;
+    CARD32 padl6 B32;
+    CARD32 padl7 B32;
 );
 
 __GLV_DEFINE_REQ(QueryXIDScreenMapping,
@@ -109,12 +108,11 @@ __GLV_DEFINE_REQ(QueryXIDScreenMapping,
 
 __GLV_DEFINE_REPLY(QueryXIDScreenMapping,
     INT32  screen B32;
-    CARD32 padl3;
-    CARD32 padl4;
-    CARD32 padl5;
-    CARD32 padl6;
-    CARD32 padl7;
-    CARD32 padl8;
+    CARD32 padl3 B32;
+    CARD32 padl4 B32;
+    CARD32 padl5 B32;
+    CARD32 padl6 B32;
+    CARD32 padl7 B32;
 );
 
 __GLV_DEFINE_REQ(QueryScreenVendorMapping,
@@ -123,12 +121,11 @@ __GLV_DEFINE_REQ(QueryScreenVendorMapping,
 
 __GLV_DEFINE_REPLY(QueryScreenVendorMapping,
     CARD32 n    B32;
-    CARD32 padl3;
-    CARD32 padl4;
-    CARD32 padl5;
-    CARD32 padl6;
-    CARD32 padl7;
-    CARD32 padl8;
+    CARD32 padl3 B32;
+    CARD32 padl4 B32;
+    CARD32 padl5 B32;
+    CARD32 padl6 B32;
+    CARD32 padl7 B32;
 );
 
 #undef __GLV_DEFINE_REQ

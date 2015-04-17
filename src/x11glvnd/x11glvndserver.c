@@ -90,9 +90,9 @@ PROC_PROTO(QueryXIDScreenMapping);
 PROC_PROTO(QueryScreenVendorMapping);
 
 static ProcVectorFuncPtr glvProcVector[X_glvLastRequest] = {
+    PROC_VECTOR_ENTRY(QueryVersion),
     PROC_VECTOR_ENTRY(QueryXIDScreenMapping),
     PROC_VECTOR_ENTRY(QueryScreenVendorMapping),
-    PROC_VECTOR_ENTRY(QueryVersion),
 };
 
 #undef PROC_VECTOR_ENTRY
