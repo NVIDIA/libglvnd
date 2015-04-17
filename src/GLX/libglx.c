@@ -915,14 +915,10 @@ static char *MergeExtensionStrings(char *currentString, const char *newString)
     // The code below assumes that currentString is not empty, so if it is
     // empty, then just copy the new string.
     if (origLen == 0) {
-        newLen = strlen(newString);
-        if (newLen > 0) {
-            buf = (char *) realloc(currentString, newLen + 1);
-            if (buf == NULL) {
-                free(currentString);
-                return NULL;
-            }
-            memcpy(buf, newString, newLen + 1);
+        buf = currentString;
+        if (newString[0] != '\0') {
+            buf = strdup(newString);
+            free(currentString);
         }
         return buf;
     }
