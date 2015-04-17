@@ -149,7 +149,7 @@ Bool XGLVQueryVersion(Display *dpy, int *major, int *minor)
 
     LockDisplay(dpy);
 
-    CHECK_EXTENSION(dpy, info, -1);
+    CHECK_EXTENSION(dpy, info, False);
 
     GetReq(glvQueryVersion, req);
 
@@ -161,14 +161,14 @@ Bool XGLVQueryVersion(Display *dpy, int *major, int *minor)
     if (!_XReply(dpy, (xReply*)&rep, 0, xTrue)) {
         UnlockDisplay(dpy);
         SyncHandle();
-        return 0;
+        return False;
     }
 
     *major = rep.majorVersion;
     *minor = rep.minorVersion;
     UnlockDisplay(dpy);
     SyncHandle();
-    return 1;
+    return True;
 }
 
 /*
