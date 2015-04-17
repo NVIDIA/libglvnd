@@ -135,7 +135,7 @@ Bool XGLVQueryExtension(Display *dpy, int *event_base_return, int *error_base_re
     if (XextHasExtension(info)) {
         *event_base_return = info->codes->first_event;
         *error_base_return = info->codes->first_error;
-        return False;
+        return True;
     } else {
         return False;
     }
