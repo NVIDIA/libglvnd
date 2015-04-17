@@ -39,12 +39,13 @@
 #define XGLV_NUM_EVENTS 0
 #define XGLV_NUM_ERRORS 0
 
-#define XGLV_EXT_MAJOR 0
+#define XGLV_EXT_MAJOR 1
 #define XGLV_EXT_MINOR 0
 
 // TODO: X_glvQueryXIDVendorMapping?
-#define X_glvQueryXIDScreenMapping      0
-#define X_glvQueryScreenVendorMapping   1
+#define X_glvQueryVersion               0
+#define X_glvQueryXIDScreenMapping      1
+#define X_glvQueryScreenVendorMapping   2
 #define X_glvLastRequest  (X_glvQueryScreenVendorMapping+1)
 
 #define GLVND_PAD(x) (((x)+3) & ~3)
@@ -87,18 +88,31 @@ static const size_t sz_xglv ## name ## Req =  \
 static const size_t sz_xglv ## name ## Reply = \
     32 // sizeof(xReply)
 
+__GLV_DEFINE_REQ(QueryVersion,
+    CARD32 majorVersion B32;
+    CARD32 minorVersion B32;
+);
+
+__GLV_DEFINE_REPLY(QueryVersion,
+    CARD32 majorVersion B32;
+    CARD32 minorVersion B32;
+    CARD32 padl4 B32;
+    CARD32 padl5 B32;
+    CARD32 padl6 B32;
+    CARD32 padl7 B32;
+);
+
 __GLV_DEFINE_REQ(QueryXIDScreenMapping,
     CARD32 xid B32;
 );
 
 __GLV_DEFINE_REPLY(QueryXIDScreenMapping,
     INT32  screen B32;
-    CARD32 padl3;
-    CARD32 padl4;
-    CARD32 padl5;
-    CARD32 padl6;
-    CARD32 padl7;
-    CARD32 padl8;
+    CARD32 padl3 B32;
+    CARD32 padl4 B32;
+    CARD32 padl5 B32;
+    CARD32 padl6 B32;
+    CARD32 padl7 B32;
 );
 
 __GLV_DEFINE_REQ(QueryScreenVendorMapping,
@@ -107,12 +121,11 @@ __GLV_DEFINE_REQ(QueryScreenVendorMapping,
 
 __GLV_DEFINE_REPLY(QueryScreenVendorMapping,
     CARD32 n    B32;
-    CARD32 padl3;
-    CARD32 padl4;
-    CARD32 padl5;
-    CARD32 padl6;
-    CARD32 padl7;
-    CARD32 padl8;
+    CARD32 padl3 B32;
+    CARD32 padl4 B32;
+    CARD32 padl5 B32;
+    CARD32 padl6 B32;
+    CARD32 padl7 B32;
 );
 
 #undef __GLV_DEFINE_REQ

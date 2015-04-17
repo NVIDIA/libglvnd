@@ -42,6 +42,24 @@
 #define XGLV_EXTENSION_NAME "x11glvnd"
 
 /*!
+ * Determines if the x11glvnd extension is supported.
+ *
+ * \param[out] event_base_return Returns the base event code.
+ * \param[out] error_base_return Returns the base error code.
+ * \return True if the extension is available, or False if it is not.
+ */
+Bool XGLVQueryExtension(Display *dpy, int *event_base_return, int *error_base_return);
+
+/*!
+ * Returns the version of the x11glvnd extension supported by the server.
+ *
+ * \param[out] major Returns the major version number.
+ * \param[out] minor Returns the minor version number.
+ * \return nonzero if the server supports a compatible version of x11glvnd.
+ */
+Bool XGLVQueryVersion(Display *dpy, int *major, int *minor);
+
+/*!
  * Returns the screen associated with this XID, or -1 if there was an error.
  */
 int XGLVQueryXIDScreenMapping(
@@ -52,6 +70,8 @@ int XGLVQueryXIDScreenMapping(
 /*!
  * Returns the vendor associated with this screen, or NULL if there was an
  * error.
+ *
+ * The caller must free the string with XFree.
  */
 char *XGLVQueryScreenVendorMapping(
     Display *dpy,
