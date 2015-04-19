@@ -35,6 +35,8 @@
 
 #define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
 
+typedef struct __GLXdispatchTableDynamicRec __GLXdispatchTableDynamic;
+
 /*!
  * Structure containing relevant per-vendor information.
  */
@@ -61,25 +63,34 @@ typedef struct __GLXdisplayInfoRec {
  */
 const __GLXdispatchTableStatic * __glXGetStaticDispatch(Display *dpy,
                                                         const int screen);
-__GLXdispatchTableDynamic *__glXGetDynDispatch(Display *dpy,
+__GLXvendorInfo *__glXGetDynDispatch(Display *dpy,
                                                const int screen);
 __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
+
+__GLXvendorInfo *__glXGetDrawableDynDispatch(Display *dpy,
+                                               GLXDrawable drawable);
+
+const __GLXdispatchTableStatic * __glXGetDrawableStaticDispatch(Display *dpy,
+                                                        GLXDrawable drawable);
 
 /*!
  * Various functions to manage mappings used to determine the screen
  * of a particular GLX call.
  */
-void __glXAddScreenContextMapping(GLXContext context, int screen);
-void __glXRemoveScreenContextMapping(GLXContext context);
+void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
+void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context);
 int __glXScreenFromContext(GLXContext context);
+int __glXVendorFromContext(Display *dpy, GLXContext context, int *retScreen, __GLXvendorInfo **retVendor);
 
-void __glXAddScreenFBConfigMapping(GLXFBConfig config, int screen);
-void __glXRemoveScreenFBConfigMapping(GLXFBConfig config);
+void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
+void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config);
 int __glXScreenFromFBConfig(GLXFBConfig config);
+int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor);
 
-void __glXAddScreenDrawableMapping(GLXDrawable drawable, int screen);
-void __glXRemoveScreenDrawableMapping(GLXDrawable drawable);
+void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor);
+void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable);
 int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable);
+int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
 

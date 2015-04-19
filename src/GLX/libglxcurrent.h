@@ -101,7 +101,7 @@ static inline const __GLXdispatchTableStatic *__glXGetCurrentDispatch(void)
  * This gets the current GLX dynamic dispatch table, which is stored in the API
  * state.
  */
-__GLXdispatchTableDynamic *__glXGetCurrentDynDispatch(void);
+__GLXvendorInfo *__glXGetCurrentDynDispatch(void);
 
 /*!
  * This gets the current (vendor-specific) context, which is stored directly
