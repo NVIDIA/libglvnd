@@ -121,10 +121,20 @@ typedef struct __GLXapiExportsRec {
      * and add mappings between various objects and screens.
      ************************************************************************/
 
+    /*!
+     * Records the screen number and vendor for a context. The screen and
+     * vendor must be the ones returned for the XVisualInfo or GLXFBConfig that
+     * the context is created from.
+     */
     void (*addScreenContextMapping)(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
+
+    /*!
+     * Removes a mapping from context to vendor. The context must have been
+     * added with \p addScreenContextMapping.
+     */
     void (*removeScreenContextMapping)(Display *dpy, GLXContext context);
 
-    /**
+    /*!
      * Looks up the screen and vendor for a context.
      *
      * If no mapping is found, then \p retScreen and \p retVendor will be set
@@ -145,10 +155,14 @@ typedef struct __GLXapiExportsRec {
     void (*removeScreenFBConfigMapping)(Display *dpy, GLXFBConfig config);
     int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor);
 
+    void (*addScreenVisualMapping)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor);
+    void (*removeScreenVisualMapping)(Display *dpy, const XVisualInfo *visual);
+    int (*vendorFromVisual)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
+
     void (*addScreenDrawableMapping)(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor);
     void (*removeScreenDrawableMapping)(Display *dpy, GLXDrawable drawable);
 
-    /**
+    /*!
      * Looks up the screen and vendor for a drawable.
      *
      * If the server does not support the x11glvnd extension, then this

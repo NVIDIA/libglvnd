@@ -291,6 +291,10 @@ static void InitExportsTable(void)
     glxExportsTable.removeScreenFBConfigMapping = __glXRemoveScreenFBConfigMapping;
     glxExportsTable.vendorFromFBConfig = __glXVendorFromFBConfig;
 
+    glxExportsTable.addScreenVisualMapping = __glXAddScreenVisualMapping;
+    glxExportsTable.removeScreenVisualMapping = __glXRemoveScreenVisualMapping;
+    glxExportsTable.vendorFromVisual = __glXVendorFromVisual;
+
     glxExportsTable.addScreenDrawableMapping = __glXAddScreenDrawableMapping;
     glxExportsTable.removeScreenDrawableMapping = __glXRemoveScreenDrawableMapping;
     glxExportsTable.vendorFromDrawable = __glXVendorFromDrawable;
@@ -783,6 +787,21 @@ int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, int *retScreen, __
     return CommonVendorFromScreen(dpy, screen, retScreen, retVendor);
 }
 
+// Internally, we use the screen number to look up a vendor, so we don't need
+// to record anything else for an XVisualInfo.
+void __glXAddScreenVisualMapping(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor)
+{
+}
+void __glXRemoveScreenVisualMapping(Display *dpy, const XVisualInfo *visual)
+{
+}
+int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor)
+{
+    if (retVendor != NULL) {
+        *retVendor = __glXLookupVendorByScreen(dpy, visual->screen);
+    }
+    return 0;
+}
 
 
 
