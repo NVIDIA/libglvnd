@@ -50,6 +50,7 @@
 #define XGLV_ABI_EXTENSION_MODULE_HAS_SETUP_FUNC_AND_INIT_DEPS \
                                                  (GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) <= 12)
 #define XGLV_ABI_HAS_LOAD_EXTENSION_LIST         (GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 17)
+#define XGLV_ABI_SWAP_MACROS_HAVE_N_ARG          (GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) <= 11)
 
 /*
  * Screen-private structure
@@ -77,6 +78,27 @@ static int glvXGLVScreenPrivKey;
 // ABI <= 3
 static int glvXGLVScreenPrivKey = -1;
 #endif
+
+#if XGLV_ABI_SWAP_MACROS_HAVE_N_ARG
+
+#define XGLV_SWAPS(x)     \
+do {                      \
+    int _XGLV_SWAPN;      \
+    swaps(x, _XGLV_SWAPN);\
+} while(0)
+
+#define XGLV_SWAPL(x)     \
+do {                      \
+    int _XGLV_SWAPN;      \
+    swapl(x, _XGLV_SWAPN);\
+} while(0)
+
+#else
+
+#define XGLV_SWAPS(x) swaps(x)
+#define XGLV_SWAPL(x) swapl(x)
+
+#endif // XGLV_ABI_SWAP_FUNCS_TAKE_N_ARG
 
 /* Dispatch information */
 typedef int ProcVectorFunc(ClientPtr);
@@ -292,10 +314,10 @@ static int ProcGLVQueryVersion(ClientPtr client)
     rep.minorVersion = XGLV_EXT_MINOR;
 
     if (client->swapped) {
-        swaps(&rep.sequenceNumber);
-        swapl(&rep.length);
-        swapl(&rep.majorVersion);
-        swapl(&rep.minorVersion);
+        XGLV_SWAPS(&rep.sequenceNumber);
+        XGLV_SWAPL(&rep.length);
+        XGLV_SWAPL(&rep.majorVersion);
+        XGLV_SWAPL(&rep.minorVersion);
     }
 
     WriteToClient(client, sz_xglvQueryVersionReply, (char *)&rep);
@@ -325,9 +347,9 @@ static int ProcGLVQueryXIDScreenMapping(ClientPtr client)
     rep.screen = scrnum;
 
     if (client->swapped) {
-        swaps(&rep.sequenceNumber);
-        swapl(&rep.length);
-        swapl(&rep.screen);
+        XGLV_SWAPS(&rep.sequenceNumber);
+        XGLV_SWAPL(&rep.length);
+        XGLV_SWAPL(&rep.screen);
     }
 
     WriteToClient(client, sz_xglvQueryXIDScreenMappingReply, (char *)&rep);
@@ -369,9 +391,9 @@ static int ProcGLVQueryScreenVendorMapping(ClientPtr client)
         rep.n = n;
 
         if (client->swapped) {
-            swaps(&rep.sequenceNumber);
-            swapl(&rep.length);
-            swapl(&rep.n);
+            XGLV_SWAPS(&rep.sequenceNumber);
+            XGLV_SWAPL(&rep.length);
+            XGLV_SWAPL(&rep.n);
         }
 
         WriteToClient(client, sz_xglvQueryScreenVendorMappingReply, (char *)&rep);
@@ -382,9 +404,9 @@ static int ProcGLVQueryScreenVendorMapping(ClientPtr client)
         GLVND_REPLY_HEADER(rep, 0);
         rep.n = 0;
         if (client->swapped) {
-            swaps(&rep.sequenceNumber);
-            swapl(&rep.length);
-            swapl(&rep.n);
+            XGLV_SWAPS(&rep.sequenceNumber);
+            XGLV_SWAPL(&rep.length);
+            XGLV_SWAPL(&rep.n);
         }
         WriteToClient(client, sz_xglvQueryScreenVendorMappingReply, (char *)&rep);
     }
