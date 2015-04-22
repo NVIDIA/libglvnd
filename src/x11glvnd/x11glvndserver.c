@@ -157,9 +157,18 @@ PUBLIC const XF86ModuleData x11glvndModuleData = { &x11glvndVersionInfo,
 
 static void *glvSetup(void *module, void *opts, int *errmaj, int *errmin)
 {
+    static Bool x11glvndSetupDone = FALSE;
     typedef int (*LoaderGetABIVersionProc)(const char *abiclass);
     LoaderGetABIVersionProc pLoaderGetABIVersion;
     int extMajor = 0;
+
+    if (x11glvndSetupDone) {
+        if (errmaj) {
+            *errmaj = LDR_ONCEONLY;
+        }
+        return NULL;
+    }
+    x11glvndSetupDone = TRUE;
 
     xf86Msg(X_INFO, "x11glvnd Loading\n");
 
