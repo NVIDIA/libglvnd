@@ -152,8 +152,8 @@ static void *glvSetup(void *module, void *opts, int *errmaj, int *errmin);
  * x11glvndModuleData is a magic symbol needed to load the x11glvnd module in
  * the X server.
  */
-const XF86ModuleData x11glvndModuleData = { &x11glvndVersionInfo,
-                                            glvSetup, NULL };
+PUBLIC const XF86ModuleData x11glvndModuleData = { &x11glvndVersionInfo,
+                                                   glvSetup, NULL };
 
 static void *glvSetup(void *module, void *opts, int *errmaj, int *errmin)
 {
