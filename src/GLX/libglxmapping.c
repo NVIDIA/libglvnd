@@ -581,6 +581,49 @@ __GLXvendorInfo *__glXGetDynDispatch(Display *dpy, const int screen)
     return vendor;
 }
 
+/**
+ * Allocates and initializes a __GLXdisplayInfoHash structure.
+ *
+ * The caller is responsible for adding the structure to the hashtable.
+ *
+ * \param dpy The display connection.
+ * \return A newly-allocated __GLXdisplayInfoHash structure, or NULL on error.
+ */
+static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
+{
+    __GLXdisplayInfoHash *pEntry = (__GLXdisplayInfoHash *) malloc(sizeof(*pEntry));
+    if (pEntry == NULL) {
+        return NULL;
+    }
+
+    memset(pEntry, 0, sizeof(*pEntry));
+    pEntry->dpy = dpy;
+    return pEntry;
+}
+
+/**
+ * Frees a __GLXdisplayInfoHash structure.
+ *
+ * The caller is responsible for removing the structure from the hashtable.
+ *
+ * \param unused Ingored. Needed for the uthash teardown function.
+ * \param pEntry The structure to free.
+ */
+static void CleanupDisplayInfoEntry(void *unused, __GLXdisplayInfoHash *pEntry)
+{
+    int i;
+
+    if (pEntry == NULL) {
+        return;
+    }
+
+    for (i=0; i<GLX_CLIENT_STRING_LAST_ATTRIB; i++) {
+        if (pEntry->info.clientStrings[i] != NULL) {
+            free(pEntry->info.clientStrings[i]);
+        }
+    }
+}
+
 __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
 {
     __GLXdisplayInfoHash *pEntry = NULL;
@@ -600,10 +643,8 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
     if (pEntry == NULL) {
-        pEntry = (__GLXdisplayInfoHash *) malloc(sizeof(*pEntry));
+        pEntry = InitDisplayInfoEntry(dpy);
         if (pEntry != NULL) {
-            memset(pEntry, 0, sizeof(*pEntry));
-            pEntry->dpy = dpy;
             HASH_ADD_PTR(_LH(__glXDisplayInfoHash), dpy, pEntry);
         }
     }
@@ -628,12 +669,7 @@ void __glXFreeDisplay(Display *dpy)
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
 
     if (pEntry != NULL) {
-        int i;
-        for (i=0; i<GLX_CLIENT_STRING_LAST_ATTRIB; i++) {
-            if (pEntry->info.clientStrings[i] != NULL) {
-                free(pEntry->info.clientStrings[i]);
-            }
-        }
+        CleanupDisplayInfoEntry(NULL, pEntry);
         free(pEntry);
     }
 }
@@ -956,6 +992,10 @@ void __glXMappingTeardown(Bool doReset)
 
         LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenXIDMappingHash,
                          __glXScreenXIDMappingHash, NULL, NULL, False);
+
+        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdisplayInfoHash,
+                         __glXDisplayInfoHash, CleanupDisplayInfoEntry,
+                         NULL, False);
         /*
          * This implicitly unloads vendor libraries that were loaded when
          * they were added to this hashtable.
