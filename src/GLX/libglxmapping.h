@@ -32,6 +32,7 @@
 
 #include "libglxabipriv.h"
 #include "GLdispatch.h"
+#include "lkdhash.h"
 
 #define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
 
@@ -49,11 +50,15 @@ struct __GLXvendorInfoRec {
     __GLdispatchTable *glDispatch; //< GL dispatch table
 };
 
+typedef struct __GLXscreenXIDMappingHashRec __GLXscreenXIDMappingHash;
+
 /*!
  * Structure containing per-display information.
  */
 typedef struct __GLXdisplayInfoRec {
     char *clientStrings[GLX_CLIENT_STRING_LAST_ATTRIB];
+
+    DEFINE_LKDHASH(__GLXscreenXIDMappingHash, xidScreenHash);
 } __GLXdisplayInfo;
 
 /*!

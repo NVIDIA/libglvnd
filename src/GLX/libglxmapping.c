@@ -130,6 +130,12 @@ typedef struct __GLXdisplayInfoHashRec {
 
 static DEFINE_INITIALIZED_LKDHASH(__GLXdisplayInfoHash, __glXDisplayInfoHash);
 
+struct __GLXscreenXIDMappingHashRec {
+    XID xid;
+    int screen;
+    UT_hash_handle hh;
+};
+
 static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
                                     const GLubyte *procName)
 {
@@ -598,6 +604,7 @@ static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
 
     memset(pEntry, 0, sizeof(*pEntry));
     pEntry->dpy = dpy;
+    LKDHASH_INIT(__glXPthreadFuncs, pEntry->info.xidScreenHash);
     return pEntry;
 }
 
@@ -620,6 +627,9 @@ static void CleanupDisplayInfoEntry(void *unused, __GLXdisplayInfoHash *pEntry)
     for (i=0; i<GLX_CLIENT_STRING_LAST_ATTRIB; i++) {
         free(pEntry->info.clientStrings[i]);
     }
+
+    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenXIDMappingHash,
+                     pEntry->info.xidScreenHash, NULL, NULL, False);
 }
 
 __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
@@ -845,16 +855,7 @@ int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorIn
  */
 
 
-typedef struct {
-    XID xid;
-    int screen;
-    UT_hash_handle hh;
-} __GLXscreenXIDMappingHash;
-
-
-static DEFINE_INITIALIZED_LKDHASH(__GLXscreenXIDMappingHash, __glXScreenXIDMappingHash);
-
-static void AddScreenXIDMapping(XID xid, int screen)
+static void AddScreenXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid, int screen)
 {
     __GLXscreenXIDMappingHash *pEntry = NULL;
 
@@ -866,24 +867,24 @@ static void AddScreenXIDMapping(XID xid, int screen)
         return;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+    LKDHASH_WRLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
 
-    HASH_FIND(hh, _LH(__glXScreenXIDMappingHash), &xid, sizeof(xid), pEntry);
+    HASH_FIND(hh, _LH(dpyInfo->xidScreenHash), &xid, sizeof(xid), pEntry);
 
     if (pEntry == NULL) {
         pEntry = malloc(sizeof(*pEntry));
         pEntry->xid = xid;
         pEntry->screen = screen;
-        HASH_ADD(hh, _LH(__glXScreenXIDMappingHash), xid, sizeof(xid), pEntry);
+        HASH_ADD(hh, _LH(dpyInfo->xidScreenHash), xid, sizeof(xid), pEntry);
     } else {
         pEntry->screen = screen;
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+    LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
 }
 
 
-static void RemoveScreenXIDMapping(XID xid)
+static void RemoveScreenXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
 {
     __GLXscreenXIDMappingHash *pEntry;
 
@@ -891,35 +892,35 @@ static void RemoveScreenXIDMapping(XID xid)
         return;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+    LKDHASH_WRLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
 
-    HASH_FIND(hh, _LH(__glXScreenXIDMappingHash), &xid, sizeof(xid), pEntry);
+    HASH_FIND(hh, _LH(dpyInfo->xidScreenHash), &xid, sizeof(xid), pEntry);
 
     if (pEntry != NULL) {
-        HASH_DELETE(hh, _LH(__glXScreenXIDMappingHash), pEntry);
+        HASH_DELETE(hh, _LH(dpyInfo->xidScreenHash), pEntry);
         free(pEntry);
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+    LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
 }
 
 
-static int ScreenFromXID(Display *dpy, XID xid)
+static int ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
 {
     __GLXscreenXIDMappingHash *pEntry;
     int screen = -1;
 
-    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+    LKDHASH_RDLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
 
-    HASH_FIND(hh, _LH(__glXScreenXIDMappingHash), &xid, sizeof(xid), pEntry);
+    HASH_FIND(hh, _LH(dpyInfo->xidScreenHash), &xid, sizeof(xid), pEntry);
 
     if (pEntry) {
         screen = pEntry->screen;
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
+        LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
     } else {
         screen = XGLVQueryXIDScreenMapping(dpy, xid);
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenXIDMappingHash);
-        AddScreenXIDMapping(xid, screen);
+        LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
+        AddScreenXIDMapping(dpy, dpyInfo, xid, screen);
     }
 
     return screen;
@@ -928,24 +929,38 @@ static int ScreenFromXID(Display *dpy, XID xid)
 
 void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor)
 {
-    AddScreenXIDMapping(drawable, screen);
+    __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
+    if (dpyInfo != NULL) {
+        AddScreenXIDMapping(dpy, dpyInfo, drawable, screen);
+    }
 }
 
 
 void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable)
 {
-    RemoveScreenXIDMapping(drawable);
+    __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
+    if (dpyInfo != NULL) {
+        RemoveScreenXIDMapping(dpy, dpyInfo, drawable);
+    }
 }
 
 
 int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable)
 {
-    return ScreenFromXID(dpy, drawable);
+    __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
+    if (dpyInfo != NULL) {
+        return ScreenFromXID(dpy, dpyInfo, drawable);
+    }
+    return -1;
 }
 
 int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor)
 {
-    int screen = ScreenFromXID(dpy, drawable);
+    __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
+    int screen = -1;
+    if (dpyInfo != NULL) {
+        screen = ScreenFromXID(dpy, dpyInfo, drawable);
+    }
     return CommonVendorFromScreen(dpy, screen, retScreen, retVendor);
 }
 
@@ -957,6 +972,8 @@ void __glXMappingTeardown(Bool doReset)
 {
 
     if (doReset) {
+        __GLXdisplayInfoHash *dpyInfoEntry, *dpyInfoTmp;
+
         /*
          * If we're just doing fork recovery, we don't actually want to unload
          * any currently loaded vendors _or_ remove any mappings (they should
@@ -967,9 +984,12 @@ void __glXMappingTeardown(Bool doReset)
         __glXPthreadFuncs.rwlock_init(&__glXDispatchIndexHash.lock, NULL);
         __glXPthreadFuncs.rwlock_init(&__glXVendorScreenHash.lock, NULL);
         __glXPthreadFuncs.rwlock_init(&__glXScreenPointerMappingHash.lock, NULL);
-        __glXPthreadFuncs.rwlock_init(&__glXScreenXIDMappingHash.lock, NULL);
         __glXPthreadFuncs.rwlock_init(&__glXVendorNameHash.lock, NULL);
         __glXPthreadFuncs.rwlock_init(&__glXDisplayInfoHash.lock, NULL);
+
+        HASH_ITER(hh, _LH(__glXDisplayInfoHash), dpyInfoEntry, dpyInfoTmp) {
+            __glXPthreadFuncs.rwlock_init(&dpyInfoEntry->info.xidScreenHash.lock, NULL);
+        }
     } else {
         /* Tear down all hashtables used in this file */
         LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdispatchIndexHash,
@@ -987,9 +1007,6 @@ void __glXMappingTeardown(Bool doReset)
 
         LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenPointerMappingHash,
                          __glXScreenPointerMappingHash, NULL, NULL, False);
-
-        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenXIDMappingHash,
-                         __glXScreenXIDMappingHash, NULL, NULL, False);
 
         LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdisplayInfoHash,
                          __glXDisplayInfoHash, CleanupDisplayInfoEntry,
