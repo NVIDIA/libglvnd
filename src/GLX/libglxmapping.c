@@ -483,8 +483,14 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
     __GLXvendorInfo *vendor = NULL;
     __GLXvendorScreenHash *pEntry = NULL;
     __GLXvendorScreenHashKey key;
+    __GLXdisplayInfo *dpyInfo;
 
     if (screen < 0) {
+        return NULL;
+    }
+
+    dpyInfo = __glXLookupDisplay(dpy);
+    if (dpyInfo == NULL) {
         return NULL;
     }
 
@@ -509,7 +515,6 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
          * try to lookup the vendor based on the current screen.
          */
         const char *preloadedVendorName = getenv("__GLX_VENDOR_LIBRARY_NAME");
-        char *queriedVendorName;
 
         assert(!vendor);
 
@@ -517,10 +522,12 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
             vendor = __glXLookupVendorByName(preloadedVendorName);
         }
 
-        if (!vendor && (dpy != NULL)) {
-            queriedVendorName = XGLVQueryScreenVendorMapping(dpy, screen);
-            vendor = __glXLookupVendorByName(queriedVendorName);
-            Xfree(queriedVendorName);
+        if (!vendor) {
+            if (dpyInfo->x11glvndSupported) {
+                char *queriedVendorName = XGLVQueryScreenVendorMapping(dpy, screen);
+                vendor = __glXLookupVendorByName(queriedVendorName);
+                Xfree(queriedVendorName);
+            }
         }
 
         if (!vendor) {
@@ -576,8 +583,15 @@ const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int s
 const __GLXdispatchTableStatic * __glXGetDrawableStaticDispatch(Display *dpy,
                                                         GLXDrawable drawable)
 {
-    int screen = __glXScreenFromDrawable(dpy, drawable);
-    return __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = NULL;
+    __glXVendorFromDrawable(dpy, drawable, NULL, &vendor);
+
+    if (vendor) {
+        assert(vendor->staticDispatch);
+        return vendor->staticDispatch;
+    } else {
+        return __glXDispatchNoopPtr;
+    }
 }
 
 __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen)
@@ -610,14 +624,25 @@ __GLXvendorInfo *__glXGetDynDispatch(Display *dpy, const int screen)
  */
 static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
 {
-    __GLXdisplayInfoHash *pEntry = (__GLXdisplayInfoHash *) malloc(sizeof(*pEntry));
+    __GLXdisplayInfoHash *pEntry;
+    int eventBase, errorBase;
+
+    pEntry = (__GLXdisplayInfoHash *) malloc(sizeof(*pEntry));
     if (pEntry == NULL) {
         return NULL;
     }
 
     memset(pEntry, 0, sizeof(*pEntry));
     pEntry->dpy = dpy;
+
     LKDHASH_INIT(__glXPthreadFuncs, pEntry->info.xidScreenHash);
+
+    if (XGLVQueryExtension(dpy, &eventBase, &errorBase)) {
+        pEntry->info.x11glvndSupported = 1;
+        XGLVQueryVersion(dpy, &pEntry->info.x11glvndMajor,
+                &pEntry->info.x11glvndMinor);
+    }
+
     return pEntry;
 }
 
@@ -931,9 +956,12 @@ static int ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
         screen = pEntry->screen;
         LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
     } else {
-        screen = XGLVQueryXIDScreenMapping(dpy, xid);
         LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
-        AddScreenXIDMapping(dpy, dpyInfo, xid, screen);
+
+        if (dpyInfo->x11glvndSupported) {
+            screen = XGLVQueryXIDScreenMapping(dpy, xid);
+            AddScreenXIDMapping(dpy, dpyInfo, xid, screen);
+        }
     }
 
     return screen;
@@ -971,10 +999,25 @@ int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, 
 {
     __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
     int screen = -1;
+    __GLXvendorInfo *vendor = NULL;
     if (dpyInfo != NULL) {
-        screen = ScreenFromXID(dpy, dpyInfo, drawable);
+        if (dpyInfo->x11glvndSupported) {
+            screen = ScreenFromXID(dpy, dpyInfo, drawable);
+            vendor = __glXLookupVendorByScreen(dpy, screen);
+        } else {
+            // We'll use the same vendor for every screen in this case.
+            screen = -1;
+            vendor = __glXLookupVendorByScreen(dpy, 0);
+        }
     }
-    return CommonVendorFromScreen(dpy, screen, retScreen, retVendor);
+
+    if (retScreen != NULL) {
+        *retScreen = screen;
+    }
+    if (retVendor != NULL) {
+        *retVendor = vendor;
+    }
+    return (vendor != NULL ? 0 : -1);
 }
 
 /*!

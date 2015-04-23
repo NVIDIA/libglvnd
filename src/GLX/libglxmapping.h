@@ -59,6 +59,10 @@ typedef struct __GLXdisplayInfoRec {
     char *clientStrings[GLX_CLIENT_STRING_LAST_ATTRIB];
 
     DEFINE_LKDHASH(__GLXscreenXIDMappingHash, xidScreenHash);
+
+    int x11glvndSupported;
+    int x11glvndMajor;
+    int x11glvndMinor;
 } __GLXdisplayInfo;
 
 /*!
