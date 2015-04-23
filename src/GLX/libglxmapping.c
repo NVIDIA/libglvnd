@@ -48,6 +48,15 @@
 
 #define _GNU_SOURCE 1
 
+#if !defined(FALLBACK_VENDOR_NAME)
+/*!
+ * This is the vendor name that we'll use as a fallback if we can't otherwise
+ * find one. This will be used, for example, if the server doesn't support
+ * the x11glvnd extension.
+ */
+#define FALLBACK_VENDOR_NAME "default"
+#endif
+
 /*
  * Hash table containing a mapping from dispatch table index entries to
  * entry point names. This is used in  __glXFetchDispatchEntry() to query
@@ -512,6 +521,10 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
             queriedVendorName = XGLVQueryScreenVendorMapping(dpy, screen);
             vendor = __glXLookupVendorByName(queriedVendorName);
             Xfree(queriedVendorName);
+        }
+
+        if (!vendor) {
+            vendor = __glXLookupVendorByName(FALLBACK_VENDOR_NAME);
         }
 
         if (!vendor) {
