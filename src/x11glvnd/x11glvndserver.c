@@ -160,7 +160,7 @@ static void *glvSetup(void *module, void *opts, int *errmaj, int *errmin)
     static Bool x11glvndSetupDone = FALSE;
     typedef int (*LoaderGetABIVersionProc)(const char *abiclass);
     LoaderGetABIVersionProc pLoaderGetABIVersion;
-    int extMajor = 0;
+    int videoMajor = 0;
 
     if (x11glvndSetupDone) {
         if (errmaj) {
@@ -172,13 +172,15 @@ static void *glvSetup(void *module, void *opts, int *errmaj, int *errmin)
 
     xf86Msg(X_INFO, "x11glvnd Loading\n");
 
+    // All of the ABI checks use the video driver ABI version number, so that's
+    // what we'll check here.
     if ((pLoaderGetABIVersion = (LoaderGetABIVersionProc)LoaderSymbol("LoaderGetABIVersion"))) {
-        extMajor = GET_ABI_MAJOR(pLoaderGetABIVersion(ABI_CLASS_EXTENSION));
+        videoMajor = GET_ABI_MAJOR(pLoaderGetABIVersion(ABI_CLASS_VIDEODRV));
     }
 
-    if (extMajor != GET_ABI_MAJOR(ABI_EXTENSION_VERSION)) {
-        xf86Msg(X_INFO, "x11glvnd: X server major extension ABI mismatch: expected %d but saw %d\n",
-                GET_ABI_MAJOR(ABI_EXTENSION_VERSION), extMajor);
+    if (videoMajor != GET_ABI_MAJOR(ABI_VIDEODRV_VERSION)) {
+        xf86Msg(X_INFO, "x11glvnd: X server major video driver ABI mismatch: expected %d but saw %d\n",
+                GET_ABI_MAJOR(ABI_VIDEODRV_VERSION), videoMajor);
         return NULL;
     }
 
