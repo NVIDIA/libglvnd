@@ -206,12 +206,13 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
     return addr;
 }
 
-__GLXextFuncPtr __glXFetchDispatchEntry(__GLXdispatchTableDynamic *dynDispatch,
+__GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
                                         int index)
 {
     __GLXextFuncPtr addr = NULL;
     __GLXdispatchFuncHash *pEntry;
     GLubyte *procName = NULL;
+    __GLXdispatchTableDynamic *dynDispatch = vendor->dynDispatch;
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, dynDispatch->hash);
 
@@ -284,15 +285,19 @@ static void InitExportsTable(void)
 
     glxExportsTable.addScreenContextMapping = __glXAddScreenContextMapping;
     glxExportsTable.removeScreenContextMapping = __glXRemoveScreenContextMapping;
-    glxExportsTable.screenFromContext = __glXScreenFromContext;
+    glxExportsTable.vendorFromContext = __glXVendorFromContext;
 
     glxExportsTable.addScreenFBConfigMapping = __glXAddScreenFBConfigMapping;
     glxExportsTable.removeScreenFBConfigMapping = __glXRemoveScreenFBConfigMapping;
-    glxExportsTable.screenFromFBConfig = __glXScreenFromFBConfig;
+    glxExportsTable.vendorFromFBConfig = __glXVendorFromFBConfig;
+
+    glxExportsTable.addScreenVisualMapping = __glXAddScreenVisualMapping;
+    glxExportsTable.removeScreenVisualMapping = __glXRemoveScreenVisualMapping;
+    glxExportsTable.vendorFromVisual = __glXVendorFromVisual;
 
     glxExportsTable.addScreenDrawableMapping = __glXAddScreenDrawableMapping;
     glxExportsTable.removeScreenDrawableMapping = __glXRemoveScreenDrawableMapping;
-    glxExportsTable.screenFromDrawable = __glXScreenFromDrawable;
+    glxExportsTable.vendorFromDrawable = __glXVendorFromDrawable;
 
 }
 
@@ -549,6 +554,13 @@ const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int s
     }
 }
 
+const __GLXdispatchTableStatic * __glXGetDrawableStaticDispatch(Display *dpy,
+                                                        GLXDrawable drawable)
+{
+    int screen = __glXScreenFromDrawable(dpy, drawable);
+    return __glXGetStaticDispatch(dpy, screen);
+}
+
 __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen)
 {
     __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
@@ -561,23 +573,21 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen)
     }
 }
 
-__GLXdispatchTableDynamic *__glXGetDynDispatch(Display *dpy, const int screen)
+__GLXvendorInfo *__glXGetDynDispatch(Display *dpy, const int screen)
 {
     __glXThreadInitialize();
 
     __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
-
-    if (vendor) {
-        assert(vendor->dynDispatch);
-        return vendor->dynDispatch;
-    } else {
-        return NULL;
-    }
+    return vendor;
 }
 
 __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
 {
     __GLXdisplayInfoHash *pEntry = NULL;
+
+    if (dpy == NULL) {
+        return NULL;
+    }
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
@@ -712,14 +722,31 @@ static int ScreenFromPointer(void *ptr)
     return screen;
 }
 
+/**
+ * Common function for the various __glXVendorFrom* functions.
+ */
+static int CommonVendorFromScreen(Display *dpy, int screen, int *retScreen, __GLXvendorInfo **retVendor)
+{
+    if (retScreen != NULL) {
+        *retScreen = screen;
+    }
+    if (retVendor != NULL) {
+        if (screen >= 0) {
+            *retVendor = __glXLookupVendorByScreen(dpy, screen);
+        } else {
+            *retVendor = NULL;
+        }
+    }
+    return (screen >= 0 ? 0 : -1);
+}
 
-void __glXAddScreenContextMapping(GLXContext context, int screen)
+void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor)
 {
     AddScreenPointerMapping(context, screen);
 }
 
 
-void __glXRemoveScreenContextMapping(GLXContext context)
+void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context)
 {
     RemoveScreenPointerMapping(context);
 }
@@ -730,14 +757,20 @@ int __glXScreenFromContext(GLXContext context)
     return ScreenFromPointer(context);
 }
 
+int __glXVendorFromContext(Display *dpy, GLXContext context, int *retScreen, __GLXvendorInfo **retVendor)
+{
+    int screen = ScreenFromPointer(context);
+    return CommonVendorFromScreen(dpy, screen, retScreen, retVendor);
+}
 
-void __glXAddScreenFBConfigMapping(GLXFBConfig config, int screen)
+
+void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor)
 {
     AddScreenPointerMapping(config, screen);
 }
 
 
-void __glXRemoveScreenFBConfigMapping(GLXFBConfig config)
+void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config)
 {
     RemoveScreenPointerMapping(config);
 }
@@ -748,6 +781,27 @@ int __glXScreenFromFBConfig(GLXFBConfig config)
     return ScreenFromPointer(config);
 }
 
+int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor)
+{
+    int screen = ScreenFromPointer(config);
+    return CommonVendorFromScreen(dpy, screen, retScreen, retVendor);
+}
+
+// Internally, we use the screen number to look up a vendor, so we don't need
+// to record anything else for an XVisualInfo.
+void __glXAddScreenVisualMapping(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor)
+{
+}
+void __glXRemoveScreenVisualMapping(Display *dpy, const XVisualInfo *visual)
+{
+}
+int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor)
+{
+    if (retVendor != NULL) {
+        *retVendor = __glXLookupVendorByScreen(dpy, visual->screen);
+    }
+    return 0;
+}
 
 
 
@@ -838,13 +892,13 @@ static int ScreenFromXID(Display *dpy, XID xid)
 }
 
 
-void __glXAddScreenDrawableMapping(GLXDrawable drawable, int screen)
+void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor)
 {
     AddScreenXIDMapping(drawable, screen);
 }
 
 
-void __glXRemoveScreenDrawableMapping(GLXDrawable drawable)
+void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable)
 {
     RemoveScreenXIDMapping(drawable);
 }
@@ -853,6 +907,12 @@ void __glXRemoveScreenDrawableMapping(GLXDrawable drawable)
 int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable)
 {
     return ScreenFromXID(dpy, drawable);
+}
+
+int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor)
+{
+    int screen = ScreenFromXID(dpy, drawable);
+    return CommonVendorFromScreen(dpy, screen, retScreen, retVendor);
 }
 
 /*!

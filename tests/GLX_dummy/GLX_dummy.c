@@ -398,7 +398,7 @@ static void dispatch_glXExampleExtensionFunction(Display *dpy,
                                                 int screen,
                                                 int *retval)
 {
-    __GLXdispatchTableDynamic *dynDispatch;
+    __GLXvendorInfo *dynDispatch;
     ExampleExtensionFunctionPtr func;
     const int index = dummyExampleExtensionFunctionIndex;
 

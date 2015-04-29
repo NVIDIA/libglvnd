@@ -68,7 +68,7 @@ extern "C" {
  * It is allocated at runtime by the API library. Vendor-provided dispatch
  * functions retrieve and operate on this structure using the API below.
  */
-typedef struct __GLXdispatchTableDynamicRec __GLXdispatchTableDynamic;
+typedef struct __GLXvendorInfoRec __GLXvendorInfo;
 
 /*!
  * Forward declaration for createGLDispatch export.
@@ -89,21 +89,21 @@ typedef struct __GLXapiExportsRec {
      * This fetches the appropriate dynamic GLX dispatch table given the display
      * and screen number.
      */
-    __GLXdispatchTableDynamic *(*getDynDispatch)(Display *dpy,
+    __GLXvendorInfo *(*getDynDispatch)(Display *dpy,
                                                  const int screen);
 
     /*!
      * This function retrieves the appropriate current dynamic dispatch table,
      * if a GL context is current. Otherwise, this returns NULL.
      */
-    __GLXdispatchTableDynamic *(*getCurrentDynDispatch)(void);
+    __GLXvendorInfo *(*getCurrentDynDispatch)(void);
 
     /*!
      * This function retrieves an entry point from the dynamic dispatch table
      * given an index into the table.
      */
     __GLXextFuncPtr           (*fetchDispatchEntry)
-        (__GLXdispatchTableDynamic *dynDispatch, int index);
+        (__GLXvendorInfo *dynDispatch, int index);
 
     /************************************************************************
      * This routine is used by the vendor to lookup its context structure.
@@ -121,17 +121,58 @@ typedef struct __GLXapiExportsRec {
      * and add mappings between various objects and screens.
      ************************************************************************/
 
-    void (*addScreenContextMapping)(GLXContext context, int screen);
-    void (*removeScreenContextMapping)(GLXContext context);
-    int  (*screenFromContext)(GLXContext context);
+    /*!
+     * Records the screen number and vendor for a context. The screen and
+     * vendor must be the ones returned for the XVisualInfo or GLXFBConfig that
+     * the context is created from.
+     */
+    void (*addScreenContextMapping)(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
 
-    void (*addScreenFBConfigMapping)(GLXFBConfig config, int screen);
-    void (*removeScreenFBConfigMapping)(GLXFBConfig config);
-    int  (*screenFromFBConfig)(GLXFBConfig config);
+    /*!
+     * Removes a mapping from context to vendor. The context must have been
+     * added with \p addScreenContextMapping.
+     */
+    void (*removeScreenContextMapping)(Display *dpy, GLXContext context);
 
-    void (*addScreenDrawableMapping)(GLXDrawable drawable, int screen);
-    void (*removeScreenDrawableMapping)(GLXDrawable drawable);
-    int  (*screenFromDrawable)(Display *dpy, GLXDrawable drawable);
+    /*!
+     * Looks up the screen and vendor for a context.
+     *
+     * If no mapping is found, then \p retScreen and \p retVendor will be set
+     * to -1 and NULL, respectively.
+     *
+     * Either of \p retScreen or \p retVendor may be NULL if the screen or
+     * vendor are not required.
+     *
+     * \param dpy The display connection.
+     * \param context The context to look up.
+     * \param[out] retScreen Returns the screen number.
+     * \param[out] retVendor Returns the vendor.
+     * \return Zero if a match was found, or non-zero if it was not.
+     */
+    int (*vendorFromContext)(Display *dpy, GLXContext context, int *retScreen, __GLXvendorInfo **retVendor);
+
+    void (*addScreenFBConfigMapping)(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
+    void (*removeScreenFBConfigMapping)(Display *dpy, GLXFBConfig config);
+    int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor);
+
+    void (*addScreenVisualMapping)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor);
+    void (*removeScreenVisualMapping)(Display *dpy, const XVisualInfo *visual);
+    int (*vendorFromVisual)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
+
+    void (*addScreenDrawableMapping)(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor);
+    void (*removeScreenDrawableMapping)(Display *dpy, GLXDrawable drawable);
+
+    /*!
+     * Looks up the screen and vendor for a drawable.
+     *
+     * If the server does not support the x11glvnd extension, then this
+     * function may not be able to determine the screen number for a drawable.
+     * In that case, it will return -1 for the screen number.
+     *
+     * Even without x11glvnd, this function will still return a vendor
+     * suitable for indirect rendering.
+     */
+    int (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor);
 
 } __GLXapiExports;
 

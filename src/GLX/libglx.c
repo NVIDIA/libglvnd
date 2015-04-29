@@ -100,7 +100,7 @@ static void ThreadDestroyed(void *tsdCtx)
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 
     if (needsUnmap) {
-        __glXRemoveScreenContextMapping(tsdCtx);
+        __glXRemoveScreenContextMapping(NULL, tsdCtx);
     }
 
     /*
@@ -153,10 +153,11 @@ PUBLIC GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis,
 
     const int screen = vis->screen;
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
     GLXContext context = pDispatch->glx14ep.createContext(dpy, vis, share_list, direct);
 
-    __glXAddScreenContextMapping(context, screen);
+    __glXAddScreenContextMapping(dpy, context, screen, vendor);
 
     return context;
 }
@@ -181,10 +182,11 @@ PUBLIC GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixma
 
     const int screen = vis->screen;
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
     GLXPixmap pmap = pDispatch->glx14ep.createGLXPixmap(dpy, vis, pixmap);
 
-    __glXAddScreenDrawableMapping(pmap, screen);
+    __glXAddScreenDrawableMapping(dpy, pmap, screen, vendor);
 
     return pmap;
 }
@@ -194,10 +196,9 @@ PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
 {
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromDrawable(dpy, pix);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, pix);
 
-    __glXRemoveScreenDrawableMapping(pix);
+    __glXRemoveScreenDrawableMapping(dpy, pix);
 
     pDispatch->glx14ep.destroyGLXPixmap(dpy, pix);
 }
@@ -343,7 +344,7 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
          * Note: this implies a lock ordering: the current context
          * hash lock must be taken before the screen pointer hash lock!
          */
-        __glXRemoveScreenContextMapping(ctx);
+        __glXRemoveScreenContextMapping(NULL, ctx);
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
@@ -631,8 +632,8 @@ static Bool MakeContextCurrentInternal(Display *dpy,
          * same screen if MakeCurrent passed, then record the mapping
          * of this drawable to the context's screen.
          */
-        __glXAddScreenDrawableMapping(draw, screen);
-        __glXAddScreenDrawableMapping(read, screen);
+        __glXAddScreenDrawableMapping(dpy, draw, screen, newVendor);
+        __glXAddScreenDrawableMapping(dpy, read, screen, newVendor);
 
         /*
          * Call into GLdispatch to set up the current context and
@@ -727,7 +728,7 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
             tmpRet = UpdateCurrentContext(oldContext, NULL, oldContextNeedsUnmap, NULL);
             assert(tmpRet);
         } else if (oldContextNeedsUnmap) {
-            __glXRemoveScreenContextMapping(oldContext);
+            __glXRemoveScreenContextMapping(NULL, oldContext);
         }
     }
 
@@ -822,8 +823,7 @@ PUBLIC void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 {
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromDrawable(dpy, drawable);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, drawable);
 
     pDispatch->glx14ep.swapBuffers(dpy, drawable);
 }
@@ -1118,13 +1118,14 @@ PUBLIC GLXFBConfig *glXChooseFBConfig(Display *dpy, int screen,
     __glXThreadInitialize();
 
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
     GLXFBConfig *fbconfigs =
         pDispatch->glx14ep.chooseFBConfig(dpy, screen, attrib_list, nelements);
     int i;
 
     if (fbconfigs != NULL) {
         for (i = 0; i < *nelements; i++) {
-            __glXAddScreenFBConfigMapping(fbconfigs[i], screen);
+            __glXAddScreenFBConfigMapping(dpy, fbconfigs[i], screen, vendor);
         }
     }
 
@@ -1140,10 +1141,11 @@ PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
 
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
     GLXContext context = pDispatch->glx14ep.createNewContext(dpy, config, render_type,
                                                      share_list, direct);
-    __glXAddScreenContextMapping(context, screen);
+    __glXAddScreenContextMapping(dpy, context, screen, vendor);
 
     return context;
 }
@@ -1156,10 +1158,11 @@ PUBLIC GLXPbuffer glXCreatePbuffer(Display *dpy, GLXFBConfig config,
 
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
     GLXPbuffer pbuffer = pDispatch->glx14ep.createPbuffer(dpy, config, attrib_list);
 
-    __glXAddScreenDrawableMapping(pbuffer, screen);
+    __glXAddScreenDrawableMapping(dpy, pbuffer, screen, vendor);
 
     return pbuffer;
 }
@@ -1172,11 +1175,12 @@ PUBLIC GLXPixmap glXCreatePixmap(Display *dpy, GLXFBConfig config,
 
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
     GLXPixmap glxPixmap =
         pDispatch->glx14ep.createPixmap(dpy, config, pixmap, attrib_list);
 
-    __glXAddScreenDrawableMapping(glxPixmap, screen);
+    __glXAddScreenDrawableMapping(dpy, glxPixmap, screen, vendor);
 
     return glxPixmap;
 }
@@ -1189,11 +1193,12 @@ PUBLIC GLXWindow glXCreateWindow(Display *dpy, GLXFBConfig config,
 
     const int screen = __glXScreenFromFBConfig(config);
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
     GLXWindow glxWindow =
         pDispatch->glx14ep.createWindow(dpy, config, win, attrib_list);
 
-    __glXAddScreenDrawableMapping(glxWindow, screen);
+    __glXAddScreenDrawableMapping(dpy, glxWindow, screen, vendor);
 
     return glxWindow;
 }
@@ -1203,10 +1208,9 @@ PUBLIC void glXDestroyPbuffer(Display *dpy, GLXPbuffer pbuf)
 {
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromDrawable(dpy, pbuf);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, pbuf);
 
-    __glXRemoveScreenDrawableMapping(pbuf);
+    __glXRemoveScreenDrawableMapping(dpy, pbuf);
 
     pDispatch->glx14ep.destroyPbuffer(dpy, pbuf);
 }
@@ -1216,10 +1220,9 @@ PUBLIC void glXDestroyPixmap(Display *dpy, GLXPixmap pixmap)
 {
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromDrawable(dpy, pixmap);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, pixmap);
 
-    __glXRemoveScreenDrawableMapping(pixmap);
+    __glXRemoveScreenDrawableMapping(dpy, pixmap);
 
     pDispatch->glx14ep.destroyPixmap(dpy, pixmap);
 }
@@ -1229,10 +1232,9 @@ PUBLIC void glXDestroyWindow(Display *dpy, GLXWindow win)
 {
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromDrawable(dpy, win);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, win);
 
-    __glXRemoveScreenDrawableMapping(win);
+    __glXRemoveScreenDrawableMapping(dpy, win);
 
     pDispatch->glx14ep.destroyWindow(dpy, win);
 }
@@ -1265,11 +1267,12 @@ PUBLIC GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
 
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
     GLXFBConfig *fbconfigs = pDispatch->glx14ep.getFBConfigs(dpy, screen, nelements);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
     int i;
 
     if (fbconfigs != NULL) {
         for (i = 0; i < *nelements; i++) {
-            __glXAddScreenFBConfigMapping(fbconfigs[i], screen);
+            __glXAddScreenFBConfigMapping(dpy, fbconfigs[i], screen, vendor);
         }
     }
 
@@ -1282,8 +1285,7 @@ PUBLIC void glXGetSelectedEvent(Display *dpy, GLXDrawable draw,
 {
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromDrawable(dpy, draw);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, draw);
 
     pDispatch->glx14ep.getSelectedEvent(dpy, draw, event_mask);
 }
@@ -1371,7 +1373,7 @@ PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
             tmpRet = UpdateCurrentContext(oldContext, NULL, oldContextNeedsUnmap, NULL);
             assert(tmpRet);
         } else if (oldContextNeedsUnmap) {
-            __glXRemoveScreenContextMapping(oldContext);
+            __glXRemoveScreenContextMapping(NULL, oldContext);
         }
     }
 
@@ -1397,8 +1399,7 @@ PUBLIC void glXQueryDrawable(Display *dpy, GLXDrawable draw,
 {
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromDrawable(dpy, draw);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, draw);
 
     return pDispatch->glx14ep.queryDrawable(dpy, draw, attribute, value);
 }
@@ -1408,8 +1409,7 @@ PUBLIC void glXSelectEvent(Display *dpy, GLXDrawable draw, unsigned long event_m
 {
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromDrawable(dpy, draw);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, draw);
 
     pDispatch->glx14ep.selectEvent(dpy, draw, event_mask);
 }
@@ -1725,7 +1725,7 @@ void __glXThreadInitialize(void)
 void CurrentContextHashCleanup(void *unused, __GLXcurrentContextHash *pEntry)
 {
     if (pEntry->needsUnmap) {
-        __glXRemoveScreenContextMapping(pEntry->ctx);
+        __glXRemoveScreenContextMapping(NULL, pEntry->ctx);
     }
 }
 
@@ -1835,9 +1835,10 @@ void _fini(void)
     __glDispatchFini();
 }
 
-__GLXdispatchTableDynamic *__glXGetCurrentDynDispatch(void)
+__GLXvendorInfo *__glXGetCurrentDynDispatch(void)
 {
     __GLXAPIState *apiState = __glXGetCurrentAPIState();
 
-    return apiState->currentDynDispatch;
+    //return apiState->currentDynDispatch;
+    return apiState->currentVendor;
 }
