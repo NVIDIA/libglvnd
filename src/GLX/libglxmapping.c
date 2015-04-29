@@ -618,9 +618,7 @@ static void CleanupDisplayInfoEntry(void *unused, __GLXdisplayInfoHash *pEntry)
     }
 
     for (i=0; i<GLX_CLIENT_STRING_LAST_ATTRIB; i++) {
-        if (pEntry->info.clientStrings[i] != NULL) {
-            free(pEntry->info.clientStrings[i]);
-        }
+        free(pEntry->info.clientStrings[i]);
     }
 }
 
