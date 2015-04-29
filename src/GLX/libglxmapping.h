@@ -40,14 +40,14 @@ typedef struct __GLXdispatchTableDynamicRec __GLXdispatchTableDynamic;
 /*!
  * Structure containing relevant per-vendor information.
  */
-typedef struct __GLXvendorInfoRec {
+struct __GLXvendorInfoRec {
     int vendorID; //< unique GLdispatch ID
     char *name; //< name of the vendor
     void *dlhandle; //< shared library handle
     const __GLXdispatchTableStatic *staticDispatch; //< static GLX dispatch table
     __GLXdispatchTableDynamic *dynDispatch; //< dynamic GLX dispatch table
     __GLdispatchTable *glDispatch; //< GL dispatch table
-} __GLXvendorInfo;
+};
 
 /*!
  * Structure containing per-display information.
