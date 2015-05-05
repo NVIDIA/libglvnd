@@ -58,6 +58,14 @@ typedef struct __GLXscreenXIDMappingHashRec __GLXscreenXIDMappingHash;
 typedef struct __GLXdisplayInfoRec {
     char *clientStrings[GLX_CLIENT_STRING_LAST_ATTRIB];
 
+    /**
+     * An array of vendors for each screen.
+     *
+     * Do not access this directly. Instead, call \c __glXLookupVendorByScreen.
+     */
+    __GLXvendorInfo **vendors;
+    glvnd_rwlock_t vendorLock;
+
     DEFINE_LKDHASH(__GLXscreenXIDMappingHash, xidScreenHash);
 
     int x11glvndSupported;
