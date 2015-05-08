@@ -32,8 +32,7 @@ noinst_HEADERS = test_utils.h
 
 TESTS_ENVIRONMENT = \
 	TOP_BUILDDIR=$(top_builddir) \
-	ABS_TOP_BUILDDIR=$(abs_top_builddir) \
-	DISPLAY=:0
+	ABS_TOP_BUILDDIR=$(abs_top_builddir)
 
 TESTS = \
 	init_test_env.sh \
