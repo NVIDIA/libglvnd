@@ -107,7 +107,8 @@ AM_CFLAGS =                                  \
 	-I$(top_srcdir)/src/util/glvnd_pthread
 
 
-testglxgetprocaddress_LDADD = $(top_builddir)/src/GLX/libGLX.la
+testglxgetprocaddress_LDADD = -lX11
+testglxgetprocaddress_LDADD += $(top_builddir)/src/GLX/libGLX.la
 
 testglxmakecurrent_LDADD = -lX11
 testglxmakecurrent_LDADD += $(top_builddir)/src/GLX/libGLX.la
