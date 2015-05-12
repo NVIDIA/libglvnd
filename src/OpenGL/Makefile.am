@@ -31,7 +31,6 @@ MAPI = $(top_srcdir)/$(MAPI_PREFIX)
 GLAPI = $(MAPI)/glapi
 
 noinst_HEADERS =        \
-	glapitemp.h         \
 	glapi_mapi_tmp.h
 
 libOpenGL_la_SOURCES = \
@@ -39,16 +38,13 @@ libOpenGL_la_SOURCES = \
 	$(MAPI)/entry.c    \
 	$(MAPI)/stub.c
 
-BUILT_SOURCES = glapitemp.h glapi_mapi_tmp.h
+BUILT_SOURCES = glapi_mapi_tmp.h
 CLEANFILES = $(BUILT_SOURCES)
 
 include $(GLAPI)/gen/glapi_gen.mk
 
 glapi_mapi_tmp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi,$<,vnd-glapi)
-
-glapitemp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi,$<,noop-gl)
 
 libOpenGL_la_CFLAGS = \
 	-I$(top_srcdir)/include

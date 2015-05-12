@@ -32,7 +32,6 @@ MAPI = $(top_srcdir)/$(MAPI_PREFIX)
 GLAPI = $(MAPI)/glapi
 
 noinst_HEADERS =        \
-	glapitemp.h         \
 	libgl.h             \
 	glapi_mapi_tmp.h
 
@@ -42,16 +41,13 @@ libGL_la_SOURCES =      \
 	$(MAPI)/stub.c      \
 	g_libglglxwrapper.c
 
-BUILT_SOURCES = glapitemp.h glapi_mapi_tmp.h g_libglglxwrapper.c
+BUILT_SOURCES = glapi_mapi_tmp.h g_libglglxwrapper.c
 CLEANFILES = $(BUILT_SOURCES)
 
 include $(GLAPI)/gen/glapi_gen.mk
 
 glapi_mapi_tmp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi,$<,vnd-glapi)
-
-glapitemp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi,$<,noop-gl)
 
 GLX_GEN_STUBS = $(top_srcdir)/src/GLX/gen_stubs.pl
 GLX_FUNCS_SPEC = $(top_srcdir)/src/GLX/glx_funcs.spec
