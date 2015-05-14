@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./configure CFLAGS='-O0 -g -DDEBUG' $*
+`dirname $0`/configure CFLAGS='-O0 -g -DDEBUG' $*
