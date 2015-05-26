@@ -37,7 +37,25 @@
 #include "u_execmem.h"
 
 
-#define EXEC_MAP_SIZE (16*4096) // DISPATCH_FUNCTION_SIZE * MAPI_TABLE_NUM_DYNAMIC
+/*
+ * Allocate 64 bytes for each stub so that they're large enough to hold the
+ * x86-64 TSD stubs. The x86 TSD and x86-64 TLS stubs both take 32 bytes each.
+ *
+ * The x86-64 TSD stubs are larger than the others because it has to deal with
+ * 64-bit addresses and preserving the function arguments.
+ *
+ * The generated stubs may not be within 2GB of u_current or
+ * u_current_get_internal, so we can't use RIP-relative addressing for them.
+ * Instead we have to use movabs instructions to load the 64-bit absolute
+ * addresses, which take 10 bytes each.
+ *
+ * In addition, x86-64 passes the first 6 parameters in registers, which the
+ * callee does not have to preserve. Since the stub has to pass those same
+ * parameters to the real function, we have to preserve them across the call to
+ * u_current_get_internal. Pushing and popping those registers takes another 24
+ * bytes.
+ */
+#define EXEC_MAP_SIZE (64*4096) // DISPATCH_FUNCTION_SIZE * MAPI_TABLE_NUM_DYNAMIC
 
 u_mutex_declare_static(exec_mutex);
 
