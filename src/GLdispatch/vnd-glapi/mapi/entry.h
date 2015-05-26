@@ -37,6 +37,7 @@ enum {
     ENTRY_X86_64_TLS,
     ENTRY_X86_TSD,
     ENTRY_PURE_C,
+    ENTRY_X86_64_TSD,
     ENTRY_NUM_TYPES
 };
 

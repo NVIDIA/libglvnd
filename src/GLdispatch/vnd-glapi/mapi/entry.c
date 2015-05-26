@@ -40,8 +40,12 @@
 #   else                 
 #      include "entry_x86_tsd.h"
 #   endif
-#elif defined(USE_X86_64_ASM) && defined(__GNUC__) && defined(GLX_USE_TLS)
-#   include "entry_x86-64_tls.h"
+#elif defined(USE_X86_64_ASM) && defined(__GNUC__)
+#   ifdef GLX_USE_TLS
+#      include "entry_x86-64_tls.h"
+#   else
+#      include "entry_x86-64_tsd.h"
+#   endif
 #else
 #   include "entry_pure_c.h"
 #endif

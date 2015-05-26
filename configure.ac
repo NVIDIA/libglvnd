@@ -172,8 +172,15 @@ AC_CHECK_FUNCS([getpagesize gettimeofday memmove memset strdup strerror])
 
 dnl TLS detection
 dnl Note: The x86 TLS build doesn't work yet. Fall back to the TSD version until it does.
+AC_ARG_ENABLE([tls],
+    [AS_HELP_STRING([--disable-tls],
+        [disable TLS usage @<:@default=enabled on supported plaforms@:>@])],
+    [enable_tls="$enableval"],
+    [enable_tls=yes]
+)
+
 AC_MSG_CHECKING([for initial-exec TLS])
-if test "x$asm_arch" != xx86; then
+if test "x$asm_arch" != xx86 && test "x$enable_tls" = "xyes"; then
     AC_COMPILE_IFELSE([AC_LANG_SOURCE([
        __thread int foo __attribute__((tls_model("initial-exec")));
     ])],

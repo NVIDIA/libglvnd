@@ -553,6 +553,7 @@ static GLboolean dummyInitiatePatch(int type,
     switch (type) {
         case __GLDISPATCH_STUB_X86_64_TLS:
         case __GLDISPATCH_STUB_X86_TLS:
+        case __GLDISPATCH_STUB_X86_64_TSD:
             dummyStubType = type;
             dummyStubSize = stubSize;
             dummyStubGeneration = stubGeneration;
@@ -587,6 +588,7 @@ static void dummyFinalizePatch(void)
     for (pAddr = dummyVertex3fvAddrs; *pAddr; pAddr++) {
         switch (dummyStubType) {
             case __GLDISPATCH_STUB_X86_64_TLS:
+            case __GLDISPATCH_STUB_X86_64_TSD:
                 patch_x86_64_tls(*pAddr, dummyStubSize);
                 break;
             case __GLDISPATCH_STUB_X86_TLS:
