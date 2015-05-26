@@ -29,89 +29,75 @@
 #include <stdint.h>
 #include "u_macros.h"
 
-#define X86_ENTRY_SIZE 32
+#define X86_64_ENTRY_SIZE 32
 
+__asm__(".pushsection wtext,\"awx\",@progbits\n");
 __asm__(".text\n"
-        ".balign 32\n"
-        "x86_entry_start:");
+        ".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"
+        "x86_64_entry_start:");
 
 #define STUB_ASM_ENTRY(func)        \
    ".globl " func "\n"              \
    ".type " func ", @function\n"    \
-   ".balign 32\n"                   \
+   ".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"                   \
    func ":"
 
 #define STUB_ASM_CODE(slot)         \
-   "movl " ENTRY_CURRENT_TABLE ", %eax\n\t" \
-   "testl %eax, %eax\n\t"           \
-   "je 1f\n\t"                      \
-   "jmp *(4 * " slot ")(%eax)\n"    \
-   "1:\n\t"                         \
-   "call " ENTRY_CURRENT_TABLE_GET "\n\t" \
-   "jmp *(4 * " slot ")(%eax)"
+    "nop" \
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
 
-__asm__(".balign 32\n"
-        "x86_entry_end:");
+__asm__(".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"
+        "x86_64_entry_end:");
+__asm__(".popsection\n");
 
 #include <string.h>
 #include "u_execmem.h"
 
-static const char x86_entry_start[];
-static const char x86_entry_end[];
+static const char x86_64_entry_start[];
+static const char x86_64_entry_end[];
 
-const int entry_type = ENTRY_X86_TSD;
-const int entry_stub_size = 0;
+const int entry_type = ENTRY_X86_64_TSD;
+const int entry_stub_size = X86_64_ENTRY_SIZE;
 
 void
 entry_init_public(void)
 {
+    assert(!"Not implemented yet");
 }
 
 void
 entry_generate_default_code(char *entry, int slot)
 {
-    assert(0);
+    assert(!"Not implemented yet");
 }
 
 mapi_func
 entry_get_public(int slot)
 {
-   return (mapi_func) ((char *)x86_entry_start + slot * X86_ENTRY_SIZE);
+   return (mapi_func) (x86_64_entry_start + slot * X86_64_ENTRY_SIZE);
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)
 void
 entry_patch(mapi_func entry, int slot)
 {
-   char *code = (char *) entry;
-
-   *((unsigned long *) (code + 11)) = slot * sizeof(mapi_func);
-   *((unsigned long *) (code + 22)) = slot * sizeof(mapi_func);
+   entry_generate_default_code((char *)entry, slot);
 }
 
 mapi_func
 entry_generate(int slot)
 {
-   const char *code_templ = x86_entry_end - X86_ENTRY_SIZE;
-   char *code;
-   mapi_func entry;
+   void *code;
 
-   code = (char *) u_execmem_alloc(X86_ENTRY_SIZE);
+   code = u_execmem_alloc(X86_64_ENTRY_SIZE);
    if (!code)
       return NULL;
 
-   memcpy(code, code_templ, X86_ENTRY_SIZE);
-   entry = (mapi_func) code;
-   entry_patch(entry, slot);
+   entry_generate_default_code(code, slot);
 
-   // Adjust the offset of the CALL instruction.
-   assert(*((uint8_t *) (code + 15)) == 0xE8);
-   *((uint32_t *) (code + 16)) += (code_templ - code);
-
-   return entry;
+   return (mapi_func)code;
 }
 #endif // !defined(STATIC_DISPATCH_ONLY)
