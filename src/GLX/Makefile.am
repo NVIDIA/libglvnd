@@ -77,4 +77,5 @@ libGLX_la_SOURCES = \
 	libglx.c \
 	libglxmapping.c \
 	libglxstring.c \
+	$(UTIL_DIR)/glvnd_genentry.c \
 	g_libglxnoop.c

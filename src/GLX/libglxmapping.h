@@ -114,6 +114,7 @@ int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable);
 int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
+__GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName);
 
 /*!
  * Looks up the vendor by name or screen number. This has the side effect of

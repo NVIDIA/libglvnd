@@ -1589,12 +1589,8 @@ PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
         goto done;
     }
 
-    /*
-     * If *that* doesn't work, request a NOP stub from GLdispatch.  This should
-     * always succeed if the function name begins with "gl".
-     */
-    addr = __glDispatchGetProcAddress((const char *)procName);
-    assert(addr || procName[0] != 'g' || procName[1] != 'l');
+    /* If that doesn't work, then try to generate a stub function. */
+    addr = __glXGenerateGLXEntrypoint(procName);
 
     /* Store the resulting proc address. */
 done:
