@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sys/mman.h>
+#include <assert.h>
 
 int glvnd_asprintf(char **strp, const char *fmt, ...)
 {
@@ -73,3 +75,33 @@ int glvnd_asprintf(char **strp, const char *fmt, ...)
     *strp = str;
     return ret;
 }
+
+int AllocExecPages(size_t size, void **writePtr, void **execPtr)
+{
+    void *ptr;
+
+    *writePtr = NULL;
+    *execPtr = NULL;
+
+    ptr = mmap(NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC,
+            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED) {
+        return -1;
+    }
+
+    writePtr = ptr;
+    execPtr = ptr;
+    return 0;
+}
+
+void FreeExecPages(size_t size, void *writePtr, void *execPtr)
+{
+    assert(writePtr == execPtr);
+    if (writePtr != NULL) {
+        munmap(writePtr, size);
+    }
+    if (execPtr != NULL && execPtr != writePtr) {
+        munmap(execPtr, size);
+    }
+}
+
