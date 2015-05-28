@@ -7,6 +7,8 @@
 #include <sys/mman.h>
 #include <assert.h>
 
+#include "utils_misc.h"
+
 #if defined(__GNUC__) && (defined(USE_X86_ASM) || defined(USE_X86_64_ASM))
 
 /// The maximum number of entrypoints that we can generate.
@@ -46,8 +48,11 @@ typedef struct GLVNDGenEntrypointRec
     /// The name of the function.
     char *procName;
 
-    /// The generated entrypoint function.
-    GLVNDentrypointStub entrypoint;
+    /// The generated entrypoint function, mapped as read/write.
+    uint8_t *entrypointWrite;
+
+    /// The generated entrypoint function, mapped as read/exec.
+    GLVNDentrypointStub entrypointExec;
 
     /// Set to 1 if we've assigned a dispatch function to this entrypoint.
     int assigned;
@@ -63,10 +68,10 @@ static int InitEntrypoints(void);
 /**
  * Generates a new entrypoint.
  *
+ * \param entry The entrypoint structure to fill in.
  * \param index The index of the dispatch function.
- * \return A newly-generated function.
  */
-static GLVNDentrypointStub GenerateEntrypointFunc(int index);
+static void GenerateEntrypointFunc(GLVNDGenEntrypoint *entry, int index);
 
 /**
  * A default function plugged into the entrypoints. This is called if no vendor
@@ -77,10 +82,12 @@ static void *DefaultDispatchFunc(void);
 /**
  * Patches an entrypoint to assign a dispatch function to it.
  */
-static inline void SetDispatchFuncPointer(GLVNDentrypointStub entrypoint, GLVNDentrypointStub dispatch);
+static void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
+        GLVNDentrypointStub dispatch);
 
 static GLVNDGenEntrypoint entrypoints[GENERATED_ENTRYPOINT_MAX] = {};
-static uint8_t *entrypointBuffer = NULL;
+static uint8_t *entrypointBufferWrite = NULL;
+static uint8_t *entrypointBufferExec = NULL;
 static int entrypointCount = 0;
 
 GLVNDentrypointStub glvndGenerateEntrypoint(const char *procName)
@@ -94,7 +101,7 @@ GLVNDentrypointStub glvndGenerateEntrypoint(const char *procName)
     for (i=0; i<entrypointCount; i++) {
         if (strcmp(procName, entrypoints[i].procName) == 0) {
             // We already generated this function, so return it.
-            return entrypoints[i].entrypoint;
+            return entrypoints[i].entrypointExec;
         }
     }
 
@@ -105,13 +112,10 @@ GLVNDentrypointStub glvndGenerateEntrypoint(const char *procName)
             return NULL;
         }
         entry->assigned = 0;
-        entry->entrypoint = GenerateEntrypointFunc(entrypointCount);
-
-        // GenerateEntrypointFunc should never fail.
-        assert(entry->entrypoint != NULL);
+        GenerateEntrypointFunc(entry, entrypointCount);
 
         entrypointCount++;
-        return entry->entrypoint;
+        return entry->entrypointExec;
     }
 
     return NULL;
@@ -125,7 +129,7 @@ void glvndUpdateEntrypoints(GLVNDentrypointUpdateCallback callback, void *param)
         if (!entrypoints[i].assigned) {
             GLVNDentrypointStub addr = callback(entrypoints[i].procName, param);
             if (addr != NULL) {
-                SetDispatchFuncPointer(entrypoints[i].entrypoint, addr);
+                SetDispatchFuncPointer(&entrypoints[i], addr);
                 entrypoints[i].assigned = 1;
             }
         }
@@ -138,54 +142,58 @@ void glvndFreeEntrypoints(void)
     for (i=0; i<entrypointCount; i++) {
         free(entrypoints[i].procName);
         entrypoints[i].procName = NULL;
-        entrypoints[i].entrypoint = NULL;
+        entrypoints[i].entrypointWrite = NULL;
+        entrypoints[i].entrypointExec = NULL;
         entrypoints[i].assigned = 0;
     }
     entrypointCount = 0;
 
-    if (entrypointBuffer != NULL) {
-        munmap(entrypointBuffer, STUB_ENTRY_SIZE * GENERATED_ENTRYPOINT_MAX);
-        entrypointBuffer = NULL;
+    if (entrypointBufferExec != NULL) {
+        FreeExecPages(STUB_ENTRY_SIZE * GENERATED_ENTRYPOINT_MAX,
+                entrypointBufferWrite, entrypointBufferExec);
+        entrypointBufferWrite = NULL;
+        entrypointBufferExec = NULL;
     }
 }
 
 int InitEntrypoints(void)
 {
-    if (entrypointBuffer == NULL) {
-        void *buf = mmap(NULL, STUB_ENTRY_SIZE * GENERATED_ENTRYPOINT_MAX,
-                PROT_EXEC | PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (buf == MAP_FAILED) {
+    if (entrypointBufferExec == NULL) {
+        void *writeBuf, *execBuf;
+        if (AllocExecPages(STUB_ENTRY_SIZE * GENERATED_ENTRYPOINT_MAX,
+                &writeBuf, &execBuf) != 0) {
             return -1;
         }
-
-        entrypointBuffer = (uint8_t *) buf;
+        entrypointBufferWrite = (uint8_t *) writeBuf;
+        entrypointBufferExec = (uint8_t *) execBuf;
     }
     return 0;
 }
 
-GLVNDentrypointStub GenerateEntrypointFunc(int index)
+void GenerateEntrypointFunc(GLVNDGenEntrypoint *entry, int index)
 {
-    uint8_t *code = entrypointBuffer + (index * STUB_ENTRY_SIZE);
+    entry->entrypointWrite = entrypointBufferWrite + (index * STUB_ENTRY_SIZE);
+    entry->entrypointExec = (GLVNDentrypointStub)
+        (entrypointBufferExec + (index * STUB_ENTRY_SIZE));
 
     assert(STUB_ENTRY_SIZE >= sizeof(STUB_TEMPLATE));
 
     // Copy the template into our buffer.
-    memcpy(code, STUB_TEMPLATE, sizeof(STUB_TEMPLATE));
+    memcpy(entry->entrypointWrite, STUB_TEMPLATE, sizeof(STUB_TEMPLATE));
 
     // Assign DefaultDispatchFunc as the dispatch function.
-    SetDispatchFuncPointer((GLVNDentrypointStub) code, (GLVNDentrypointStub) DefaultDispatchFunc);
-    return (GLVNDentrypointStub) code;
+    SetDispatchFuncPointer(entry, (GLVNDentrypointStub) DefaultDispatchFunc);
 }
 
-void SetDispatchFuncPointer(GLVNDentrypointStub entrypoint, GLVNDentrypointStub dispatch)
+void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
+        GLVNDentrypointStub dispatch)
 {
-    uint8_t *code = (uint8_t *) entrypoint;
+    uint8_t *code = entry->entrypointWrite;
 
 #if defined(USE_X86_ASM)
     // For x86, we use a JMP instruction with a PC-relative offset. Figure out
     // the offset from the generated entrypoint to the dispatch function.
-    intptr_t offset = ((intptr_t) dispatch) - ((intptr_t) entrypoint) - DISPATCH_FUNC_OFFSET_REL;
+    intptr_t offset = ((intptr_t) dispatch) - ((intptr_t) entry->entrypointExec) - DISPATCH_FUNC_OFFSET_REL;
     *((intptr_t *) (code + DISPATCH_FUNC_OFFSET)) = offset;
 
 #elif defined(USE_X86_64_ASM)
