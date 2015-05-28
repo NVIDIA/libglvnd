@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, NVIDIA CORPORATION.
+ * Copyright (c) 2015, NVIDIA CORPORATION.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -27,35 +27,49 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
-#if !defined(__UTILS_MISC_H)
-#define __UTILS_MISC_H
+#include "utils_misc.h"
 
-/*
- * Various macros which may prove useful in various places
- */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
 
-#define ARRAY_LEN(_arr) (sizeof(_arr)/sizeof((_arr)[0]))
+int glvnd_asprintf(char **strp, const char *fmt, ...)
+{
+    static const int GLVND_ASPRINTF_BUF_LEN = 256;
+    char *str = NULL;
+    int ret = -1;
 
-#if (201104 <= __STDC_VERSION__ \
-     || (4 < __GNUC__) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 6)))
-# define STATIC_ASSERT(x) _Static_assert((x), #x)
-#else
-# define STATIC_ASSERT(x) do {             \
-    (void) sizeof(char [1 - 2*(!(x))]); \
-} while (0)
-#endif
+    if (fmt) {
+        va_list ap;
+        int len, current_len = GLVND_ASPRINTF_BUF_LEN;
 
-#if ((2 < __GNUC__) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 93)))
-# define UNUSED __attribute__((__unused__))
-#else
-# define UNUSED 
-#endif
+        while (1) {
+            str = malloc(current_len);
+            if (str == NULL) {
+                break;
+            }
 
-#define ASSERT_CODE(x) x
+            va_start(ap, fmt);
+            len = vsnprintf(str, current_len, fmt, ap);
+            va_end(ap);
 
-/*!
- * A local implementation of asprintf(3), for systems that don't support it.
- */
-int glvnd_asprintf(char **strp, const char *fmt, ...);
+            // If the buffer isn't large enough, then vsnprintf will either
+            // return -1 (for glibc < 2.1) or the number of bytes the buffer
+            // needs to be (for glibc >= 2.1).
+            if ((len > -1) && (len < current_len)) {
+                ret = len;
+                break;
+            } else if (len > -1) {
+                current_len = len + 1;
+            } else {
+                current_len += GLVND_ASPRINTF_BUF_LEN;
+            }
 
-#endif // !defined(__UTILS_MISC_H)
+            free(str);
+        }
+    }
+
+    *strp = str;
+    return ret;
+}

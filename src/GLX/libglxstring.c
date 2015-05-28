@@ -3,48 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include <assert.h>
-
-int glvnd_asprintf(char **strp, const char *fmt, ...)
-{
-    static const int GLVND_ASPRINTF_BUF_LEN = 256;
-    char *str = NULL;
-    int ret = -1;
-
-    if (fmt) {
-        va_list ap;
-        int len, current_len = GLVND_ASPRINTF_BUF_LEN;
-
-        while (1) {
-            str = malloc(current_len);
-            if (str == NULL) {
-                break;
-            }
-
-            va_start(ap, fmt);
-            len = vsnprintf(str, current_len, fmt, ap);
-            va_end(ap);
-
-            // If the buffer isn't large enough, then vsnprintf will either
-            // return -1 (for glibc < 2.1) or the number of bytes the buffer
-            // needs to be (for glibc >= 2.1).
-            if ((len > -1) && (len < current_len)) {
-                ret = len;
-                break;
-            } else if (len > -1) {
-                current_len = len + 1;
-            } else {
-                current_len += GLVND_ASPRINTF_BUF_LEN;
-            }
-
-            free(str);
-        }
-    }
-
-    *strp = str;
-    return ret;
-}
 
 int FindNextExtensionName(const char **name, size_t *len)
 {

@@ -4,11 +4,6 @@
 #include <stddef.h>
 
 /*!
- * A local implementation of asprintf(3), for systems that don't support it.
- */
-int glvnd_asprintf(char **strp, const char *fmt, ...);
-
-/*!
  * Helper function for tokenizing an extension string.
  *
  * The function is similar to strtok, except that it doesn't modify the string.

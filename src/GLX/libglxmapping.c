@@ -41,6 +41,7 @@
 #include "libglxnoop.h"
 #include "libglxthread.h"
 #include "libglxstring.h"
+#include "utils_misc.h"
 #include "glvnd_genentry.h"
 #include "trace.h"
 
