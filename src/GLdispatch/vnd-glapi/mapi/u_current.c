@@ -222,8 +222,6 @@ u_current_get_user_internal(void)
 void
 u_current_set(const struct mapi_table *tbl)
 {
-   stub_init_once();
-
    if (!tbl)
       tbl = (const struct mapi_table *) table_noop_array;
 

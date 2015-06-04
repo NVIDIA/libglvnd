@@ -33,8 +33,6 @@
 struct mapi_stub;
 
 #if !defined(STATIC_DISPATCH_ONLY)
-void
-stub_init_once(void);
 
 const struct mapi_stub *
 stub_find_public(const char *name);

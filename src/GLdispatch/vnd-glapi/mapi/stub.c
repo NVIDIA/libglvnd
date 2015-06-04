@@ -75,21 +75,6 @@ static struct mapi_stub dynamic_stubs[MAPI_TABLE_NUM_DYNAMIC];
 static int num_dynamic_stubs;
 static int next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
 
-void
-stub_init_once(void)
-{
-#ifdef HAVE_PTHREAD
-   static glvnd_once_t once = GLVND_ONCE_INIT;
-   pthreadFuncs.once(&once, entry_init_public);
-#else
-   static int first = 1;
-   if (first) {
-      first = 0;
-      entry_init_public();
-   }
-#endif
-}
-
 /**
  * Add a dynamic stub.
  */
