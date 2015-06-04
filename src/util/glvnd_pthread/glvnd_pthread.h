@@ -71,7 +71,7 @@ typedef struct _glvnd_once_t {
 
 typedef struct _glvnd_thread_t {
     pthread_t tid;
-    int singlethreaded;
+    int valid;
 } glvnd_thread_t;
 
 #define GLVND_THREAD_NULL_INIT {}
@@ -125,6 +125,13 @@ typedef struct GLVNDPthreadFuncsRec {
      */
     int is_singlethreaded;
 } GLVNDPthreadFuncs;
+
+/**
+ * A NULL glvnd_thread_t value. This is mainly useful as something to pass to
+ * \c GLVNDPthreadFuncs.equal. To initialize a glvnd_thread_t variable, use
+ * \c GLVND_THREAD_NULL_INIT.
+ */
+extern const glvnd_thread_t GLVND_THREAD_NULL;
 
 /*!
  * \brief Sets up pthreads wrappers.

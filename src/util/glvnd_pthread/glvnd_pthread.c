@@ -35,6 +35,8 @@
 #include "trace.h"
 #include "glvnd_pthread.h"
 
+const glvnd_thread_t GLVND_THREAD_NULL = GLVND_THREAD_NULL_INIT;
+
 /* The real function pointers */
 typedef struct GLVNDPthreadRealFuncsRec {
     /* Should never be used by libglvnd. May be used by some unit tests */
@@ -127,15 +129,14 @@ static glvnd_thread_t st_self(void)
     glvnd_thread_t foo;
 
     memset(&foo.tid, 0, sizeof(foo.tid));
-    foo.singlethreaded = 1;
+    foo.valid = 1;
 
     return foo;
 }
 
 static int st_equal(glvnd_thread_t t1, glvnd_thread_t t2)
 {
-    assert(t1.singlethreaded && t2.singlethreaded);
-    return 0;
+    return (t1.valid == t2.valid);
 }
 
 static int st_mutex_init(glvnd_mutex_t *mutex, const glvnd_mutexattr_t *attr)
@@ -217,8 +218,11 @@ static void *st_getspecific(glvnd_key_t key)
 static int mt_create(glvnd_thread_t *thread, const glvnd_thread_attr_t *attr,
                      void *(*start_routine) (void *), void *arg)
 {
-    thread->singlethreaded = 0;
-    return pthreadRealFuncs.create(&thread->tid, attr, start_routine, arg);
+    int rv;
+
+    rv = pthreadRealFuncs.create(&thread->tid, attr, start_routine, arg);
+    thread->valid = (rv == 0 ? 1 : 0);
+    return rv;
 }
 
 static int mt_join(glvnd_thread_t thread, void **retval)
@@ -237,14 +241,15 @@ static glvnd_thread_t mt_self(void)
     glvnd_thread_t foo;
 
     foo.tid = pthreadRealFuncs.self();
-    foo.singlethreaded = 0;
+    foo.valid = 1;
 
     return foo;
 }
 
 static int mt_equal(glvnd_thread_t t1, glvnd_thread_t t2)
 {
-    return pthreadRealFuncs.equal(t1.tid, t2.tid);
+    return (!t1.valid && !t2.valid) ||
+            (t1.valid && t2.valid && pthreadRealFuncs.equal(t1.tid, t2.tid));
 }
 
 static int mt_mutex_init(glvnd_mutex_t *mutex, const glvnd_mutexattr_t *attr)
