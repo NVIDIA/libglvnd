@@ -33,6 +33,9 @@ void
 u_current_destroy(void);
 
 void
+u_current_set_multithreaded(void);
+
+void
 u_current_set(const struct mapi_table *tbl);
 
 void

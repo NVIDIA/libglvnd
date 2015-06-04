@@ -143,6 +143,8 @@ static int stubOwnerVendorID;
  */
 static const __GLdispatchPatchCallbacks *stubCurrentPatchCb;
 
+static glvnd_thread_t firstThreadId = GLVND_THREAD_NULL_INIT;
+static int isMultiThreaded = 0;
 
 /*
  * The dispatch lock. This should be taken around any code that manipulates the
@@ -174,9 +176,8 @@ void __glDispatchInit(GLVNDPthreadFuncs *funcs)
         /* Initialize pthreads imports */
         glvndSetupPthreads(RTLD_DEFAULT, &pthreadFuncs);
 
-        // Call into GLAPI to see if we are multithreaded
-        // TODO: fix GLAPI to use the pthread funcs provided here?
-        _glapi_check_multithread();
+        // Initialize the GLAPI layer.
+        _glapi_init();
 
         LockDispatch();
         glvnd_list_init(&newProcList);
@@ -786,14 +787,24 @@ void __glDispatchFini(void)
     UnlockDispatch();
 
     // Clean up GLAPI thread state
-    _glapi_destroy_multithread();
+    _glapi_destroy();
 }
 
 void __glDispatchCheckMultithreaded(void)
 {
     if (!pthreadFuncs.is_singlethreaded)
     {
-        _glapi_check_multithread();
+        LockDispatch();
+        if (!isMultiThreaded) {
+            glvnd_thread_t tid = pthreadFuncs.self();
+            if (pthreadFuncs.equal(firstThreadId, GLVND_THREAD_NULL)) {
+                firstThreadId = tid;
+            } else if (!pthreadFuncs.equal(firstThreadId, tid)) {
+                isMultiThreaded = 1;
+                _glapi_set_multithread();
+            }
+        }
+        UnlockDispatch();
     }
 }
 

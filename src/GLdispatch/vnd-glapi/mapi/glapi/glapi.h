@@ -44,8 +44,8 @@
 #ifndef _GLAPI_H
 #define _GLAPI_H
 
-#include "glapi/glthread.h"
-
+#include <stddef.h>
+#include "u_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -124,13 +124,24 @@ _GLAPI_EXPORT extern void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 #endif /* defined (GLX_USE_TLS) */
 
 
+/**
+ * Initializes the GLAPI layer.
+ */
 void
-_glapi_destroy_multithread(void);
+_glapi_init(void);
+
+void
+_glapi_destroy(void);
 
 
-_GLAPI_EXPORT void
-_glapi_check_multithread(void);
-
+/**
+ * Switches to multi-threaded mode. Some systems may have a more efficient
+ * dispatch path for single-threaded applications. This function is called from
+ * __glDispatchCheckMultithreaded when a second thread starts calling GLX
+ * functions.
+ */
+void
+_glapi_set_multithread(void);
 
 _GLAPI_EXPORT void
 _glapi_set_context(void *context);

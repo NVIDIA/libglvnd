@@ -32,6 +32,8 @@
 #include "table.h" /* for MAPI_TABLE_NUM_SLOTS */
 #include "stub.h"
 
+#include "u_thread.h"
+
 /*
  * Global variables, _glapi_get_context, and _glapi_get_dispatch are defined in
  * u_current.c.
@@ -43,15 +45,21 @@ const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 #endif /* GLX_USE_TLS */
 
 void
-_glapi_destroy_multithread(void)
+_glapi_init(void)
+{
+    u_current_init();
+}
+
+void
+_glapi_destroy(void)
 {
    u_current_destroy();
 }
 
 void
-_glapi_check_multithread(void)
+_glapi_set_multithread(void)
 {
-   u_current_init();
+    u_current_set_multithreaded();
 }
 
 void

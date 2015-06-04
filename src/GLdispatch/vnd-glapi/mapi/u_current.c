@@ -139,47 +139,37 @@ u_current_init_tsd(void)
     }
 }
 
-/**
- * Mutex for multithread check.
- */
-u_mutex_declare_static(ThreadCheckMutex);
-
-/**
- * We should call this periodically from a function such as glXMakeCurrent
- * in order to test if multiple threads are being used.
- */
 void
 u_current_init(void)
 {
-   // TODO: Move the initialization code (and maybe stub_init_once) to
-   // __glDispatchInit.
-   static u_thread_t knownID = U_THREAD_INIT;
-   static int firstCall = 1;
-   int i;
+    static int firstCall = 1;
+    assert(firstCall); // This should only ever be called once.
+    if (firstCall) {
+        u_current_init_tsd();
+        firstCall = 0;
+    }
+}
 
-   if (ThreadSafe)
-      return;
+void
+u_current_set_multithreaded(void)
+{
+    int i;
 
-   u_mutex_lock(ThreadCheckMutex);
-   if (firstCall) {
-      u_current_init_tsd();
-
-      knownID = u_thread_self();
-      firstCall = 0;
-   }
-   else if (!u_thread_equal(knownID, u_thread_self())) {
-      ThreadSafe = 1;
-      for (i = 0; i < U_CURRENT_NUM_ENTRIES; i++) {
-         u_current[i] = NULL;
-      }
-   }
-   u_mutex_unlock(ThreadCheckMutex);
+    ThreadSafe = 1;
+    for (i = 0; i < U_CURRENT_NUM_ENTRIES; i++) {
+        u_current[i] = NULL;
+    }
 }
 
 #else
 
 void
 u_current_init(void)
+{
+}
+
+void
+u_current_set_multithreaded(void)
 {
 }
 
