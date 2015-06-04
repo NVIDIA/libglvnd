@@ -34,8 +34,7 @@
 #define X86_64_ENTRY_SIZE 64
 
 __asm__(".pushsection wtext,\"awx\",@progbits\n");
-__asm__(".text\n"
-        ".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"
+__asm__(".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"
         "x86_64_entry_start:");
 
 #define STUB_ASM_ENTRY(func)        \
