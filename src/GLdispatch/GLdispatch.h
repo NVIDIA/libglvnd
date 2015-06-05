@@ -45,15 +45,6 @@
  * library entrypoints.
  */
 
-/*
- * XXX: Kludge to export the get current function directly from glapi for
- * performance reasons.
- */
-#define CURRENT_CONTEXT     1  // GLAPI_CURRENT_CONTEXT
-#define CURRENT_API_STATE   2  // GLAPI_CURRENT_USER1
-
-PUBLIC void *_glapi_get_current(int index);
-
 /* Namespaces for API state */
 enum {
     GLDISPATCH_API_GLX,
@@ -194,20 +185,14 @@ PUBLIC void __glDispatchLoseCurrent(void);
  *
  * This currently just hijacks _glapi_{set,get}_context() for this purpose.
  */
-static inline __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void)
-{
-    return _glapi_get_current(CURRENT_API_STATE);
-}
+PUBLIC __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void);
 
 /*!
  * This gets the current (opaque) vendor library context pointer. If the pointer
  * is NULL, no context is current, otherwsise the contents of the pointer
  * depends on the vendor whose context is current.
  */
-static inline void *__glDispatchGetCurrentContext(void)
-{
-    return _glapi_get_current(CURRENT_CONTEXT);
-}
+PUBLIC void *__glDispatchGetCurrentContext(void);
 
 /*!
  * This gets the "offset" of the given entrypoint in the GL dispatch table

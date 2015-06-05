@@ -76,10 +76,6 @@ struct _glapi_table;
 
 enum {
     GLAPI_CURRENT_DISPATCH = 0, /* This MUST be the first entry! */
-    GLAPI_CURRENT_CONTEXT,
-    GLAPI_CURRENT_USER1,
-    GLAPI_CURRENT_USER2,
-    GLAPI_CURRENT_USER3,
     GLAPI_NUM_CURRENT_ENTRIES
 };
 
@@ -94,8 +90,6 @@ _GLAPI_EXPORT extern const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 
 # define GET_DISPATCH() ((struct _glapi_table *) \
     _glapi_tls_Current[GLAPI_CURRENT_DISPATCH])
-# define GET_CURRENT_CONTEXT(C)  struct gl_context *C = (struct gl_context *) \
-    _glapi_tls_Current[GLAPI_CURRENT_CONTEXT]
 
 #else
 
@@ -108,16 +102,10 @@ _GLAPI_EXPORT extern void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
      (struct _glapi_table *)_glapi_Current[GLAPI_CURRENT_DISPATCH] : \
       _glapi_get_dispatch())
 
-#  define GET_CURRENT_CONTEXT(C)  struct gl_context *C = (struct gl_context *) \
-     (likely(_glapi_Current[GLAPI_CURRENT_CONTEXT]) ? \
-      _glapi_Current[GLAPI_CURRENT_CONTEXT] : _glapi_get_context())
-
 # else
 
 #  define GET_DISPATCH() ((struct _glapi_table *) \
     _glapi_Current[GLAPI_CURRENT_DISPATCH])
-#  define GET_CURRENT_CONTEXT(C)  struct gl_context *C = \
-    (struct gl_context *) _glapi_Current[GLAPI_CURRENT_CONTEXT]
 
 # endif
 
@@ -143,22 +131,9 @@ _glapi_destroy(void);
 void
 _glapi_set_multithread(void);
 
-_GLAPI_EXPORT void
-_glapi_set_context(void *context);
-
-
-_GLAPI_EXPORT void *
-_glapi_get_context(void);
-
 
 _GLAPI_EXPORT void
 _glapi_set_dispatch(struct _glapi_table *dispatch);
-
-_GLAPI_EXPORT void
-_glapi_set_current(void *p, int index);
-
-_GLAPI_EXPORT void *
-_glapi_get_current(int index);
 
 
 _GLAPI_EXPORT struct _glapi_table *

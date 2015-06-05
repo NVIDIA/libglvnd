@@ -74,8 +74,7 @@
  * and \c _glapi_Context just like the case without any threading support.
  * When \c _glapi_Dispatch and \c _glapi_Context are \c NULL, the thread state
  * data \c _gl_DispatchTSD and \c ContextTSD are used.  Drivers and the
- * static dispatch functions access these variables via \c _glapi_get_dispatch
- * and \c _glapi_get_context.
+ * static dispatch functions access these variables via \c _glapi_get_dispatch.
  *
  * There is a race condition in setting \c _glapi_Dispatch to \c NULL.  It is
  * possible for the original thread to be setting it at the same instant a new
@@ -92,23 +91,21 @@
 /*@{*/
 #if defined(GLX_USE_TLS)
 
-PUBLIC __thread void *u_current[U_CURRENT_NUM_ENTRIES]
+PUBLIC __thread void *u_current[GLAPI_NUM_CURRENT_ENTRIES]
     __attribute__((tls_model("initial-exec")))
     = {
         (void *) table_noop_array,
-        NULL
       };
 
 #else
 
-PUBLIC void *u_current[U_CURRENT_NUM_ENTRIES]
+PUBLIC void *u_current[GLAPI_NUM_CURRENT_ENTRIES]
     = {
-        (void *) table_noop_array,
-        NULL
+        (void *) table_noop_array
       };
 
 #ifdef THREADS
-struct u_tsd u_current_tsd[U_CURRENT_NUM_ENTRIES];
+static struct u_tsd u_current_tsd[GLAPI_NUM_CURRENT_ENTRIES];
 static int ThreadSafe;
 #endif /* THREADS */
 
@@ -121,7 +118,7 @@ u_current_destroy(void)
 {
 #if defined(THREADS) && defined(_WIN32)
     int i;
-    for (i = 0; i < U_CURRENT_NUM_ENTRIES; i++) {
+    for (i = 0; i < GLAPI_NUM_CURRENT_ENTRIES; i++) {
         u_tsd_destroy(&u_current_tsd[i]);
     }
 #endif
@@ -134,7 +131,7 @@ static void
 u_current_init_tsd(void)
 {
     int i;
-    for (i = 0; i < U_CURRENT_NUM_ENTRIES; i++) {
+    for (i = 0; i < GLAPI_NUM_CURRENT_ENTRIES; i++) {
         u_tsd_init(&u_current_tsd[i]);
     }
 }
@@ -156,7 +153,7 @@ u_current_set_multithreaded(void)
     int i;
 
     ThreadSafe = 1;
-    for (i = 0; i < U_CURRENT_NUM_ENTRIES; i++) {
+    for (i = 0; i < GLAPI_NUM_CURRENT_ENTRIES; i++) {
         u_current[i] = NULL;
     }
 }
@@ -178,43 +175,6 @@ u_current_set_multithreaded(void)
 
 
 /**
- * Set the current context pointer for this thread.
- * The context pointer is an opaque type which should be cast to
- * void from the real context pointer type.
- */
-void
-u_current_set_user(const void *ptr)
-{
-#if defined(GLX_USE_TLS)
-   u_current[U_CURRENT_USER0] = (void *) ptr;
-#elif defined(THREADS)
-   u_tsd_set(&u_current_tsd[U_CURRENT_USER0], (void *) ptr);
-   u_current[U_CURRENT_USER0] = (ThreadSafe) ? NULL : (void *) ptr;
-#else
-   u_current[U_CURRENT_USER0] = (void *) ptr;
-#endif
-}
-
-/**
- * Get the current context pointer for this thread.
- * The context pointer is an opaque type which should be cast from
- * void to the real context pointer type.
- */
-void *
-u_current_get_user_internal(void)
-{
-#if defined(GLX_USE_TLS)
-   return u_current[U_CURRENT_USER0];
-#elif defined(THREADS)
-   return (ThreadSafe)
-      ? u_tsd_get(&u_current_tsd[U_CURRENT_USER0])
-      : u_current[U_CURRENT_USER0];
-#else
-   return u_current[U_CURRENT_USER0];
-#endif
-}
-
-/**
  * Set the global or per-thread dispatch table pointer.
  * If the dispatch parameter is NULL we'll plug in the no-op dispatch
  * table (__glapi_noop_table).
@@ -226,66 +186,13 @@ u_current_set(const struct mapi_table *tbl)
       tbl = (const struct mapi_table *) table_noop_array;
 
 #if defined(GLX_USE_TLS)
-   u_current[U_CURRENT_TABLE] = (void *) tbl;
+   u_current[GLAPI_CURRENT_DISPATCH] = (void *) tbl;
 #elif defined(THREADS)
-   u_tsd_set(&u_current_tsd[U_CURRENT_TABLE], (void *) tbl);
-   u_current[U_CURRENT_TABLE] = (ThreadSafe) ? NULL : (void *) tbl;
+   u_tsd_set(&u_current_tsd[GLAPI_CURRENT_DISPATCH], (void *) tbl);
+   u_current[GLAPI_CURRENT_DISPATCH] = (ThreadSafe) ? NULL : (void *) tbl;
 #else
-   u_current[U_CURRENT_TABLE] = (void *) tbl;
+   u_current[GLAPI_CURRENT_DISPATCH] = (void *) tbl;
 #endif
-}
-
-void
-u_current_set_index(void *p, int index)
-{
-    switch (index) {
-        case U_CURRENT_TABLE:
-            u_current_set((struct mapi_table *)p);
-            break;
-        case U_CURRENT_USER0:
-            u_current_set_user(p);
-            break;
-        case U_CURRENT_USER1:
-        case U_CURRENT_USER2:
-        case U_CURRENT_USER3:
-#if defined(GLX_USE_TLS)
-            u_current[index] = p;
-#elif defined(THREADS)
-            u_tsd_set(&u_current_tsd[index], p);
-            u_current[index] = (ThreadSafe) ? NULL : p;
-#else
-            u_current[index] = p;
-#endif
-            break;
-        default:
-            assert(!"Missing or invalid index!");
-            break;
-    }
-}
-
-void *
-u_current_get_index(int index)
-{
-    switch (index) {
-        case U_CURRENT_TABLE:
-            return (void *)u_current_get();
-        case U_CURRENT_USER0:
-            return (void *)u_current_get_user();
-        case U_CURRENT_USER1:
-        case U_CURRENT_USER2:
-        case U_CURRENT_USER3:
-#if defined(GLX_USE_TLS)
-            return u_current[index];
-#elif defined(THREADS)
-            return (ThreadSafe) ? u_tsd_get(&u_current_tsd[index]) :
-                u_current[index];
-#else
-            return u_current[index];
-#endif
-        default:
-            assert(!"Missing or invalid index!");
-            return NULL;
-    }
 }
 
 /**
@@ -295,11 +202,11 @@ struct mapi_table *
 u_current_get_internal(void)
 {
 #if defined(GLX_USE_TLS)
-   return (struct mapi_table *)u_current[U_CURRENT_TABLE];
+   return (struct mapi_table *)u_current[GLAPI_CURRENT_DISPATCH];
 #elif defined(THREADS)
    return (struct mapi_table *) ((ThreadSafe) ?
-         u_tsd_get(&u_current_tsd[U_CURRENT_TABLE]) : u_current[U_CURRENT_TABLE]);
+         u_tsd_get(&u_current_tsd[GLAPI_CURRENT_DISPATCH]) : u_current[GLAPI_CURRENT_DISPATCH]);
 #else
-   return (struct mapi_table *)u_current[U_CURRENT_TABLE];
+   return (struct mapi_table *)u_current[GLAPI_CURRENT_DISPATCH];
 #endif
 }

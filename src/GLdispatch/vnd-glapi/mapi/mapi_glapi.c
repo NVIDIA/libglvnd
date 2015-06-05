@@ -32,10 +32,8 @@
 #include "table.h" /* for MAPI_TABLE_NUM_SLOTS */
 #include "stub.h"
 
-#include "u_thread.h"
-
 /*
- * Global variables, _glapi_get_context, and _glapi_get_dispatch are defined in
+ * Global variables and _glapi_get_dispatch are defined in
  * u_current.c.
  */
 
@@ -64,27 +62,9 @@ _glapi_set_multithread(void)
 }
 
 void
-_glapi_set_context(void *context)
-{
-   u_current_set_user((const void *) context);
-}
-
-void
 _glapi_set_dispatch(struct _glapi_table *dispatch)
 {
    u_current_set((const struct mapi_table *) dispatch);
-}
-
-void
-_glapi_set_current(void *p, int index)
-{
-    u_current_set_index(p, index);
-}
-
-void *
-_glapi_get_current(int index)
-{
-    return u_current_get_index(index);
 }
 
 /**
