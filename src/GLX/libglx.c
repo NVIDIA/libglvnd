@@ -360,9 +360,8 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
  * - Removing the old current context oldCtx from __glXCurrentContextHash
  *
  * \param[in] ctx The context to make current
- * \param[in] tsdCtx If this function is called from the tsdContextKey
- * destructor, this should point to the old context to use.  Otherwise, this
- * should be set to NULL.
+ * \param[in] oldCtx The previous current context, or NULL if no context was
+ * current before.
  * \param[in] needsUnmapNew True when the new context's screen mapping
  * should be removed when it is no longer current (this can happen if the make
  * current operation failed and we are restoring a context which will be
@@ -379,15 +378,13 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
  * Returns True on success.
  */
 static Bool UpdateCurrentContext(GLXContext newCtx,
-                                 GLXContext tsdCtx,
+                                 GLXContext oldCtx,
                                  Bool needsUnmapNew,
                                  Bool *needsUnmapOld)
 {
     __GLXcurrentContextHash *pOldEntry,
                             *pTmpEntry,
                             *pNewEntry;
-    GLXContext oldCtx;
-
     if (needsUnmapOld) {
         *needsUnmapOld = False;
     }
@@ -413,17 +410,7 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
         return False;
     }
 
-    // Update the TSD entry to reflect the correct current context.  It's
-    // possible that this may be called from tsdContextKey's destructor.  In
-    // that case, the NULL value has already been associated with the key and
-    // pthread_getspecific() will return the wrong value, so use the value
-    // passed in as tsdCtx instead.  In the case where this is called from a
-    // destructor and tsdCtx == NULL, oldCtx will (correctly) be set to NULL.
-    if (tsdCtx) {
-        oldCtx = tsdCtx;
-    } else {
-        oldCtx = (GLXContext)__glXPthreadFuncs.getspecific(tsdContextKey);
-    }
+    // Update the TSD entry to reflect the correct current context.
     __glXPthreadFuncs.setspecific(tsdContextKey, newCtx);
 
     if (oldCtx) {
@@ -651,16 +638,12 @@ static Bool MakeContextCurrentInternal(Display *dpy,
     }
 }
 
-static void SaveCurrentValues(GLXDrawable *pDraw,
-                              GLXDrawable *pRead,
-                              GLXContext *pContext)
-{
-    *pDraw = glXGetCurrentDrawable();
-    *pRead = glXGetCurrentReadDrawable();
-    *pContext = glXGetCurrentContext();
-}
-
-PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext context)
+/**
+ * A common function to handle glXMakeCurrent and glXMakeContextCurrent.
+ */
+static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
+                                  GLXDrawable read, GLXContext context,
+                                  char callerOpcode)
 {
     __glXThreadInitialize();
 
@@ -670,7 +653,24 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
     GLXContext oldContext;
     Bool oldContextNeedsUnmap;
 
-    SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
+    // Look up the current context and drawables. If the current context and
+    // drawables are the same as the new ones, then return early.
+    oldContext = __glXGetCurrentContext();
+    if (oldContext != NULL) {
+        __GLXAPIState *oldApiState = __glXGetCurrentAPIState();
+        oldDraw = oldApiState->currentDraw;
+        oldRead = oldApiState->currentRead;
+        if (dpy == oldApiState->currentDisplay && context == oldContext
+                && draw == oldDraw && read == oldRead) {
+            return True;
+        }
+    } else {
+        if (context == NULL) {
+            return True;
+        }
+        oldDraw = None;
+        oldRead = None;
+    }
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 
@@ -681,7 +681,7 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
     }
 
     if (oldContext != context) {
-        if (!UpdateCurrentContext(context, NULL, False, &oldContextNeedsUnmap)) {
+        if (!UpdateCurrentContext(context, oldContext, False, &oldContextNeedsUnmap)) {
             /*
              * Fail here. Continuing on would mess up our accounting.
              */
@@ -691,22 +691,29 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
     }
 
     ret = MakeContextCurrentInternal(dpy,
-                                     drawable,
-                                     drawable,
+                                     draw,
+                                     read,
                                      context,
-                                     X_GLXMakeCurrent,
+                                     callerOpcode,
                                      &pDispatch);
     if (ret) {
         assert(!context || pDispatch);
         if (pDispatch) {
-            ret = pDispatch->glx14ep.makeCurrent(dpy, drawable, context);
+            if (callerOpcode == X_GLXMakeCurrent && draw == read) {
+                ret = pDispatch->glx14ep.makeCurrent(dpy, draw, context);
+            } else {
+                ret = pDispatch->glx14ep.makeContextCurrent(dpy,
+                                                            draw,
+                                                            read,
+                                                            context);
+            }
             if (!ret) {
                 // Restore the original current values
                 tmpRet = MakeContextCurrentInternal(dpy,
                                                     oldDraw,
                                                     oldRead,
                                                     oldContext,
-                                                    X_GLXMakeCurrent,
+                                                    callerOpcode,
                                                     &pDispatch);
                 assert(tmpRet);
                 if (pDispatch) {
@@ -725,7 +732,7 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
          * If the make current operation failed, restore the original context.
          */
         if (!ret) {
-            tmpRet = UpdateCurrentContext(oldContext, NULL, oldContextNeedsUnmap, NULL);
+            tmpRet = UpdateCurrentContext(oldContext, context, oldContextNeedsUnmap, NULL);
             assert(tmpRet);
         } else if (oldContextNeedsUnmap) {
             __glXRemoveScreenContextMapping(NULL, oldContext);
@@ -737,6 +744,16 @@ PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext contex
     return ret;
 }
 
+PUBLIC Bool glXMakeCurrent(Display *dpy, GLXDrawable drawable, GLXContext context)
+{
+    return CommonMakeCurrent(dpy, drawable, drawable, context, X_GLXMakeCurrent);
+}
+
+PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
+                                  GLXDrawable read, GLXContext context)
+{
+    return CommonMakeCurrent(dpy, draw, read, context, X_GLXMakeContextCurrent);
+}
 
 PUBLIC Bool glXQueryExtension(Display *dpy, int *error_base, int *event_base)
 {
@@ -1299,87 +1316,6 @@ PUBLIC XVisualInfo *glXGetVisualFromFBConfig(Display *dpy, GLXFBConfig config)
     const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
 
     return pDispatch->glx14ep.getVisualFromFBConfig(dpy, config);
-}
-
-PUBLIC Bool glXMakeContextCurrent(Display *dpy, GLXDrawable draw,
-                                  GLXDrawable read, GLXContext context)
-{
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch;
-    Bool tmpRet, ret;
-    GLXDrawable oldDraw, oldRead;
-    GLXContext oldContext;
-    Bool oldContextNeedsUnmap;
-
-    SaveCurrentValues(&oldDraw, &oldRead, &oldContext);
-
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-
-    if (IsContextCurrentToAnyOtherThread(context)) {
-        // XXX throw BadAccess?
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-        return False;
-    }
-
-    if (oldContext != context) {
-        if (!UpdateCurrentContext(context, NULL, False, &oldContextNeedsUnmap)) {
-            /*
-             * Fail here. Continuing on would mess up our accounting.
-             */
-            LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-            return False;
-        }
-    }
-
-    ret = MakeContextCurrentInternal(dpy,
-                                     draw,
-                                     read,
-                                     context,
-                                     X_GLXMakeContextCurrent,
-                                     &pDispatch);
-    if (ret) {
-        assert(!context || pDispatch);
-        if (pDispatch) {
-            ret = pDispatch->glx14ep.makeContextCurrent(dpy,
-                                                        draw,
-                                                        read,
-                                                        context);
-            if (!ret) {
-                // Restore the original current values
-                tmpRet = MakeContextCurrentInternal(dpy,
-                                                    oldDraw,
-                                                    oldRead,
-                                                    oldContext,
-                                                    X_GLXMakeContextCurrent,
-                                                    &pDispatch);
-                assert(tmpRet);
-                if (pDispatch) {
-                    tmpRet = pDispatch->glx14ep.makeContextCurrent(dpy,
-                                                                oldDraw,
-                                                                oldRead,
-                                                                oldContext);
-                    assert(tmpRet);
-                }
-            }
-        }
-    }
-
-    if (oldContext != context) {
-        /*
-         * If the make current operation failed, restore the original context.
-         */
-        if (!ret) {
-            tmpRet = UpdateCurrentContext(oldContext, NULL, oldContextNeedsUnmap, NULL);
-            assert(tmpRet);
-        } else if (oldContextNeedsUnmap) {
-            __glXRemoveScreenContextMapping(NULL, oldContext);
-        }
-    }
-
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-
-    return ret;
 }
 
 
