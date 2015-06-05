@@ -59,10 +59,6 @@
 
 GLVNDPthreadFuncs __glXPthreadFuncs;
 
-static glvnd_key_t tsdContextKey;
-static Bool tsdContextKeyInitialized;
-static glvnd_once_t threadCreateTSDContextOnceControl = GLVND_ONCE_INIT;
-
 static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
 
 /*
@@ -84,40 +80,6 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
                                  Bool needsUnmapNew,
                                  Bool *needsUnmapOld);
 
-
-static void ThreadDestroyed(void *tsdCtx)
-{
-    Bool needsUnmap;
-    /*
-     * If a GLX context is current in this thread, remove it from the
-     * current context hash before destroying the thread.
-     *
-     * The TSD key associated with this destructor contains a pointer
-     * to the current context.
-     */
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-    UpdateCurrentContext(NULL, tsdCtx, False, &needsUnmap);
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-
-    if (needsUnmap) {
-        __glXRemoveScreenContextMapping(NULL, tsdCtx);
-    }
-
-    /*
-     * Call into GLdispatch to lose current to this thread.  XXX
-     * should we check for ownership of the API state before doing
-     * this?
-     */
-    __glDispatchLoseCurrent();
-}
-
-static void ThreadCreateTSDContextOnce(void)
-{
-    int ret = __glXPthreadFuncs.key_create(&tsdContextKey, ThreadDestroyed);
-    assert(!ret);
-
-    tsdContextKeyInitialized = True;
-}
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
 {
@@ -265,6 +227,40 @@ void DisplayClosed(Display *dpy)
 }
 
 /* NOTE this assumes the __glXAPIStateHash lock is taken! */
+static void CleanupAPIStateEntry(void *unused, __GLXAPIState *apiState)
+{
+    free(apiState->glas.id);
+}
+
+static void ThreadDestroyed(__GLdispatchAPIState *apiState, void *context)
+{
+    __GLXAPIState *glxState = (__GLXAPIState *) apiState;
+    Bool needsUnmap;
+
+    /*
+     * If a GLX context is current in this thread, remove it from the
+     * current context hash before destroying the thread.
+     *
+     * The TSD key associated with this destructor contains a pointer
+     * to the current context.
+     */
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+    UpdateCurrentContext(NULL, (GLXContext) context, False, &needsUnmap);
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+
+    if (needsUnmap) {
+        __glXRemoveScreenContextMapping(NULL, (GLXContext) context);
+    }
+
+    // Free the API state struct.
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXAPIStateHash);
+    HASH_DEL(_LH(__glXAPIStateHash), glxState);
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXAPIStateHash);
+    CleanupAPIStateEntry(NULL, glxState);
+    free(glxState);
+}
+
+/* NOTE this assumes the __glXAPIStateHash lock is taken! */
 static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
 {
     __GLXAPIState *apiState = calloc(1, sizeof(*apiState));
@@ -274,6 +270,7 @@ static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
     apiState->glas.tag = GLDISPATCH_API_GLX;
     apiState->glas.id = malloc(sizeof(glvnd_thread_t));
     apiState->glas.vendorID = -1;
+    apiState->glas.threadDestroyedCallback = ThreadDestroyed;
 
     *((glvnd_thread_t *)apiState->glas.id) = tid;
 
@@ -281,12 +278,6 @@ static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
                     sizeof(glvnd_thread_t), apiState);
 
     return apiState;
-}
-
-/* NOTE this assumes the __glXAPIStateHash lock is taken! */
-static void CleanupAPIStateEntry(void *unused, __GLXAPIState *apiState)
-{
-    free(apiState->glas.id);
 }
 
 /* NOTE this assumes the __glXAPIStateHash lock is taken! */
@@ -401,17 +392,6 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
     } else {
         pNewEntry = NULL;
     }
-
-    // Initialize the TSD entry (if we haven't already)
-    __glXPthreadFuncs.once(&threadCreateTSDContextOnceControl,
-                           ThreadCreateTSDContextOnce);
-
-    if (!tsdContextKeyInitialized) {
-        return False;
-    }
-
-    // Update the TSD entry to reflect the correct current context.
-    __glXPthreadFuncs.setspecific(tsdContextKey, newCtx);
 
     if (oldCtx) {
         // Remove the old context from the hash table, if not NULL
@@ -1663,9 +1643,6 @@ void CurrentContextHashCleanup(void *unused, __GLXcurrentContextHash *pEntry)
 
 static void __glXAPITeardown(Bool doReset)
 {
-    /* Clear the current TSD context */
-    __glXPthreadFuncs.setspecific(tsdContextKey, NULL);
-
     /*
      * XXX: This will leave dangling screen-context mappings, but they will be
      * cleared separately in __glXMappingTeardown().

@@ -77,6 +77,23 @@ typedef struct __GLdispatchAPIStateRec {
      */
     void *id;
 
+    /**
+     * A callback that is called when a thread that has a current context
+     * terminates.
+     *
+     * This is called after libGLdispatch handles its cleanup, so
+     * __glDispatchGetCurrentAPIState and __glDispatchGetCurrentContext will both
+     * return NULL. The API state and context are passed as parameters instead.
+     *
+     * The callback should not call __glDispatchMakeCurrent or
+     * __glDispatchLoseCurrent.
+     *
+     * \param apiState The API state passed to __glDispatchMakeCurrent.
+     * \param context The context passed to __glDispatchMakeCurrent.
+     */
+    void (*threadDestroyedCallback)(struct __GLdispatchAPIStateRec *apiState,
+                                    void *context);
+
     /*************************************************************************
      * GLdispatch-managed variables: Modified by MakeCurrent()
      *************************************************************************/

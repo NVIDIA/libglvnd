@@ -699,13 +699,9 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
     return GL_TRUE;
 }
 
-PUBLIC void __glDispatchLoseCurrent(void)
+static void LoseCurrentInternal(__GLdispatchAPIState *curApiState,
+        GLboolean threadDestroyed)
 {
-    __GLdispatchAPIState *curApiState = __glDispatchGetCurrentAPIState();
-    if (curApiState == NULL) {
-        return;
-    }
-
     LockDispatch();
     // Try to restore the libglvnd default stubs, if possible.
     PatchEntrypoints(NULL, 0);
@@ -725,8 +721,19 @@ PUBLIC void __glDispatchLoseCurrent(void)
         curApiState->vendorID = -1;
     }
 
-    SetCurrentAPIState(NULL);
-    _glapi_set_dispatch(NULL);
+    if (!threadDestroyed) {
+        SetCurrentAPIState(NULL);
+        _glapi_set_dispatch(NULL);
+    }
+}
+
+PUBLIC void __glDispatchLoseCurrent(void)
+{
+    __GLdispatchAPIState *curApiState = __glDispatchGetCurrentAPIState();
+    if (curApiState == NULL) {
+        return;
+    }
+    LoseCurrentInternal(curApiState, GL_FALSE);
 }
 
 __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void)
@@ -838,6 +845,14 @@ void __glDispatchCheckMultithreaded(void)
 
 void ThreadDestroyed(void *data)
 {
-    //__GLdispatchAPIState *apiState = (__GLdispatchAPIState *) data;
+    if (data != NULL) {
+        __GLdispatchAPIState *apiState = (__GLdispatchAPIState *) data;
+        void *context = apiState->context;
+        LoseCurrentInternal(apiState, GL_TRUE);
+
+        if (apiState->threadDestroyedCallback != NULL) {
+            apiState->threadDestroyedCallback(apiState, context);
+        }
+    }
 }
 
