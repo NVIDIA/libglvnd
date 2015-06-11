@@ -71,12 +71,6 @@ typedef struct __GLdispatchAPIStateRec {
      */
     int tag;
 
-    /*!
-     * Unique identifier for the state within the namespace. Usually (pointer
-     * to) thread id
-     */
-    void *id;
-
     /**
      * A callback that is called when a thread that has a current context
      * terminates.

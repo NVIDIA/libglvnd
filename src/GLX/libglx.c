@@ -226,12 +226,6 @@ void DisplayClosed(Display *dpy)
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXAPIStateHash);
 }
 
-/* NOTE this assumes the __glXAPIStateHash lock is taken! */
-static void CleanupAPIStateEntry(void *unused, __GLXAPIState *apiState)
-{
-    free(apiState->glas.id);
-}
-
 static void ThreadDestroyed(__GLdispatchAPIState *apiState, void *context)
 {
     __GLXAPIState *glxState = (__GLXAPIState *) apiState;
@@ -256,7 +250,6 @@ static void ThreadDestroyed(__GLdispatchAPIState *apiState, void *context)
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXAPIStateHash);
     HASH_DEL(_LH(__glXAPIStateHash), glxState);
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXAPIStateHash);
-    CleanupAPIStateEntry(NULL, glxState);
     free(glxState);
 }
 
@@ -268,13 +261,12 @@ static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
     assert(apiState);
 
     apiState->glas.tag = GLDISPATCH_API_GLX;
-    apiState->glas.id = malloc(sizeof(glvnd_thread_t));
     apiState->glas.vendorID = -1;
     apiState->glas.threadDestroyedCallback = ThreadDestroyed;
 
-    *((glvnd_thread_t *)apiState->glas.id) = tid;
+    apiState->tid = tid;
 
-    HASH_ADD_KEYPTR(hh, _LH(__glXAPIStateHash), apiState->glas.id,
+    HASH_ADD(hh, _LH(__glXAPIStateHash), tid,
                     sizeof(glvnd_thread_t), apiState);
 
     return apiState;
@@ -1651,7 +1643,7 @@ static void __glXAPITeardown(Bool doReset)
                      __glXCurrentContextHash, CurrentContextHashCleanup, NULL, doReset);
 
     LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXAPIState,
-                     __glXAPIStateHash, CleanupAPIStateEntry,
+                     __glXAPIStateHash, NULL,
                      NULL, doReset);
 
     if (doReset) {

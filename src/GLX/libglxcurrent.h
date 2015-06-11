@@ -55,6 +55,9 @@ typedef struct __GLXAPIStateRec {
     const __GLXdispatchTableStatic *currentStaticDispatch;
     __GLXdispatchTableDynamic *currentDynDispatch;
     __GLXvendorInfo *currentVendor;
+
+    glvnd_thread_t tid;
+
     UT_hash_handle hh;
 } __GLXAPIState;
 
