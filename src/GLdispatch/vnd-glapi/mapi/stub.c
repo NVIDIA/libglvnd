@@ -30,10 +30,13 @@
 #include <assert.h>
 
 #include "u_current.h"
-#include "u_thread.h"
 #include "entry.h"
 #include "stub.h"
 #include "table.h"
+
+#if !defined(STATIC_DISPATCH_ONLY)
+#include "u_thread.h"
+#endif
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
 #define MAPI_LAST_SLOT (MAPI_TABLE_NUM_STATIC + MAPI_TABLE_NUM_DYNAMIC - 1)
@@ -220,7 +223,7 @@ stub_allow_override(void)
     return !!entry_stub_size;
 }
 
-void *stub_get_addr_by_name(const char *name)
+static void *stub_get_addr_by_name(const char *name)
 {
     const struct mapi_stub *stub;
 

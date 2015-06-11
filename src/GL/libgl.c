@@ -36,8 +36,6 @@
 #include "stub.h"
 #include "GLdispatch.h"
 
-GLVNDPthreadFuncs pthreadFuncs;
-
 // Initialize GLX imports
 #if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__((constructor)) __libGLInit(void)
@@ -48,7 +46,7 @@ void _init(void)
     // Fix up the static GL entrypoints, if necessary
     entry_init_public();
 
-    __glDispatchInit(&pthreadFuncs);
+    __glDispatchInit(NULL);
 
     // Register these entrypoints with GLdispatch so they can be overwritten at
     // runtime
