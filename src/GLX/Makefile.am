@@ -63,6 +63,7 @@ libGLX_la_LIBADD += $(XEXT_LIBS)
 libGLX_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
 libGLX_la_LIBADD += $(X11GLVND_DIR)/libx11glvnd_client.la
 libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
+libGLX_la_LIBADD += $(GLVND_PTHREAD_DIR)/libglvnd_pthread.la
 
 libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic
 
