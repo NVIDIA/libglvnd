@@ -32,7 +32,6 @@
 
 #include "glheader.h"
 #include "compiler.h"
-#include "glvnd_pthread.h"
 #include "GLdispatchABI.h"
 
 /*!
@@ -110,7 +109,7 @@ typedef void (*__GLdispatchGetOffsetHook)(void *(*lookupStubOffset)(const char *
 /*!
  * Initialize GLdispatch with pthreads functions needed for locking.
  */
-PUBLIC void __glDispatchInit(GLVNDPthreadFuncs *funcs);
+PUBLIC void __glDispatchInit(void);
 
 /*!
  * Tears down GLdispatch state.

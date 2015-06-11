@@ -46,7 +46,7 @@ void _init(void)
     // Fix up the static GL entrypoints, if necessary
     entry_init_public();
 
-    __glDispatchInit(NULL);
+    __glDispatchInit();
 
     // Register these entrypoints with GLdispatch so they can be overwritten at
     // runtime

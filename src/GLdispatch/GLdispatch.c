@@ -38,6 +38,7 @@
 #include "GLdispatch.h"
 #include "GLdispatchPrivate.h"
 #include "stub.h"
+#include "glvnd_pthread.h"
 
 /*
  * Global current dispatch table list. We need this to fix up all current
@@ -178,7 +179,7 @@ static inline void UnlockDispatch(void)
 
 #define CheckDispatchLocked() assert(dispatchLock.isLocked)
 
-void __glDispatchInit(GLVNDPthreadFuncs *funcs)
+void __glDispatchInit(void)
 {
     if (clientRefcount == 0) {
         /* Initialize pthreads imports */
@@ -201,13 +202,6 @@ void __glDispatchInit(GLVNDPthreadFuncs *funcs)
     }
 
     clientRefcount++;
-
-    if (funcs) {
-        // If the client needs a copy of these funcs, assign them now
-        // XXX: instead of copying, we should probably just provide a pointer.
-        // However, that's a bigger change...
-        *funcs = pthreadFuncs;
-    }
 }
 
 int __glDispatchNewVendorID(void)

@@ -1682,7 +1682,7 @@ void _init(void)
 {
 
     /* Initialize GLdispatch; this will also initialize our pthreads imports */
-    __glDispatchInit(NULL);
+    __glDispatchInit();
     glvndSetupPthreads(RTLD_DEFAULT, &__glXPthreadFuncs);
 
     {
