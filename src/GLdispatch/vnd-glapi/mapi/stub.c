@@ -222,6 +222,22 @@ static int stub_allow_override(void)
     return !!entry_stub_size;
 }
 
+static GLboolean stubStartPatch(void)
+{
+    if (!stub_allow_override())
+    {
+        return GL_FALSE;
+    }
+
+    // Nothing else to do yet.
+    return GL_TRUE;
+}
+
+static void stubFinishPatch(void)
+{
+    // Nothing else to do yet.
+}
+
 static void stubRestoreFuncs(void)
 {
     int i, slot;
@@ -246,9 +262,15 @@ static void stubRestoreFuncs(void)
 #endif // !defined(STATIC_DISPATCH_ONLY)
 }
 
-static void *stubGetPatchOffset(const char *name)
+static void stubAbortPatch(void)
+{
+    stubRestoreFuncs();
+}
+
+static GLboolean stubGetPatchOffset(const char *name, void **writePtr, const void **execPtr)
 {
     const struct mapi_stub *stub;
+    void *addr = NULL;
 
     stub = stub_find_public(name);
 
@@ -258,11 +280,17 @@ static void *stubGetPatchOffset(const char *name)
     }
 #endif // !defined(STATIC_DISPATCH_ONLY)
 
-    if (!stub) {
-        return NULL;
+    if (stub) {
+        addr = stub_get_addr(stub);
+    }
+    if (writePtr != NULL) {
+        *writePtr = addr;
+    }
+    if (execPtr != NULL) {
+        *execPtr = addr;
     }
 
-    return stub_get_addr(stub);
+    return (addr != NULL ? GL_TRUE : GL_FALSE);
 }
 
 static int stubGetStubType(void)
@@ -277,6 +305,9 @@ static int stubGetStubSize(void)
 
 static const __GLdispatchStubPatchCallbacks stubPatchCallbacks =
 {
+    stubStartPatch,     // startPatch
+    stubFinishPatch,    // finishPatch
+    stubAbortPatch,     // abortPatch
     stubRestoreFuncs,   // restoreFuncs
     stubGetPatchOffset, // getPatchOffset
     stubGetStubType,    // getStubType

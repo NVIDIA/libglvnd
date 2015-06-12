@@ -506,6 +506,7 @@ static int PatchingIsSafe(void)
 typedef struct __GLdispatchStubCallbackRec {
     __GLdispatchStubPatchCallbacks callbacks;
     int id;
+    GLboolean isPatched;
 
     struct glvnd_list entry;
 } __GLdispatchStubCallback;
@@ -516,19 +517,13 @@ int __glDispatchRegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *call
         return -1;
     }
 
-    // The __GLdispatchPatchCallbacks interface requires every set of
-    // entrypoints to use the same type and size.
-    if (callbacks->getStubType() != entry_type
-            || callbacks->getStubSize() != entry_stub_size) {
-        return -1;
-    }
-
     __GLdispatchStubCallback *stub = malloc(sizeof(*stub));
     if (stub == NULL) {
         return -1;
     }
 
     memcpy(&stub->callbacks, callbacks, sizeof(__GLdispatchStubPatchCallbacks));
+    stub->isPatched = GL_FALSE;
 
     LockDispatch();
     stub->id = nextDispatchStubID++;
@@ -605,31 +600,46 @@ static int PatchEntrypoints(
     }
 
     if (patchCb) {
-        GLboolean needOffsets;
+        GLboolean anySuccess = GL_FALSE;
 
-        if (!patchCb->initiatePatch(entry_type,
-                                    entry_stub_size,
-                                    dispatchStubListGeneration,
-                                    &needOffsets)) {
-            // Patching unsupported on this platform
-            return 0;
-        }
-
-        if (needOffsets) {
-            // Fetch offsets for this vendor
-            glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-                patchCb->getOffsetHook(stub->callbacks.getPatchOffset);
+        glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
+            if (patchCb->checkPatchSupported(stub->callbacks.getStubType(),
+                        stub->callbacks.getStubSize()))
+            {
+                if (stub->callbacks.startPatch()) {
+                    if (patchCb->initiatePatch(stub->callbacks.getStubType(),
+                                stub->callbacks.getStubSize(),
+                                stub->callbacks.getPatchOffset)) {
+                        stub->callbacks.finishPatch();
+                        stub->isPatched = GL_TRUE;
+                        anySuccess = GL_TRUE;
+                    } else {
+                        stub->callbacks.abortPatch();
+                        stub->isPatched = GL_FALSE;
+                    }
+                }
+            } else if (stub->isPatched) {
+                // The vendor library can't patch these stubs, but they were
+                // patched before. Restore them now.
+                stub->callbacks.restoreFuncs();
+                stub->isPatched = GL_FALSE;
             }
         }
 
-        patchCb->finalizePatch();
-
-        stubCurrentPatchCb = patchCb;
-        stubOwnerVendorID = vendorID;
+        if (anySuccess) {
+            stubCurrentPatchCb = patchCb;
+            stubOwnerVendorID = vendorID;
+        } else {
+            stubCurrentPatchCb = NULL;
+            stubOwnerVendorID = 0;
+        }
     } else {
         // Restore the stubs to the default implementation
         glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-            stub->callbacks.restoreFuncs();
+            if (stub->isPatched) {
+                stub->callbacks.restoreFuncs();
+                stub->isPatched = GL_FALSE;
+            }
         }
 
         stubCurrentPatchCb = NULL;

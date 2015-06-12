@@ -471,7 +471,8 @@ static void         dummySetDispatchIndex      (const GLubyte *procName, int ind
 #if defined(PATCH_ENTRYPOINTS)
 PUBLIC int __glXSawVertex3fv;
 
-static void patch_x86_64_tls(char *entry,
+static void patch_x86_64_tls(char *writeEntry,
+                             const char *execEntry,
                              int stubSize)
 {
 #if defined(__x86_64__)
@@ -491,18 +492,19 @@ static void patch_x86_64_tls(char *entry,
     }
 
     p = (int *)&tmpl[2];
-    *p = (int)(pSawVertex3fv - (entry + 6));
+    *p = (int)(pSawVertex3fv - (execEntry + 6));
 
     p = (int *)&tmpl[11];
-    *p = (int)(pSawVertex3fv - (entry + 15));
+    *p = (int)(pSawVertex3fv - (execEntry + 15));
 
-    memcpy(entry, tmpl, sizeof(tmpl));
+    memcpy(writeEntry, tmpl, sizeof(tmpl));
 #else
     assert(0); // Should not be calling this
 #endif
 }
 
-static void patch_x86_tls(char *entry,
+static void patch_x86_tls(char *writeEntry,
+                          const char *execEntry,
                           int stubSize)
 {
 #if defined(__i386__)
@@ -522,12 +524,12 @@ static void patch_x86_tls(char *entry,
     }
 
     p = (int *)&tmpl[1];
-    *p = (int)(pSawVertex3fv - (entry + 5));
+    *p = (int)(pSawVertex3fv - (execEntry + 5));
 
     p = (int *)&tmpl[9];
-    *p = (int)(pSawVertex3fv - (entry + 13));
+    *p = (int)(pSawVertex3fv - (execEntry + 13));
 
-    memcpy(entry, tmpl, sizeof(tmpl));
+    memcpy(writeEntry, tmpl, sizeof(tmpl));
 
     // Jump to an intermediate location
     __asm__(
@@ -539,65 +541,45 @@ static void patch_x86_tls(char *entry,
 #endif
 }
 
-static int dummyStubType;
-static int dummyStubSize;
-static GLint64 dummyStubGeneration;
-static char *dummyVertex3fvAddrs[3];
-
-static GLboolean dummyInitiatePatch(int type,
-                                    int stubSize,
-                                    GLint64 stubGeneration,
-                                    GLboolean *needOffsets)
+static GLboolean dummyCheckPatchSupported(int type, int stubSize)
 {
-    assert(needOffsets);
     switch (type) {
         case __GLDISPATCH_STUB_X86_64_TLS:
         case __GLDISPATCH_STUB_X86_TLS:
         case __GLDISPATCH_STUB_X86_64_TSD:
-            dummyStubType = type;
-            dummyStubSize = stubSize;
-            dummyStubGeneration = stubGeneration;
-            *needOffsets = GL_TRUE;
             return GL_TRUE;
         default:
-            *needOffsets = GL_FALSE;
             return GL_FALSE;
     }
 }
 
-/* Only interested in glVertex3fv() for testing purposes. */
-static void dummyGetOffsetHook(
-    void *(*lookupStubOffset)(const char *funcName)
-)
+static GLboolean dummyInitiatePatch(int type,
+                                    int stubSize,
+                                    DispatchPatchLookupStubOffset lookupStubOffset)
 {
-    char **pNewAddr;
+    void *writeAddr;
+    const void *execAddr;
 
-    // Seek to the first empty entry
-    for (pNewAddr = dummyVertex3fvAddrs;
-         *pNewAddr; pNewAddr++) {
+    if (!dummyCheckPatchSupported(type, stubSize))
+    {
+        return GL_FALSE;
     }
 
-    assert((pNewAddr - dummyVertex3fvAddrs) < 3);
-
-    *pNewAddr = (char *)lookupStubOffset("Vertex3fv");
-}
-
-static void dummyFinalizePatch(void)
-{
-    char **pAddr;
-    for (pAddr = dummyVertex3fvAddrs; *pAddr; pAddr++) {
-        switch (dummyStubType) {
+    if (lookupStubOffset("Vertex3fv", &writeAddr, &execAddr)) {
+        switch (type) {
             case __GLDISPATCH_STUB_X86_64_TLS:
             case __GLDISPATCH_STUB_X86_64_TSD:
-                patch_x86_64_tls(*pAddr, dummyStubSize);
+                patch_x86_64_tls(writeAddr, execAddr, stubSize);
                 break;
             case __GLDISPATCH_STUB_X86_TLS:
-                patch_x86_tls(*pAddr, dummyStubSize);
+                patch_x86_tls(writeAddr, execAddr, stubSize);
                 break;
             default:
                 assert(0);
         }
     }
+
+    return GL_TRUE;
 }
 
 static void dummyReleasePatch(void)
@@ -606,9 +588,8 @@ static void dummyReleasePatch(void)
 
 static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 {
+    .checkPatchSupported = dummyCheckPatchSupported,
     .initiatePatch = dummyInitiatePatch,
-    .getOffsetHook = dummyGetOffsetHook,
-    .finalizePatch = dummyFinalizePatch,
     .releasePatch = dummyReleasePatch,
 };
 #endif // defined(PATCH_ENTRYPOINTS)

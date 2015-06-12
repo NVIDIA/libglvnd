@@ -45,6 +45,7 @@
 #define _GLAPI_H
 
 #include <stddef.h>
+#include <GL/gl.h>
 #include "u_compiler.h"
 
 #ifdef __cplusplus
@@ -190,6 +191,34 @@ _glapi_set_warning_func(_glapi_proc func);
  */
 typedef struct __GLdispatchStubPatchCallbacksRec {
     /**
+     * Called before trying to patch any entrypoints.
+     *
+     * If startPatch succeeds, then libGLdispatch will call \c getPatchOffsets
+     * to fetch the address of each function.
+     *
+     * After it finishes patching, libGLdispatch will call either
+     * \c finishPatch or \c abortPatch.
+     *
+     * \return GL_TRUE on success, GL_FALSE on failure.
+     */
+    GLboolean (* startPatch) (void);
+
+    /**
+     * Finishes any patching. This is called after \c startPatch if patching
+     * is successful.
+     */
+    void (* finishPatch) (void);
+
+    /**
+     * Finishes any patching, and restores the entrypoints to their original
+     * state.
+     *
+     * This is called if an error occurrs and libGLdispatch has to abort
+     * patching the entrypoints.
+     */
+    void (* abortPatch) (void);
+
+    /**
      * Called by libGLdispatch to restore each entrypoint to its normal,
      * unpatched behavior.
      */
@@ -198,8 +227,10 @@ typedef struct __GLdispatchStubPatchCallbacksRec {
     /**
      * Returns the address of a function to patch. This may or may not create a
      * new stub function if one doesn't already exist.
+     *
+     * This function is passed to __GLdispatchPatchCallbacks::initiatePatch.
      */
-    void * (* getPatchOffset) (const char *name);
+    GLboolean (* getPatchOffset) (const char *name, void **writePtr, const void **execPtr);
 
     /**
      * Returns the type of the stub functions. This is one of the
