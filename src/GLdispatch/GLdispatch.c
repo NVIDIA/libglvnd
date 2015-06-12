@@ -108,6 +108,8 @@ static int latestGeneration;
  * Dispatch stub list for entrypoint rewriting.
  */
 static struct glvnd_list dispatchStubList;
+static int nextDispatchStubID = 1;
+static int localDispatchStubId = -1;
 
 /*
  * Track the latest generation of the dispatch stub list so that vendor
@@ -126,11 +128,6 @@ static GLint64 dispatchStubListGeneration;
  * IDs must be non-zero.
  */
 static int firstUnusedVendorID = 1;
-
-/*
- * Dispatch stub list for entrypoint rewriting.
- */
-static struct glvnd_list dispatchStubList;
 
 /**
  * The key used to store the __GLdispatchAPIState for the current thread.
@@ -197,8 +194,7 @@ void __glDispatchInit(void)
         UnlockDispatch();
 
         // Register GLdispatch's static entrypoints for rewriting
-        __glDispatchRegisterStubCallbacks(stub_get_offsets,
-                                          stub_restore);
+        localDispatchStubId = __glDispatchRegisterStubCallbacks(stub_get_patch_callbacks());
     }
 
     clientRefcount++;
@@ -492,7 +488,7 @@ static int PatchingIsSafe(void)
     /*
      * Can only patch entrypoints on supported TLS access models
      */
-    if (!stub_allow_override()) {
+    if (glvnd_list_is_empty(&dispatchStubList)) {
         return 0;
     }
 
@@ -508,40 +504,55 @@ static int PatchingIsSafe(void)
 }
 
 typedef struct __GLdispatchStubCallbackRec {
-    void (*get_offsets_func)(__GLdispatchGetOffsetHook func);
-    void (*restore_func)(void);
+    __GLdispatchStubPatchCallbacks callbacks;
+    int id;
 
     struct glvnd_list entry;
 } __GLdispatchStubCallback;
 
-void __glDispatchRegisterStubCallbacks(
-    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
-    void (*restore_func)(void)
-)
+int __glDispatchRegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *callbacks)
 {
+    if (callbacks == NULL) {
+        return -1;
+    }
+
+    // The __GLdispatchPatchCallbacks interface requires every set of
+    // entrypoints to use the same type and size.
+    if (callbacks->getStubType() != entry_type
+            || callbacks->getStubSize() != entry_stub_size) {
+        return -1;
+    }
+
     __GLdispatchStubCallback *stub = malloc(sizeof(*stub));
-    stub->get_offsets_func = get_offsets_func;
-    stub->restore_func = restore_func;
+    if (stub == NULL) {
+        return -1;
+    }
+
+    memcpy(&stub->callbacks, callbacks, sizeof(__GLdispatchStubPatchCallbacks));
 
     LockDispatch();
+    stub->id = nextDispatchStubID++;
     glvnd_list_add(&stub->entry, &dispatchStubList);
     dispatchStubListGeneration++;
     UnlockDispatch();
+
+    return stub->id;
 }
 
-void __glDispatchUnregisterStubCallbacks(
-    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
-    void (*restore_func)(void)
-)
+void __glDispatchUnregisterStubCallbacks(int stubId)
 {
     __GLdispatchStubCallback *curStub, *tmpStub;
+    if (stubId < 0) {
+        return;
+    }
+
     LockDispatch();
 
     glvnd_list_for_each_entry_safe(curStub, tmpStub, &dispatchStubList, entry) {
-        if (get_offsets_func == curStub->get_offsets_func) {
-            assert(restore_func == curStub->restore_func);
-
+        if (curStub->id == stubId) {
             glvnd_list_del(&curStub->entry);
+            free(curStub);
+            break;
         }
     }
 
@@ -607,7 +618,7 @@ static int PatchEntrypoints(
         if (needOffsets) {
             // Fetch offsets for this vendor
             glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-                stub->get_offsets_func(patchCb->getOffsetHook);
+                patchCb->getOffsetHook(stub->callbacks.getPatchOffset);
             }
         }
 
@@ -618,7 +629,7 @@ static int PatchEntrypoints(
     } else {
         // Restore the stubs to the default implementation
         glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-            stub->restore_func();
+            stub->callbacks.restoreFuncs();
         }
 
         stubCurrentPatchCb = NULL;

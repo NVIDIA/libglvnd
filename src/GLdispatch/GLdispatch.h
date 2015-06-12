@@ -203,24 +203,6 @@ PUBLIC GLint __glDispatchGetOffset(const GLubyte *procName);
 PUBLIC void __glDispatchSetEntry(__GLdispatchTable *dispatch,
                                  GLint offset, __GLdispatchProc addr);
 
-/*!
- * This registers stubs with GLdispatch to be overwritten if a vendor library
- * explicitly requests custom entrypoint code.  This is used by the wrapper
- * interface libraries.
- */
-PUBLIC void __glDispatchRegisterStubCallbacks(
-    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
-    void (*restore_func)(void)
-);
-
-/*!
- * This unregisters the GLdispatch stubs, and performs any necessary cleanup.
- */
-PUBLIC void __glDispatchUnregisterStubCallbacks(
-    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
-    void (*restore_func)(void)
-);
-
 /**
  * Checks to see if multiple threads are being used. This should be called
  * periodically from places like glXMakeCurrent.

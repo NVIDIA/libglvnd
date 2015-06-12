@@ -217,41 +217,12 @@ stub_get_addr(const struct mapi_stub *stub)
    return (stub->addr) ? stub->addr : entry_get_public(stub->slot);
 }
 
-int
-stub_allow_override(void)
+static int stub_allow_override(void)
 {
     return !!entry_stub_size;
 }
 
-static void *stub_get_addr_by_name(const char *name)
-{
-    const struct mapi_stub *stub;
-
-    stub = stub_find_public(name);
-
-#if !defined(STATIC_DISPATCH_ONLY)
-    if (!stub) {
-        stub = stub_find_dynamic(name, 0);
-    }
-#endif // !defined(STATIC_DISPATCH_ONLY)
-
-    if (!stub) {
-        return NULL;
-    }
-
-    return stub_get_addr(stub);
-}
-
-void
-stub_get_offsets(
-    stub_get_offset_hook get_offset_hook
-)
-{
-    get_offset_hook(stub_get_addr_by_name);
-}
-
-void
-stub_restore(void)
+static void stubRestoreFuncs(void)
 {
     int i, slot;
     const struct mapi_stub *stub;
@@ -274,3 +245,53 @@ stub_restore(void)
     }
 #endif // !defined(STATIC_DISPATCH_ONLY)
 }
+
+static void *stubGetPatchOffset(const char *name)
+{
+    const struct mapi_stub *stub;
+
+    stub = stub_find_public(name);
+
+#if !defined(STATIC_DISPATCH_ONLY)
+    if (!stub) {
+        stub = stub_find_dynamic(name, 0);
+    }
+#endif // !defined(STATIC_DISPATCH_ONLY)
+
+    if (!stub) {
+        return NULL;
+    }
+
+    return stub_get_addr(stub);
+}
+
+static int stubGetStubType(void)
+{
+    return entry_type;
+}
+
+static int stubGetStubSize(void)
+{
+    return entry_stub_size;
+}
+
+static const __GLdispatchStubPatchCallbacks stubPatchCallbacks =
+{
+    stubRestoreFuncs,   // restoreFuncs
+    stubGetPatchOffset, // getPatchOffset
+    stubGetStubType,    // getStubType
+    stubGetStubSize,    // getStubSize
+};
+
+const __GLdispatchStubPatchCallbacks *stub_get_patch_callbacks(void)
+{
+    if (stub_allow_override())
+    {
+        return &stubPatchCallbacks;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+

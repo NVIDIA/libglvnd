@@ -36,6 +36,8 @@
 #include "stub.h"
 #include "GLdispatch.h"
 
+static int patchStubId = -1;
+
 // Initialize GLX imports
 #if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__((constructor)) __libGLInit(void)
@@ -50,7 +52,7 @@ void _init(void)
 
     // Register these entrypoints with GLdispatch so they can be overwritten at
     // runtime
-    __glDispatchRegisterStubCallbacks(stub_get_offsets, stub_restore);
+    patchStubId = __glDispatchRegisterStubCallbacks(stub_get_patch_callbacks());
 
     // Lookup function pointers from libGLX for the GLX entrypoints
     __glXWrapperInit(__glXGetCachedProcAddress);
@@ -63,5 +65,5 @@ void _fini(void)
 #endif
 {
     // Unregister the GLdispatch entrypoints
-    __glDispatchUnregisterStubCallbacks(stub_get_offsets, stub_restore);
+    __glDispatchUnregisterStubCallbacks(patchStubId);
 }
