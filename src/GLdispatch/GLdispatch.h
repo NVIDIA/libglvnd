@@ -76,17 +76,15 @@ typedef struct __GLdispatchAPIStateRec {
      * terminates.
      *
      * This is called after libGLdispatch handles its cleanup, so
-     * __glDispatchGetCurrentAPIState and __glDispatchGetCurrentContext will both
-     * return NULL. The API state and context are passed as parameters instead.
+     * __glDispatchGetCurrentAPIState will return NULL. The API state is passed
+     * as a parameter instead.
      *
      * The callback should not call __glDispatchMakeCurrent or
      * __glDispatchLoseCurrent.
      *
      * \param apiState The API state passed to __glDispatchMakeCurrent.
-     * \param context The context passed to __glDispatchMakeCurrent.
      */
-    void (*threadDestroyedCallback)(struct __GLdispatchAPIStateRec *apiState,
-                                    void *context);
+    void (*threadDestroyedCallback)(struct __GLdispatchAPIStateRec *apiState);
 
     /*************************************************************************
      * GLdispatch-managed variables: Modified by MakeCurrent()
@@ -101,11 +99,6 @@ typedef struct __GLdispatchAPIStateRec {
      * The current (high-level) __GLdispatch table
      */
     __GLdispatchTable *dispatch;
-
-    /*!
-     * The current (vendor-specific) GL context
-     */
-    void *context;
 } __GLdispatchAPIState;
 
 /*!
@@ -166,7 +159,7 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
 
 /*!
  * This makes the given API state current, and assigns this API state
- * the passed-in current dispatch table, context, and vendor ID.
+ * the passed-in current dispatch table and vendor ID.
  *
  * If patchCb is not NULL, GLdispatch will attempt to overwrite its
  * entrypoints (and the entrypoints of any loaded interface libraries)
@@ -179,13 +172,12 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
  */
 PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
                                          __GLdispatchTable *dispatch,
-                                         void *context,
                                          int vendorID,
                                          const __GLdispatchPatchCallbacks *patchCb);
 
 /*!
- * This makes the NOP dispatch table current and sets the current context and
- * API state to NULL.
+ * This makes the NOP dispatch table current and sets the current API state to
+ * NULL.
  */
 PUBLIC void __glDispatchLoseCurrent(void);
 
@@ -193,17 +185,8 @@ PUBLIC void __glDispatchLoseCurrent(void);
  * This gets the current (opaque) API state pointer. If the pointer is
  * NULL, no context is current, otherwise the contents of the pointer depends on
  * which client API owns the context (EGL or GLX).
- *
- * This currently just hijacks _glapi_{set,get}_context() for this purpose.
  */
 PUBLIC __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void);
-
-/*!
- * This gets the current (opaque) vendor library context pointer. If the pointer
- * is NULL, no context is current, otherwsise the contents of the pointer
- * depends on the vendor whose context is current.
- */
-PUBLIC void *__glDispatchGetCurrentContext(void);
 
 /*!
  * This gets the "offset" of the given entrypoint in the GL dispatch table

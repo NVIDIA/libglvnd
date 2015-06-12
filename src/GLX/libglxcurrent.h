@@ -52,6 +52,7 @@ typedef struct __GLXAPIStateRec {
     Display *currentDisplay;
     GLXDrawable currentDraw;
     GLXDrawable currentRead;
+    GLXContext currentContext;
     const __GLXdispatchTableStatic *currentStaticDispatch;
     __GLXdispatchTableDynamic *currentDynDispatch;
     __GLXvendorInfo *currentVendor;
@@ -112,7 +113,12 @@ __GLXvendorInfo *__glXGetCurrentDynDispatch(void);
  */
 static inline GLXContext __glXGetCurrentContext(void)
 {
-    return (GLXContext)__glDispatchGetCurrentContext();
+    __GLXAPIState *apiState = __glXGetCurrentAPIState();
+    if (apiState != NULL) {
+        return apiState->currentContext;
+    } else {
+        return NULL;
+    }
 }
 
 #endif // !defined(__LIB_GLX_TLS)

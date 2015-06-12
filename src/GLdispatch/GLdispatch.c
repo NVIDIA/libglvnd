@@ -480,7 +480,7 @@ static inline int PatchingIsDisabledByEnvVar(void)
 
 static inline int ContextIsCurrentInAnyOtherThread(void)
 {
-    int thisThreadsContext = !!__glDispatchGetCurrentContext();
+    int thisThreadsContext = !!__glDispatchGetCurrentAPIState();
     int otherContexts;
 
     CheckDispatchLocked();
@@ -636,7 +636,6 @@ static int PatchEntrypoints(
 
 PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
                                          __GLdispatchTable *dispatch,
-                                         void *context,
                                          int vendorID,
                                          const __GLdispatchPatchCallbacks *patchCb)
 {
@@ -677,7 +676,7 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
         DispatchCurrentRef(dispatch);
     }
 
-    if (!curApiState || !curApiState->context) {
+    if (!curApiState) {
         numCurrentContexts++;
     }
 
@@ -686,7 +685,6 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
     /*
      * Update the API state with the new values.
      */
-    apiState->context = context;
     apiState->dispatch = dispatch;
     apiState->vendorID = vendorID;
 
@@ -706,7 +704,7 @@ static void LoseCurrentInternal(__GLdispatchAPIState *curApiState,
     // Try to restore the libglvnd default stubs, if possible.
     PatchEntrypoints(NULL, 0);
 
-    if (curApiState && curApiState->context) {
+    if (curApiState) {
         numCurrentContexts--;
     }
     UnlockDispatch();
@@ -717,7 +715,6 @@ static void LoseCurrentInternal(__GLdispatchAPIState *curApiState,
         UnlockDispatch();
 
         curApiState->dispatch = NULL;
-        curApiState->context = NULL;
         curApiState->vendorID = -1;
     }
 
@@ -744,15 +741,6 @@ __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void)
 void SetCurrentAPIState(__GLdispatchAPIState *apiState)
 {
     pthreadFuncs.setspecific(threadContextKey, apiState);
-}
-
-void *__glDispatchGetCurrentContext(void)
-{
-    __GLdispatchAPIState *apiState = __glDispatchGetCurrentAPIState();
-    if (apiState != NULL) {
-        return apiState->context;
-    }
-    return NULL;
 }
 
 /*
@@ -847,11 +835,10 @@ void ThreadDestroyed(void *data)
 {
     if (data != NULL) {
         __GLdispatchAPIState *apiState = (__GLdispatchAPIState *) data;
-        void *context = apiState->context;
         LoseCurrentInternal(apiState, GL_TRUE);
 
         if (apiState->threadDestroyedCallback != NULL) {
-            apiState->threadDestroyedCallback(apiState, context);
+            apiState->threadDestroyedCallback(apiState);
         }
     }
 }

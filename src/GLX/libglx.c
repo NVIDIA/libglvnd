@@ -226,7 +226,7 @@ void DisplayClosed(Display *dpy)
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXAPIStateHash);
 }
 
-static void ThreadDestroyed(__GLdispatchAPIState *apiState, void *context)
+static void ThreadDestroyed(__GLdispatchAPIState *apiState)
 {
     __GLXAPIState *glxState = (__GLXAPIState *) apiState;
     Bool needsUnmap;
@@ -239,11 +239,11 @@ static void ThreadDestroyed(__GLdispatchAPIState *apiState, void *context)
      * to the current context.
      */
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-    UpdateCurrentContext(NULL, (GLXContext) context, False, &needsUnmap);
+    UpdateCurrentContext(NULL, glxState->currentContext, False, &needsUnmap);
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 
     if (needsUnmap) {
-        __glXRemoveScreenContextMapping(NULL, (GLXContext) context);
+        __glXRemoveScreenContextMapping(NULL, glxState->currentContext);
     }
 
     // Free the API state struct.
@@ -558,9 +558,10 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         __glDispatchLoseCurrent();
 
         /* Update the current display and drawable(s) in this apiState */
-        apiState->currentDisplay = dpy;
-        apiState->currentDraw = draw;
-        apiState->currentRead = read;
+        apiState->currentDisplay = NULL;
+        apiState->currentDraw = None;
+        apiState->currentRead = None;
+        apiState->currentContext = NULL;
         apiState->currentVendor = NULL;
 
         /* Update the GLX dispatch table */
@@ -576,6 +577,7 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         apiState->currentDraw = draw;
         apiState->currentRead = read;
         apiState->currentVendor = newVendor;
+        apiState->currentContext = context;
 
         /* Update the GLX dispatch table */
         apiState->currentStaticDispatch = *ppDispatch;
@@ -601,7 +603,6 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         ret = __glDispatchMakeCurrent(
             &apiState->glas,
             newVendor->glDispatch,
-            (void *)context,
             newVendor->vendorID,
             newVendor->staticDispatch->glxvc.patchCallbacks
         );
@@ -621,17 +622,18 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
 
     const __GLXdispatchTableStatic *pDispatch;
     Bool tmpRet, ret;
+    __GLXAPIState *oldApiState;
     GLXDrawable oldDraw, oldRead;
     GLXContext oldContext;
     Bool oldContextNeedsUnmap;
 
     // Look up the current context and drawables. If the current context and
     // drawables are the same as the new ones, then return early.
-    oldContext = __glXGetCurrentContext();
-    if (oldContext != NULL) {
-        __GLXAPIState *oldApiState = __glXGetCurrentAPIState();
+    oldApiState = __glXGetCurrentAPIState();
+    if (oldApiState != NULL) {
         oldDraw = oldApiState->currentDraw;
         oldRead = oldApiState->currentRead;
+        oldContext = oldApiState->currentContext;
         if (dpy == oldApiState->currentDisplay && context == oldContext
                 && draw == oldDraw && read == oldRead) {
             return True;
@@ -642,6 +644,7 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
         }
         oldDraw = None;
         oldRead = None;
+        oldContext = NULL;
     }
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
