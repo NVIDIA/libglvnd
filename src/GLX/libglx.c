@@ -475,38 +475,157 @@ void NotifyVendorOfXError(int screen,
     }
 }
 
-static Bool MakeContextCurrentInternal(Display *dpy,
-                                       GLXDrawable draw,
-                                       GLXDrawable read,
-                                       GLXContext context,
-                                       char callerOpcode,
-                                       const __GLXdispatchTableStatic **ppDispatch)
+static Bool InternalLoseCurrent(__GLXAPIState *apiState)
 {
-    __GLXAPIState *apiState;
-    __GLXvendorInfo *oldVendor, *newVendor;
     Bool ret;
-    int screen;
+    Bool oldContextNeedsUnmap;
 
-    DBG_PRINTF(0, "dpy = %p, draw = %x, read = %x, context = %p\n",
-               dpy, (unsigned)draw, (unsigned)read, context);
+    if (apiState->currentVendor == NULL) {
+        return True;
+    }
 
-    assert(callerOpcode == X_GLXMakeCurrent ||
-           callerOpcode == X_GLXMakeContextCurrent);
+    assert (apiState->currentDisplay != NULL);
 
-    apiState = __glXGetCurrentAPIState();
-    oldVendor = apiState->currentVendor;
-    screen = __glXScreenFromContext(context);
-
-    if (context && (screen < 0)) {
-        /*
-         * XXX: We can run into this corner case if a GLX client calls
-         * glXDestroyContext() on a current context, loses current to this
-         * context (causing it to be freed), then tries to make current to the
-         * context again.  This is incorrect application behavior, but we should
-         * attempt to handle this failure gracefully.
-         */
+    if (!UpdateCurrentContext(NULL, apiState->currentContext, False, &oldContextNeedsUnmap)) {
         return False;
     }
+
+    ret = apiState->currentVendor->staticDispatch->glx14ep.makeCurrent(apiState->currentDisplay, None, NULL);
+    if (!ret) {
+        return False;
+    }
+
+    __glDispatchLoseCurrent();
+
+    if (oldContextNeedsUnmap) {
+        __glXRemoveScreenContextMapping(NULL, apiState->currentContext);
+    }
+
+    /* Update the current display and drawable(s) in this apiState */
+    apiState->currentDisplay = NULL;
+    apiState->currentDraw = None;
+    apiState->currentRead = None;
+    apiState->currentContext = NULL;
+    apiState->currentVendor = NULL;
+
+    /* Update the GLX dispatch table */
+    apiState->currentStaticDispatch = NULL;
+    apiState->currentDynDispatch = NULL;
+    return True;
+}
+
+/**
+ * Calls into the vendor library to set the current context, and then updates
+ * the API state fields to match.
+ *
+ * This function does *not* call into libGLdispatch, so it can only switch
+ * to another context with the same vendor.
+ *
+ * If this function succeeds, then it will update the current display, context,
+ * and drawables in \p apiState.
+ *
+ * If it fails, then it will leave \p apiState unmodified. It's up to the
+ * vendor library to ensure that the old context is still current in that case.
+ */
+static Bool InternalMakeCurrentVendor(
+        Display *dpy, GLXDrawable draw, GLXDrawable read,
+        GLXContext context, char callerOpcode,
+        __GLXAPIState *apiState,
+        __GLXvendorInfo *vendor)
+{
+    Bool ret;
+
+    assert(apiState->currentVendor == vendor);
+
+    if (callerOpcode == X_GLXMakeCurrent && draw == read) {
+        ret = vendor->staticDispatch->glx14ep.makeCurrent(dpy, draw, context);
+    } else {
+        ret = vendor->staticDispatch->glx14ep.makeContextCurrent(dpy,
+                                                    draw,
+                                                    read,
+                                                    context);
+    }
+
+    if (ret) {
+        apiState->currentDisplay = dpy;
+        apiState->currentDraw = draw;
+        apiState->currentRead = read;
+        apiState->currentContext = context;
+    }
+
+    return ret;
+}
+
+/**
+ * Makes a context current. This function handles both the vendor library and
+ * libGLdispatch.
+ *
+ * There must not be a current API state in libGLdispatch when this function is
+ * called.
+ *
+ * If this function fails, then it will release the context and dispatch state
+ * before returning.
+ */
+static Bool InternalMakeCurrentDispatch(
+        Display *dpy, GLXDrawable draw, GLXDrawable read,
+        GLXContext context, char callerOpcode,
+        __GLXAPIState *apiState,
+        __GLXvendorInfo *vendor)
+{
+    Bool ret;
+
+    assert(__glDispatchGetCurrentAPIState() == NULL);
+    assert(apiState->currentVendor == NULL);
+
+    if (!UpdateCurrentContext(context, NULL, False, NULL)) {
+        return False;
+    }
+
+    ret = __glDispatchMakeCurrent(
+        &apiState->glas,
+        vendor->glDispatch,
+        vendor->vendorID,
+        vendor->staticDispatch->glxvc.patchCallbacks
+    );
+
+    if (ret) {
+        /* Update the vendor pointers and the GLX dispatch table */
+        apiState->currentVendor = vendor;
+        apiState->currentStaticDispatch = vendor->staticDispatch;
+        apiState->currentDynDispatch = vendor->dynDispatch;
+
+        ret = InternalMakeCurrentVendor(dpy, draw, read, context, callerOpcode,
+                apiState, vendor);
+        if (!ret) {
+            __glDispatchLoseCurrent();
+            apiState->currentVendor = NULL;
+            apiState->currentStaticDispatch = NULL;
+            apiState->currentDynDispatch = NULL;
+        }
+    }
+
+    if (!ret) {
+        UpdateCurrentContext(NULL, context, False, NULL);
+    }
+
+    return ret;
+}
+
+/**
+ * A common function to handle glXMakeCurrent and glXMakeContextCurrent.
+ */
+static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
+                                  GLXDrawable read, GLXContext context,
+                                  char callerOpcode)
+{
+    __glXThreadInitialize();
+    __GLXAPIState *apiState;
+    __GLXvendorInfo *oldVendor, *newVendor;
+    Display *oldDpy;
+    GLXDrawable oldDraw, oldRead;
+    GLXContext oldContext;
+    Bool ret;
+    int screen;
 
     /*
      * If <ctx> is NULL and <draw> and <read> are not None, or if <draw> or
@@ -524,131 +643,27 @@ static Bool MakeContextCurrentInternal(Display *dpy,
         return False;
     }
 
-    /*
-     * If we have a valid screen number, there must be a valid vendor associated
-     * with that screen.
-     */
-    newVendor = __glXLookupVendorByScreen(dpy, screen);
-    assert(!context || newVendor);
-
-    if (oldVendor != newVendor) {
-        // Lose current on the old context before proceeding
-        if (oldVendor) {
-            const __GLXdispatchTableStatic *oldDispatch =
-                oldVendor->staticDispatch;
-            assert(oldDispatch);
-            ret = oldDispatch->glx14ep.makeCurrent(dpy,
-                                                   None,
-                                                   NULL);
-            if (!ret) {
-                return False;
-            }
-        }
+    apiState = __glXGetCurrentAPIState();
+    if (apiState == NULL) {
+        return False;
     }
 
-    /* Save the new dispatch table for use by caller */
-    assert(!newVendor || newVendor->staticDispatch);
-    *ppDispatch = newVendor ? newVendor->staticDispatch : NULL;
-
-    if (!context) {
-        /*
-         * Call into GLdispatch to lose current and update the context and GL
-         * dispatch table
-         */
-        __glDispatchLoseCurrent();
-
-        /* Update the current display and drawable(s) in this apiState */
-        apiState->currentDisplay = NULL;
-        apiState->currentDraw = None;
-        apiState->currentRead = None;
-        apiState->currentContext = NULL;
-        apiState->currentVendor = NULL;
-
-        /* Update the GLX dispatch table */
-        apiState->currentStaticDispatch = NULL;
-        apiState->currentDynDispatch = NULL;
-
+    oldVendor = apiState->currentVendor;
+    oldDpy = apiState->currentDisplay;
+    oldDraw = apiState->currentDraw;
+    oldRead = apiState->currentRead;
+    oldContext = apiState->currentContext;
+    if (context == NULL && oldContext == NULL)
+    {
+        // If both contexts are NULL, then ignore the other parameters and
+        // return early.
         return True;
-    } else {
-        assert(newVendor);
-
-        /* Update the current display and drawable(s) in this apiState */
-        apiState->currentDisplay = dpy;
-        apiState->currentDraw = draw;
-        apiState->currentRead = read;
-        apiState->currentVendor = newVendor;
-        apiState->currentContext = context;
-
-        /* Update the GLX dispatch table */
-        apiState->currentStaticDispatch = *ppDispatch;
-        apiState->currentDynDispatch = newVendor->dynDispatch;
-
-        DBG_PRINTF(0, "GL dispatch = %p\n", apiState->glas.dispatch);
-
-
-        /*
-         * XXX It is possible that these drawables were never seen by
-         * this libGLX.so instance before now.  Since the screen is
-         * known from the context, and the drawable must be on the
-         * same screen if MakeCurrent passed, then record the mapping
-         * of this drawable to the context's screen.
-         */
-        __glXAddScreenDrawableMapping(dpy, draw, screen, newVendor);
-        __glXAddScreenDrawableMapping(dpy, read, screen, newVendor);
-
-        /*
-         * Call into GLdispatch to set up the current context and
-         * GL dispatch table.
-         */
-        ret = __glDispatchMakeCurrent(
-            &apiState->glas,
-            newVendor->glDispatch,
-            newVendor->vendorID,
-            newVendor->staticDispatch->glxvc.patchCallbacks
-        );
-
-        return ret;
     }
-}
-
-/**
- * A common function to handle glXMakeCurrent and glXMakeContextCurrent.
- */
-static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
-                                  GLXDrawable read, GLXContext context,
-                                  char callerOpcode)
-{
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch;
-    Bool ret;
-    __GLXAPIState *oldApiState;
-    GLXDrawable oldDraw, oldRead;
-    GLXContext oldContext;
-    Bool oldContextNeedsUnmap;
-
-    // This variable is set, but only used in asserts, so tell the compiler not
-    // to warn about it on a release build when asserts are disabled.
-    Bool tmpRet __attribute__((unused));
-
-    // Look up the current context and drawables. If the current context and
-    // drawables are the same as the new ones, then return early.
-    oldApiState = __glXGetCurrentAPIState();
-    if (oldApiState != NULL) {
-        oldDraw = oldApiState->currentDraw;
-        oldRead = oldApiState->currentRead;
-        oldContext = oldApiState->currentContext;
-        if (dpy == oldApiState->currentDisplay && context == oldContext
-                && draw == oldDraw && read == oldRead) {
-            return True;
-        }
-    } else {
-        if (context == NULL) {
-            return True;
-        }
-        oldDraw = None;
-        oldRead = None;
-        oldContext = NULL;
+    if (dpy == oldDpy && context == oldContext
+            && draw == oldDraw && read == oldRead) {
+        // The current display, context, and drawables are the same, so just
+        // return.
+        return True;
     }
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
@@ -659,67 +674,87 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
         return False;
     }
 
-    if (oldContext != context) {
-        if (!UpdateCurrentContext(context, oldContext, False, &oldContextNeedsUnmap)) {
+    if (context != NULL) {
+        screen = __glXScreenFromContext(context);
+        if (screen < 0) {
             /*
-             * Fail here. Continuing on would mess up our accounting.
+             * XXX: We can run into this corner case if a GLX client calls
+             * glXDestroyContext() on a current context, loses current to this
+             * context (causing it to be freed), then tries to make current to the
+             * context again.  This is incorrect application behavior, but we should
+             * attempt to handle this failure gracefully.
              */
             LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
             return False;
         }
+        newVendor = __glXLookupVendorByScreen(dpy, screen);
+        assert(newVendor != NULL);
+    } else {
+        newVendor = NULL;
     }
 
-    ret = MakeContextCurrentInternal(dpy,
-                                     draw,
-                                     read,
-                                     context,
-                                     callerOpcode,
-                                     &pDispatch);
-    if (ret) {
-        assert(!context || pDispatch);
-        if (pDispatch) {
-            if (callerOpcode == X_GLXMakeCurrent && draw == read) {
-                ret = pDispatch->glx14ep.makeCurrent(dpy, draw, context);
-            } else {
-                ret = pDispatch->glx14ep.makeContextCurrent(dpy,
-                                                            draw,
-                                                            read,
-                                                            context);
-            }
-            if (!ret) {
-                // Restore the original current values
-                tmpRet = MakeContextCurrentInternal(dpy,
-                                                    oldDraw,
-                                                    oldRead,
-                                                    oldContext,
-                                                    callerOpcode,
-                                                    &pDispatch);
-                assert(tmpRet);
-                if (pDispatch) {
-                    tmpRet = pDispatch->glx14ep.makeContextCurrent(dpy,
-                                                                oldDraw,
-                                                                oldRead,
-                                                                oldContext);
-                    assert(tmpRet);
-                }
-            }
-        }
-    }
-
-    if (oldContext != context) {
+    if (oldVendor == newVendor) {
         /*
-         * If the make current operation failed, restore the original context.
+         * We're switching between two contexts that use the same vendor. That
+         * means the dispatch table is also the same, which is the only thing
+         * that libGLdispatch cares about. Call into the vendor library to
+         * switch contexts, but don't call into libGLdispatch.
          */
-        if (!ret) {
-            tmpRet = UpdateCurrentContext(oldContext, context, oldContextNeedsUnmap, NULL);
-            assert(tmpRet);
-        } else if (oldContextNeedsUnmap) {
-            __glXRemoveScreenContextMapping(NULL, oldContext);
+        Bool oldContextNeedsUnmap = False;
+        ret = True;
+        if (oldContext != context) {
+            ret = UpdateCurrentContext(context, oldContext, False, &oldContextNeedsUnmap);
+        }
+        if (ret) {
+            ret = InternalMakeCurrentVendor(dpy, draw, read, context, callerOpcode,
+                    apiState, newVendor);
+        }
+        if (ret && oldContextNeedsUnmap) {
+            __glXRemoveScreenContextMapping(NULL, apiState->currentContext);
+        }
+    } else if (newVendor == NULL) {
+        /*
+         * We have a current context and we're releasing it.
+         */
+        assert(context == NULL);
+        ret = InternalLoseCurrent(apiState);
+    } else if (oldVendor == NULL) {
+        /*
+         * We don't have a current context, so we only need to make the new one
+         * current.
+         */
+        ret = InternalMakeCurrentDispatch(dpy, draw, read, context, callerOpcode,
+                apiState, newVendor);
+    } else {
+        /*
+         * We're switching between contexts with different vendors.
+         *
+         * This gets tricky because we have to call into both vendor libraries
+         * and libGLdispatch. Any of those can fail, and if it does, then we
+         * have to make sure libGLX, libGLdispatch, and the vendor libraries
+         * all agree on what the current context is.
+         *
+         * To do that, we'll first release the current context, and then make
+         * the new context current.
+         */
+        ret = InternalLoseCurrent(apiState);
+        if (ret) {
+            ret = InternalMakeCurrentDispatch(dpy, draw, read, context, callerOpcode,
+                    apiState, newVendor);
+            if (!ret) {
+                /*
+                 * Try to restore the old context. Note that this can fail if
+                 * the old context was marked for deletion. If that happens,
+                 * then we'll end up with no current context instead, but we
+                 * should at least still be in a consistent state.
+                 */
+                InternalMakeCurrentDispatch(oldDpy, oldDraw, oldRead, oldContext,
+                        callerOpcode, apiState, oldVendor);
+            }
         }
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-
     return ret;
 }
 
