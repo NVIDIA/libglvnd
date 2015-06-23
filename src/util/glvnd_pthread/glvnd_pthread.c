@@ -195,22 +195,29 @@ static int st_once(glvnd_once_t *once_control, void (*init_routine)(void))
 
 static int st_key_create(glvnd_key_t *key, void (*destr_function)(void *))
 {
+    key->data = malloc(sizeof(void *));
+    if (key->data == NULL)
+    {
+        return ENOMEM;
+    }
     return 0;
 }
 
 static int st_key_delete(glvnd_key_t key)
 {
+    free(key.data);
     return 0;
 }
 
 static int st_setspecific(glvnd_key_t key, const void *p)
 {
+    (*key.data) = (void *) p;
     return 0;
 }
 
 static void *st_getspecific(glvnd_key_t key)
 {
-    return NULL;
+    return *(key.data);
 }
 
 /* Multi-threaded functions */
@@ -324,22 +331,22 @@ static int mt_once(glvnd_once_t *once_control, void (*init_routine)(void))
 
 static int mt_key_create(glvnd_key_t *key, void (*destr_function)(void *))
 {
-    return pthreadRealFuncs.key_create(key, destr_function);
+    return pthreadRealFuncs.key_create(&key->key, destr_function);
 }
 
 static int mt_key_delete(glvnd_key_t key)
 {
-    return pthreadRealFuncs.key_delete(key);
+    return pthreadRealFuncs.key_delete(key.key);
 }
 
 static int mt_setspecific(glvnd_key_t key, const void *p)
 {
-    return pthreadRealFuncs.setspecific(key, p);
+    return pthreadRealFuncs.setspecific(key.key, p);
 }
 
 static void *mt_getspecific(glvnd_key_t key)
 {
-    return pthreadRealFuncs.getspecific(key);
+    return pthreadRealFuncs.getspecific(key.key);
 }
 
 void glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)

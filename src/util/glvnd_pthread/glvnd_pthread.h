@@ -78,7 +78,10 @@ typedef struct _glvnd_thread_t {
 
 typedef pthread_attr_t glvnd_thread_attr_t;
 
-typedef pthread_key_t glvnd_key_t;
+typedef union {
+    pthread_key_t key;
+    void **data;
+} glvnd_key_t;
 #define GLVND_KEYS_MAX PTHREAD_KEYS_MAX
 
 /*!
