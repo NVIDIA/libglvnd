@@ -75,10 +75,7 @@ typedef struct __GLXcurrentContextHashRec {
 static DEFINE_INITIALIZED_LKDHASH(__GLXcurrentContextHash,
                                   __glXCurrentContextHash);
 
-static Bool UpdateCurrentContext(GLXContext newCtx,
-                                 GLXContext tsdCtx,
-                                 Bool needsUnmapNew,
-                                 Bool *needsUnmapOld);
+static Bool UpdateCurrentContext(GLXContext newCtx, GLXContext oldCtx);
 
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
@@ -229,7 +226,6 @@ void DisplayClosed(Display *dpy)
 static void ThreadDestroyed(__GLdispatchAPIState *apiState)
 {
     __GLXAPIState *glxState = (__GLXAPIState *) apiState;
-    Bool needsUnmap;
 
     /*
      * If a GLX context is current in this thread, remove it from the
@@ -239,12 +235,8 @@ static void ThreadDestroyed(__GLdispatchAPIState *apiState)
      * to the current context.
      */
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-    UpdateCurrentContext(NULL, glxState->currentContext, False, &needsUnmap);
+    UpdateCurrentContext(NULL, glxState->currentContext);
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
-
-    if (needsUnmap) {
-        __glXRemoveScreenContextMapping(NULL, glxState->currentContext);
-    }
 
     // Free the API state struct.
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXAPIStateHash);
@@ -335,73 +327,73 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
 }
 
 /*!
- * Updates the current context.  This function handles:
+ * Updates the current context.
  *
- * - Adding the new current context newCtx to the process-global
- *   __glXCurrentContextHash and updating this thread's TSD entry to
- *   contain this context
- * - Removing the old current context oldCtx from __glXCurrentContextHash
+ * If both newCtx and oldCtx are not NULL, then it will replace the old context
+ * with the new context in the __glXCurrentContextHash table.
  *
- * \param[in] ctx The context to make current
- * \param[in] oldCtx The previous current context, or NULL if no context was
+ * This function will remove the old context from the __glXCurrentContextHash
+ * hashtable, and add the new context to it.
+ *
+ * If the old context was flagged for deletion, then it will also remove the
+ * context from the (context, screen) mapping.
+ *
+ * \note that the only case where this function can fail is if \p oldCtx is NULL
+ * and \p newCtx is not NULL, because it has to allocate a new hashtable entry.
+ *
+ * \note __glXCurrentContextHash must be write-locked before calling this
+ * function.
+ *
+ * \param[in] newCtx The new context to make current, or \c NULL to just
+ * release the current context.
+ * \param[in] oldCtx The previous current context, or \c NULL if no context was
  * current before.
- * \param[in] needsUnmapNew True when the new context's screen mapping
- * should be removed when it is no longer current (this can happen if the make
- * current operation failed and we are restoring a context which will be
- * destroyed when it loses current) or False otherwise.
- * \param[out] needsUnmapOld If non-NULL, points to a boolean which is set to
- * indicate whether the old context's screen mapping needs to be removed
- * (because the old context is about to be destroyed).
  *
- * Returns True on success, False otherwise.
- *
- * Note: __glXCurrentContextHash must be write-locked before calling this
- * function!
- *
- * Returns True on success.
+ * \return True on success, False otherwise.
  */
 static Bool UpdateCurrentContext(GLXContext newCtx,
-                                 GLXContext oldCtx,
-                                 Bool needsUnmapNew,
-                                 Bool *needsUnmapOld)
+                                 GLXContext oldCtx)
 {
-    __GLXcurrentContextHash *pOldEntry,
-                            *pTmpEntry,
-                            *pNewEntry;
-    if (needsUnmapOld) {
-        *needsUnmapOld = False;
-    }
+    __GLXcurrentContextHash *pEntry;
 
-    // Attempt the allocation first, so we can bail out early
-    // on failure.
-    if (newCtx) {
-        pNewEntry = malloc(sizeof(*pNewEntry));
-        if (!pNewEntry) {
+    if (oldCtx != NULL) {
+        Bool needsUnmap;
+
+        HASH_FIND(hh, _LH(__glXCurrentContextHash), &oldCtx, sizeof(oldCtx), pEntry);
+        assert(pEntry);
+
+        HASH_DELETE(hh, _LH(__glXCurrentContextHash), pEntry);
+        needsUnmap = pEntry->needsUnmap;
+
+        if (newCtx != NULL)
+        {
+            // Switching to a new context. Reuse the same structure so that we
+            // don't have to worry about malloc failing.
+            pEntry->ctx = newCtx;
+            pEntry->needsUnmap = False;
+            HASH_ADD(hh, _LH(__glXCurrentContextHash), ctx, sizeof(newCtx), pEntry);
+        }
+        else
+        {
+            // We're releasing the current context, so free the structure.
+            free(pEntry);
+        }
+
+        if (needsUnmap) {
+            __glXRemoveScreenContextMapping(NULL, oldCtx);
+        }
+    } else {
+        // We're adding a current context but we didn't have one before, so
+        // allocate a new hash entry.
+        assert(newCtx != NULL);
+
+        pEntry = malloc(sizeof(*pEntry));
+        if (!pEntry) {
             return False;
         }
-        pNewEntry->ctx = newCtx;
-        pNewEntry->needsUnmap = needsUnmapNew;
-    } else {
-        pNewEntry = NULL;
-    }
-
-    if (oldCtx) {
-        // Remove the old context from the hash table, if not NULL
-        HASH_FIND(hh, _LH(__glXCurrentContextHash), &oldCtx, sizeof(oldCtx), pOldEntry);
-
-        assert(pOldEntry);
-
-        if (needsUnmapOld) {
-            *needsUnmapOld = pOldEntry->needsUnmap;
-        }
-        HASH_DELETE(hh, _LH(__glXCurrentContextHash), pOldEntry);
-        free(pOldEntry);
-    }
-
-    if (pNewEntry) {
-        HASH_FIND(hh, _LH(__glXCurrentContextHash), &newCtx, sizeof(newCtx), pTmpEntry);
-        assert(!pTmpEntry);
-        HASH_ADD(hh, _LH(__glXCurrentContextHash), ctx, sizeof(newCtx), pNewEntry);
+        pEntry->ctx = newCtx;
+        pEntry->needsUnmap = False;
+        HASH_ADD(hh, _LH(__glXCurrentContextHash), ctx, sizeof(newCtx), pEntry);
     }
 
     return True;
@@ -478,17 +470,12 @@ void NotifyVendorOfXError(int screen,
 static Bool InternalLoseCurrent(__GLXAPIState *apiState)
 {
     Bool ret;
-    Bool oldContextNeedsUnmap;
 
     if (apiState->currentVendor == NULL) {
         return True;
     }
 
     assert (apiState->currentDisplay != NULL);
-
-    if (!UpdateCurrentContext(NULL, apiState->currentContext, False, &oldContextNeedsUnmap)) {
-        return False;
-    }
 
     ret = apiState->currentVendor->staticDispatch->glx14ep.makeCurrent(apiState->currentDisplay, None, NULL);
     if (!ret) {
@@ -497,9 +484,8 @@ static Bool InternalLoseCurrent(__GLXAPIState *apiState)
 
     __glDispatchLoseCurrent();
 
-    if (oldContextNeedsUnmap) {
-        __glXRemoveScreenContextMapping(NULL, apiState->currentContext);
-    }
+    // Remove the context from the current context map.
+    UpdateCurrentContext(NULL, apiState->currentContext);
 
     /* Update the current display and drawable(s) in this apiState */
     apiState->currentDisplay = NULL;
@@ -577,7 +563,7 @@ static Bool InternalMakeCurrentDispatch(
     assert(__glDispatchGetCurrentAPIState() == NULL);
     assert(apiState->currentVendor == NULL);
 
-    if (!UpdateCurrentContext(context, NULL, False, NULL)) {
+    if (!UpdateCurrentContext(context, NULL)) {
         return False;
     }
 
@@ -605,7 +591,7 @@ static Bool InternalMakeCurrentDispatch(
     }
 
     if (!ret) {
-        UpdateCurrentContext(NULL, context, False, NULL);
+        UpdateCurrentContext(NULL, context);
     }
 
     return ret;
@@ -700,17 +686,10 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
          * that libGLdispatch cares about. Call into the vendor library to
          * switch contexts, but don't call into libGLdispatch.
          */
-        Bool oldContextNeedsUnmap = False;
-        ret = True;
-        if (oldContext != context) {
-            ret = UpdateCurrentContext(context, oldContext, False, &oldContextNeedsUnmap);
-        }
+        ret = InternalMakeCurrentVendor(dpy, draw, read, context, callerOpcode,
+                apiState, newVendor);
         if (ret) {
-            ret = InternalMakeCurrentVendor(dpy, draw, read, context, callerOpcode,
-                    apiState, newVendor);
-        }
-        if (ret && oldContextNeedsUnmap) {
-            __glXRemoveScreenContextMapping(NULL, apiState->currentContext);
+            UpdateCurrentContext(context, oldContext);
         }
     } else if (newVendor == NULL) {
         /*
