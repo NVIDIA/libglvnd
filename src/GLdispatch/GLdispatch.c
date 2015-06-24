@@ -638,10 +638,10 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
                                          int vendorID,
                                          const __GLdispatchPatchCallbacks *patchCb)
 {
-    __GLdispatchAPIState *curApiState = __glDispatchGetCurrentAPIState();
-    __GLdispatchTable *curDispatch;
-
-    curDispatch = curApiState ? curApiState->dispatch : NULL;
+    if (__glDispatchGetCurrentAPIState() != NULL) {
+        assert(!"__glDispatchMakeCurrent called with a current API state\n");
+        return GL_FALSE;
+    }
 
     // We need to fix up the dispatch table if it hasn't been
     // initialized, or there are new dynamic entries which were
@@ -668,16 +668,8 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
         FixupDispatchTable(dispatch);
     }
 
-    if (curDispatch != dispatch) {
-        if (curDispatch) {
-            DispatchCurrentUnref(curDispatch);
-        }
-        DispatchCurrentRef(dispatch);
-    }
-
-    if (!curApiState) {
-        numCurrentContexts++;
-    }
+    DispatchCurrentRef(dispatch);
+    numCurrentContexts++;
 
     UnlockDispatch();
 
@@ -705,17 +697,12 @@ static void LoseCurrentInternal(__GLdispatchAPIState *curApiState,
 
     if (curApiState) {
         numCurrentContexts--;
-    }
-    UnlockDispatch();
-
-    if (curApiState) {
-        LockDispatch();
         DispatchCurrentUnref(curApiState->dispatch);
-        UnlockDispatch();
 
         curApiState->dispatch = NULL;
         curApiState->vendorID = -1;
     }
+    UnlockDispatch();
 
     if (!threadDestroyed) {
         SetCurrentAPIState(NULL);

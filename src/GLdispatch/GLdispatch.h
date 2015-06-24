@@ -183,6 +183,10 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
  * This makes the given API state current, and assigns this API state
  * the passed-in current dispatch table and vendor ID.
  *
+ * When this function is called, the current thread must not already have an
+ * API state. To switch between two API states, first release the old API state
+ * by calling \c __glDispatchLoseCurrent.
+ *
  * If patchCb is not NULL, GLdispatch will attempt to overwrite its
  * entrypoints (and the entrypoints of any loaded interface libraries)
  * using the provided callbacks.  If patchCb is NULL and the entrypoints
@@ -200,6 +204,10 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
 /*!
  * This makes the NOP dispatch table current and sets the current API state to
  * NULL.
+ *
+ * A window system library should only call this if it created the current API
+ * state. That is, if libGLX should not attempt to release an EGL context or
+ * vice-versa.
  */
 PUBLIC void __glDispatchLoseCurrent(void);
 
