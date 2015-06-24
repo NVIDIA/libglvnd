@@ -62,6 +62,14 @@ GLVNDPthreadFuncs pthreadFuncs;
  */
 static int numCurrentContexts;
 
+/**
+ * Private data for each API state.
+ */
+typedef struct __GLdispatchAPIStatePrivateRec {
+    /// A pointer back to the API state.
+    __GLdispatchAPIState *apiState;
+} __GLdispatchAPIStatePrivate;
+
 typedef struct __GLdispatchProcEntryRec {
     char *procName;
 
@@ -659,8 +667,15 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
                                          int vendorID,
                                          const __GLdispatchPatchCallbacks *patchCb)
 {
+    __GLdispatchAPIStatePrivate *priv;
+
     if (__glDispatchGetCurrentAPIState() != NULL) {
         assert(!"__glDispatchMakeCurrent called with a current API state\n");
+        return GL_FALSE;
+    }
+
+    priv = (__GLdispatchAPIStatePrivate *) malloc(sizeof(__GLdispatchAPIStatePrivate));
+    if (priv == NULL) {
         return GL_FALSE;
     }
 
@@ -675,6 +690,7 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
     // If the current entrypoints are unsafe to use with this vendor, bail out.
     if (!CurrentEntrypointsSafeToUse(vendorID)) {
         UnlockDispatch();
+        free(priv);
         return GL_FALSE;
     }
 
@@ -699,6 +715,8 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
      */
     apiState->dispatch = dispatch;
     apiState->vendorID = vendorID;
+    priv->apiState = apiState;
+    apiState->priv = priv;
 
     /*
      * Set the current state in TLS.
@@ -720,6 +738,10 @@ static void LoseCurrentInternal(__GLdispatchAPIState *curApiState,
         numCurrentContexts--;
         DispatchCurrentUnref(curApiState->dispatch);
 
+        if (curApiState->priv != NULL) {
+            free(curApiState->priv);
+            curApiState->priv = NULL;
+        }
         curApiState->dispatch = NULL;
         curApiState->vendorID = -1;
     }

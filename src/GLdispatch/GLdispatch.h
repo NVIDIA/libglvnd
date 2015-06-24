@@ -58,6 +58,11 @@ enum {
     GLDISPATCH_API_EGL
 };
 
+/**
+ * An opaque structure used for internal API state data.
+ */
+struct __GLdispatchAPIStatePrivateRec;
+
 /*!
  * Generic API state structure. The window system binding API libraries subclass
  * from this structure to track API-library specific current state (e.g.
@@ -106,6 +111,17 @@ typedef struct __GLdispatchAPIStateRec {
      * The current (high-level) __GLdispatch table
      */
     __GLdispatchTable *dispatch;
+
+    /*!
+     * Private data for this API state.
+     *
+     * This structure is assigned in \c __glDispatchMakeCurrent, and freed in
+     * \c __glDispatchLoseCurrent.
+     *
+     * The value of this pointer, if any, is an internal detail of
+     * libGLdispatch. The window system library should just ignore it.
+     */
+    struct __GLdispatchAPIStatePrivateRec *priv;
 } __GLdispatchAPIState;
 
 /*!
