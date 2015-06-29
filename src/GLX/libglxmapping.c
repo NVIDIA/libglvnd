@@ -52,10 +52,18 @@
 #if !defined(FALLBACK_VENDOR_NAME)
 /*!
  * This is the vendor name that we'll use as a fallback if we can't otherwise
- * find one. This will be used, for example, if the server doesn't support
- * the x11glvnd extension.
+ * find one.
+ *
+ * The only place where this should happen is if the display connection is to a
+ * remote X server, which might not support the x11glvnd extension, or might
+ * specify a vendor library that's not available to the client. In that case,
+ * only indirect rendering will be possible.
+ *
+ * Eventually, libglvnd should have a dedicated vendor library for indirect
+ * rendering, independent of any hardware vendor. Until then, this will
+ * typically be a symlink to an existing vendor library.
  */
-#define FALLBACK_VENDOR_NAME "default"
+#define FALLBACK_VENDOR_NAME "indirect"
 #endif
 
 /*
