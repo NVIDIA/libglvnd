@@ -1684,6 +1684,10 @@ void __attribute__ ((constructor)) __glXInit(void)
 void _init(void)
 #endif
 {
+    if (__glDispatchGetABIVersion() != GLDISPATCH_ABI_VERSION) {
+        fprintf(stderr, "libGLdispatch ABI version is incompatible with libGLX.\n");
+        abort();
+    }
 
     /* Initialize GLdispatch; this will also initialize our pthreads imports */
     __glDispatchInit();

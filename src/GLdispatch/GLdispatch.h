@@ -35,6 +35,14 @@
 #include "GLdispatchABI.h"
 
 /*!
+ * The current version of the ABI between libGLdispatch and the window system
+ * libraries.
+ *
+ * \see __glDispatchGetABIVersion
+ */
+#define GLDISPATCH_ABI_VERSION 0
+
+/*!
  * \defgroup gldispatch core GL/GLES dispatch and TLS module
  *
  * GLdispatch is a thin wrapper around Mesa's mapi/glapi dispatch table
@@ -105,6 +113,21 @@ typedef struct __GLdispatchAPIStateRec {
  * rewriting.
  */
 typedef void (*__GLdispatchGetOffsetHook)(void *(*lookupStubOffset)(const char *));
+
+/*!
+ * Gets the version number for the ABI between libGLdispatch and the
+ * window-system libraries.
+ *
+ * The current version (which libGLX checks for) is \c GLDISPATCH_ABI_VERSION.
+ *
+ * Note that this only defines the interface between the libGLdispatch and a
+ * window-system library such as libGLX. The interface between libGLX and a
+ * vendor library still uses \c GLX_VENDOR_ABI_VERSION for its version number.
+ *
+ * This function can (and generally should) be called before
+ * \c __glDispatchInit.
+ */
+PUBLIC int __glDispatchGetABIVersion(void);
 
 /*!
  * Initialize GLdispatch with pthreads functions needed for locking.

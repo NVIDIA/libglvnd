@@ -179,6 +179,11 @@ static inline void UnlockDispatch(void)
 
 #define CheckDispatchLocked() assert(dispatchLock.isLocked)
 
+int __glDispatchGetABIVersion(void)
+{
+    return GLDISPATCH_ABI_VERSION;
+}
+
 void __glDispatchInit(void)
 {
     if (clientRefcount == 0) {
