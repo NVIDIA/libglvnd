@@ -103,16 +103,6 @@ typedef struct __GLdispatchAPIStateRec {
      *************************************************************************/
 
     /*!
-     * ID of the current vendor for this state
-     */
-    int vendorID;
-
-    /*!
-     * The current (high-level) __GLdispatch table
-     */
-    __GLdispatchTable *dispatch;
-
-    /*!
      * Private data for this API state.
      *
      * This structure is assigned in \c __glDispatchMakeCurrent, and freed in

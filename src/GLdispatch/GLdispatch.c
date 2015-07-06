@@ -68,6 +68,12 @@ static int numCurrentContexts;
 typedef struct __GLdispatchAPIStatePrivateRec {
     /// A pointer back to the API state.
     __GLdispatchAPIState *apiState;
+
+    /// ID of the current vendor for this state
+    int vendorID;
+
+    /// The current (high-level) __GLdispatch table
+    __GLdispatchTable *dispatch;
 } __GLdispatchAPIStatePrivate;
 
 typedef struct __GLdispatchProcEntryRec {
@@ -713,8 +719,8 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
     /*
      * Update the API state with the new values.
      */
-    apiState->dispatch = dispatch;
-    apiState->vendorID = vendorID;
+    apiState->priv->dispatch = dispatch;
+    apiState->priv->vendorID = vendorID;
     priv->apiState = apiState;
     apiState->priv = priv;
 
@@ -736,14 +742,14 @@ static void LoseCurrentInternal(__GLdispatchAPIState *curApiState,
 
     if (curApiState) {
         numCurrentContexts--;
-        DispatchCurrentUnref(curApiState->dispatch);
-
         if (curApiState->priv != NULL) {
+            if (curApiState->priv->dispatch != NULL) {
+                DispatchCurrentUnref(curApiState->priv->dispatch);
+            }
+
             free(curApiState->priv);
             curApiState->priv = NULL;
         }
-        curApiState->dispatch = NULL;
-        curApiState->vendorID = -1;
     }
     UnlockDispatch();
 

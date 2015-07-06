@@ -253,7 +253,6 @@ static __GLXAPIState *CreateAPIState(glvnd_thread_t tid)
     assert(apiState);
 
     apiState->glas.tag = GLDISPATCH_API_GLX;
-    apiState->glas.vendorID = -1;
     apiState->glas.threadDestroyedCallback = ThreadDestroyed;
 
     apiState->tid = tid;
