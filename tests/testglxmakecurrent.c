@@ -122,7 +122,11 @@ static PFNGLMAKECURRENTTESTRESULTSPROC GetMakeCurrentTestResults(void)
     for (i = 0; i < 3; i++) {
         proc = (PFNGLMAKECURRENTTESTRESULTSPROC)
             glXGetProcAddress((GLubyte *)"glMakeCurrentTestResults");
-        assert((i == 0) || (proc == old_proc));
+        if ((i != 0) && (proc != old_proc))
+        {
+            printError("Got different addresses for glMakeCurrentTestResults: %p, %p\n", proc, old_proc);
+            return NULL;
+        }
         old_proc = proc;
     }
     return proc;
