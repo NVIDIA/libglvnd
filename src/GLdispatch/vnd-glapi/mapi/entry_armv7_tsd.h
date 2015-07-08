@@ -29,13 +29,21 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <assert.h>
 
 #include "entry.h"
 #include "u_macros.h"
 #include "u_current.h"
-#include "u_execmem.h"
 #include "utils_misc.h"
+#include "entryhelpers.h"
+
+#if !defined(STATIC_DISPATCH_ONLY)
+#include "u_execmem.h"
+#else
+#define u_execmem_get_writable(addr) ((void *) (addr))
+#endif
 
 /*
  * See: https://sourceware.org/binutils/docs/as/ARM-Directives.html
@@ -134,19 +142,19 @@ static unsigned char BYTECODE_TEMPLATE[] =
 
 #define ARMV7_BYTECODE_SIZE sizeof(BYTECODE_TEMPLATE)
 
-__asm__(".balign " U_STRINGIFY(ARMV7_ENTRY_SIZE) "\n\t"
-        ".section wtext, \"awx\"\n\t"
-        "armv7_entry_start:\n\t");
+__asm__(".section wtext,\"ax\"\n"
+        ".balign 4096\n"
+        "armv7_entry_start:\n");
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
-__asm__(".balign " U_STRINGIFY(ARMV7_ENTRY_SIZE) "\n\t"
-        ".armv7_entry_end:\n\t"
+__asm__(".balign 4096\n"
+        "armv7_entry_end:\n"
         ".text\n\t");
 
-static const char armv7_entry_start[];
-static const char armv7_entry_end[];
+static char armv7_entry_start[];
+static char armv7_entry_end[];
 
 /*
  * If built with -marm, let the assembler know that we are done with Thumb
@@ -177,22 +185,24 @@ entry_init_public(void)
 void
 entry_generate_default_code(char *entry, int slot)
 {
+    char *writeEntry;
+
     // Make sure the base address has the Thumb mode bit
     assert((uintptr_t)entry & (uintptr_t)0x1);
 
-    // Get the actual beginning of the stub allocation
-    entry -= 1;
+    // Get the pointer to the writable mapping.
+    writeEntry = (char *) u_execmem_get_writable(entry - 1);
 
-    memcpy(entry, BYTECODE_TEMPLATE, ARMV7_BYTECODE_SIZE);
+    memcpy(writeEntry, BYTECODE_TEMPLATE, ARMV7_BYTECODE_SIZE);
 
-    *((uint32_t *)(entry + TEMPLATE_OFFSET_SLOT)) = slot;
-    *((uint32_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
+    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_SLOT)) = slot;
+    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
         (uint32_t)u_current;
-    *((uint32_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
+    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
         (uint32_t)u_current_get_internal;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache(entry, entry + ARMV7_BYTECODE_SIZE);
+    __builtin___clear_cache(writeEntry, writeEntry + ARMV7_BYTECODE_SIZE);
 }
 
 mapi_func
@@ -200,6 +210,24 @@ entry_get_public(int slot)
 {
     // Add 1 to the base address to force Thumb mode when jumping to the stub
     return (mapi_func)(armv7_entry_start + (slot * ARMV7_ENTRY_SIZE) + 1);
+}
+
+int entry_patch_start(void)
+{
+    return entry_patch_start_helper(armv7_entry_start, armv7_entry_end);
+}
+
+int entry_patch_finish(void)
+{
+    return entry_patch_finish_helper(armv7_entry_start, armv7_entry_end);
+}
+
+void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
+{
+    // Get the actual beginning of the stub allocation
+    void *entryBase = (void *) (((uintptr_t) entry) - 1);
+    *execPtr = (const void *) entryBase;
+    *writePtr = u_execmem_get_writable(entryBase);
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)

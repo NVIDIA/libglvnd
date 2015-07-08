@@ -39,6 +39,7 @@ libGL_la_SOURCES =      \
 	libgl.c             \
 	$(MAPI)/entry.c     \
 	$(MAPI)/stub.c      \
+	$(MAPI)/entryhelpers.c \
 	g_libglglxwrapper.c \
 	$(top_srcdir)/src/util/utils_misc.c
 

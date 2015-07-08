@@ -268,7 +268,7 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
     __builtin___clear_cache((char *)entry->entrypointExec - 1,
-                            (char *)entry->entrypointExec + sizeof(STUB_TEMPLATE));
+                            (char *)entry->entrypointExec - 1 + sizeof(STUB_TEMPLATE));
 #else
 #error "Can't happen -- not implemented"
 #endif

@@ -61,6 +61,25 @@ entry_get_public(int slot)
    return public_entries[slot];
 }
 
+int entry_patch_start(void)
+{
+    assert(!"This should never be called");
+    return 0;
+}
+
+int entry_patch_finish(void)
+{
+    assert(!"This should never be called");
+    return 0;
+}
+
+void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
+{
+    assert(!"This should never be called");
+    *writePtr = NULL;
+    *execPtr = NULL;
+}
+
 #if !defined(STATIC_DISPATCH_ONLY)
 mapi_func
 entry_generate(int slot)

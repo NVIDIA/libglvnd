@@ -16,6 +16,7 @@ MAPI_GLAPI_FILES = \
 	$(TOP)/$(MAPI_PREFIX)/mapi_glapi.c \
 	$(TOP)/$(MAPI_PREFIX)/stub.c \
 	$(TOP)/$(MAPI_PREFIX)/table.c \
+	$(TOP)/$(MAPI_PREFIX)/entryhelpers.c \
 	$(MAPI_UTIL_FILES) \
 	$(TOP)/src/util/utils_misc.c
 

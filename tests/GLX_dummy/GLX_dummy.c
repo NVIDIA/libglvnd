@@ -575,15 +575,9 @@ static void patch_armv7_thumb_tsd(char *writeEntry,
 
     *((uint32_t *)(tmpl + offsetAddr)) = (uint32_t)pSawVertex3fv;
 
-    // Make sure the base address has the Thumb mode bit
-    assert((uintptr_t)writeEntry & (uintptr_t)0x1);
-
-    // Get the actual beginning of the stub allocation
-    writeEntry -= 1;
-
     memcpy(writeEntry, tmpl, sizeof(tmpl));
 
-    __builtin___clear_cache(writeEntry, writeEntry + sizeof(tmpl));
+    __builtin___clear_cache((char *) execEntry, (char *) (execEntry + sizeof(tmpl)));
 #else
     assert(0); // Should not be calling this
 #endif

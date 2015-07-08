@@ -29,12 +29,15 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include "u_macros.h"
+#include "entryhelpers.h"
 
 #define X86_64_ENTRY_SIZE 64
 
-__asm__(".pushsection wtext,\"awx\",@progbits\n");
-__asm__(".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"
+__asm__(".section wtext,\"ax\",@progbits\n");
+__asm__(".balign 4096\n"
         "x86_64_entry_start:");
 
 #define STUB_ASM_ENTRY(func)        \
@@ -68,15 +71,20 @@ __asm__(".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"
 #include "mapi_tmp.h"
 
 
-__asm__(".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"
+__asm__(".balign 4096\n"
         "x86_64_entry_end:");
-__asm__(".popsection\n");
+__asm__(".text\n");
 
 #include <string.h>
-#include "u_execmem.h"
 
-static const char x86_64_entry_start[];
-static const char x86_64_entry_end[];
+#if !defined(STATIC_DISPATCH_ONLY)
+#include "u_execmem.h"
+#else
+#define u_execmem_get_writable(addr) ((void *) (addr))
+#endif
+
+static char x86_64_entry_start[];
+static char x86_64_entry_end[];
 
 const int entry_type = ENTRY_X86_64_TSD;
 const int entry_stub_size = X86_64_ENTRY_SIZE;
@@ -118,17 +126,34 @@ entry_init_public(void)
 void
 entry_generate_default_code(char *entry, int slot)
 {
-    memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+    char *writeEntry = (char *) u_execmem_get_writable(entry);
+    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
-    *((uint32_t *) (entry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
-    *((uintptr_t *) (entry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) u_current;
-    *((uintptr_t *) (entry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = (uintptr_t) u_current_get_internal;
+    *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
+    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) u_current;
+    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = (uintptr_t) u_current_get_internal;
 }
 
 mapi_func
 entry_get_public(int slot)
 {
    return (mapi_func) (x86_64_entry_start + slot * X86_64_ENTRY_SIZE);
+}
+
+int entry_patch_start(void)
+{
+    return entry_patch_start_helper(x86_64_entry_start, x86_64_entry_end);
+}
+
+int entry_patch_finish(void)
+{
+    return entry_patch_finish_helper(x86_64_entry_start, x86_64_entry_end);
+}
+
+void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
+{
+    *execPtr = (const void *) entry;
+    *writePtr = u_execmem_get_writable((void *) entry);
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)

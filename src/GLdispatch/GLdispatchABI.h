@@ -82,6 +82,11 @@ enum {
  * Note that if this function fails, then the vendor library can still try to
  * patch other entrypoints.
  *
+ * Note that on ARM, the low-order bit of both \c execPtr and \p writePtr will
+ * be zero, even if the stub uses the thumb instruction set. The vendor library
+ * should use the \c type parameter of \c initiatePatch to determine which
+ * instruction set to use.
+ *
  * \param funcName The function name.
  * \param[out] writePtr The pointer that the vendor library can write to.
  * \param[out] execPtr The pointer to the executable code.

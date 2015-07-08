@@ -26,16 +26,18 @@
  */
 
 #include <assert.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include "utils_misc.h"
 #include "u_macros.h"
+#include "entryhelpers.h"
 
 #define ENTRY_STUB_ALIGN 32
 #define ENTRY_STUB_SIZE ENTRY_STUB_ALIGN
 #define ENTRY_STUB_ALIGN_DIRECTIVE ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n"
 
-__asm__(".section wtext,\"awx\",@progbits\n");
-
-__asm__(ENTRY_STUB_ALIGN_DIRECTIVE
+__asm__(".section wtext,\"ax\",@progbits\n");
+__asm__(".balign 4096\n"
         "x86_64_entry_start:");
 
 #define STUB_ASM_ENTRY(func)                             \
@@ -52,6 +54,9 @@ __asm__(ENTRY_STUB_ALIGN_DIRECTIVE
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
+__asm__(".balign 4096\n"
+        "x86_64_entry_end:");
+
 __asm__(".text\n");
 
 __asm__("x86_64_current_tls:\n\t"
@@ -63,7 +68,12 @@ extern unsigned long
 x86_64_current_tls();
 
 #include <string.h>
+
+#if !defined(STATIC_DISPATCH_ONLY)
 #include "u_execmem.h"
+#else
+#define u_execmem_get_writable(addr) ((void *) (addr))
+#endif
 
 const int entry_type = ENTRY_X86_64_TLS;
 const int entry_stub_size = ENTRY_STUB_SIZE;
@@ -93,7 +103,7 @@ void entry_generate_default_code(char *entry, int slot)
     p = (unsigned int *)&tmpl[14];
     *p = (unsigned int)(8 * slot);
 
-    memcpy(entry, tmpl, sizeof(tmpl));
+    memcpy(u_execmem_get_writable(entry), tmpl, sizeof(tmpl));
 }
 
 void
@@ -101,13 +111,29 @@ entry_init_public(void)
 {
 }
 
-static char
-x86_64_entry_start[];
+static char x86_64_entry_start[];
+static char x86_64_entry_end[];
 
 mapi_func
 entry_get_public(int slot)
 {
    return (mapi_func) (x86_64_entry_start + slot * ENTRY_STUB_SIZE);
+}
+
+int entry_patch_start(void)
+{
+    return entry_patch_start_helper(x86_64_entry_start, x86_64_entry_end);
+}
+
+int entry_patch_finish(void)
+{
+    return entry_patch_finish_helper(x86_64_entry_start, x86_64_entry_end);
+}
+
+void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
+{
+    *execPtr = (const void *) entry;
+    *writePtr = u_execmem_get_writable((void *) entry);
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)

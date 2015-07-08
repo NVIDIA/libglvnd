@@ -58,7 +58,12 @@ __asm__(".balign 32\n"
         "x86_entry_end:");
 
 #include <string.h>
+
+#if !defined(STATIC_DISPATCH_ONLY)
 #include "u_execmem.h"
+#else
+#define u_execmem_get_writable(addr) ((void *) (addr))
+#endif
 
 static const char x86_entry_start[];
 static const char x86_entry_end[];
@@ -74,7 +79,7 @@ entry_init_public(void)
 void
 entry_generate_default_code(char *entry, int slot)
 {
-    assert(0);
+    assert(!"This should never be called");
 }
 
 mapi_func
@@ -83,11 +88,30 @@ entry_get_public(int slot)
    return (mapi_func) ((char *)x86_entry_start + slot * X86_ENTRY_SIZE);
 }
 
+int entry_patch_start(void)
+{
+    assert(!"This should never be called");
+    return 0;
+}
+
+int entry_patch_finish(void)
+{
+    assert(!"This should never be called");
+    return 0;
+}
+
+void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
+{
+    assert(!"This should never be called");
+    *writePtr = NULL;
+    *execPtr = NULL;
+}
+
 #if !defined(STATIC_DISPATCH_ONLY)
 void
 entry_patch(mapi_func entry, int slot)
 {
-   char *code = (char *) entry;
+   char *code = (char *) u_execmem_get_writable(entry);
 
    *((unsigned long *) (code + 11)) = slot * sizeof(mapi_func);
    *((unsigned long *) (code + 22)) = slot * sizeof(mapi_func);
@@ -98,19 +122,21 @@ entry_generate(int slot)
 {
    const char *code_templ = x86_entry_end - X86_ENTRY_SIZE;
    char *code;
+   char *writeEntry;
    mapi_func entry;
 
    code = (char *) u_execmem_alloc(X86_ENTRY_SIZE);
    if (!code)
       return NULL;
 
-   memcpy(code, code_templ, X86_ENTRY_SIZE);
+   writeEntry = (char *) u_execmem_get_writable(code);
+   memcpy(writeEntry, code_templ, X86_ENTRY_SIZE);
    entry = (mapi_func) code;
    entry_patch(entry, slot);
 
    // Adjust the offset of the CALL instruction.
-   assert(*((uint8_t *) (code + 15)) == 0xE8);
-   *((uint32_t *) (code + 16)) += (code_templ - code);
+   assert(*((uint8_t *) (writeEntry + 15)) == 0xE8);
+   *((uint32_t *) (writeEntry + 16)) += (code_templ - code);
 
    return entry;
 }

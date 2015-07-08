@@ -220,8 +220,10 @@ typedef struct __GLdispatchStubPatchCallbacksRec {
     /**
      * Called by libGLdispatch to restore each entrypoint to its normal,
      * unpatched behavior.
+     *
+     * \return GL_TRUE on success, GL_FALSE on failure.
      */
-    void (* restoreFuncs) (void);
+    GLboolean (* restoreFuncs) (void);
 
     /**
      * Returns the address of a function to patch. This may or may not create a

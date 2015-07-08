@@ -37,6 +37,7 @@ libOpenGL_la_SOURCES = \
 	libopengl.c        \
 	$(MAPI)/entry.c    \
 	$(MAPI)/stub.c     \
+	$(MAPI)/entryhelpers.c \
 	$(top_srcdir)/src/util/utils_misc.c
 
 BUILT_SOURCES = glapi_mapi_tmp.h

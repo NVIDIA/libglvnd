@@ -60,4 +60,30 @@ entry_generate_default_code(char *entry, int slot);
 void
 entry_patch(mapi_func entry, int slot);
 
+/**
+ * Called before starting entrypoint patching.
+ *
+ * This function will generally call mprotect(2) to make the static entrypoints
+ * writable.
+ *
+ * \return Non-zero on success, zero on failure.
+ */
+int entry_patch_start(void);
+
+/**
+ * Called after the vendor library finishes patching the entrypoints.
+ *
+ * \return Non-zero on success, zero on failure.
+ */
+int entry_patch_finish(void);
+
+/**
+ * Returns the addresses for an entrypoint that a vendor library can patch.
+ *
+ * \param[in] entry The entrypoint to patch.
+ * \param[out] writePtr The address that the vendor library can write to.
+ * \param[out] execPtr An executable mapping of \p writePtr.
+ */
+void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr);
+
 #endif /* _ENTRY_H_ */

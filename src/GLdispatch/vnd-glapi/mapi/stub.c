@@ -270,21 +270,23 @@ static int stub_allow_override(void)
 
 static GLboolean stubStartPatch(void)
 {
-    if (!stub_allow_override())
-    {
+    if (!stub_allow_override()) {
         return GL_FALSE;
     }
 
-    // Nothing else to do yet.
+    if (!entry_patch_start()) {
+        return GL_FALSE;
+    }
+
     return GL_TRUE;
 }
 
 static void stubFinishPatch(void)
 {
-    // Nothing else to do yet.
+    entry_patch_finish();
 }
 
-static void stubRestoreFuncs(void)
+static void stubRestoreFuncsInternal(void)
 {
     int i, slot;
     const struct mapi_stub *stub;
@@ -308,15 +310,28 @@ static void stubRestoreFuncs(void)
 #endif // !defined(STATIC_DISPATCH_ONLY)
 }
 
+static GLboolean stubRestoreFuncs(void)
+{
+    if (entry_patch_start()) {
+        stubRestoreFuncsInternal();
+        entry_patch_finish();
+        return GL_TRUE;
+    } else {
+        return GL_FALSE;
+    }
+}
+
 static void stubAbortPatch(void)
 {
-    stubRestoreFuncs();
+    stubRestoreFuncsInternal();
+    entry_patch_finish();
 }
 
 static GLboolean stubGetPatchOffset(const char *name, void **writePtr, const void **execPtr)
 {
     const struct mapi_stub *stub;
-    void *addr = NULL;
+    void *writeAddr = NULL;
+    const void *execAddr = NULL;
 
     stub = stub_find_public(name);
 
@@ -327,16 +342,20 @@ static GLboolean stubGetPatchOffset(const char *name, void **writePtr, const voi
 #endif // !defined(STATIC_DISPATCH_ONLY)
 
     if (stub) {
-        addr = stub_get_addr(stub);
-    }
-    if (writePtr != NULL) {
-        *writePtr = addr;
-    }
-    if (execPtr != NULL) {
-        *execPtr = addr;
+        mapi_func addr = stub_get_addr(stub);
+        if (addr != NULL) {
+            entry_get_patch_addresses(addr, &writeAddr, &execAddr);
+        }
     }
 
-    return (addr != NULL ? GL_TRUE : GL_FALSE);
+    if (writePtr != NULL) {
+        *writePtr = writeAddr;
+    }
+    if (execPtr != NULL) {
+        *execPtr = execAddr;
+    }
+
+    return ((writeAddr != NULL && execAddr != NULL) ? GL_TRUE : GL_FALSE);
 }
 
 static int stubGetStubType(void)
