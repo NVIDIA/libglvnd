@@ -200,6 +200,7 @@ static int st_key_create(glvnd_key_t *key, void (*destr_function)(void *))
     {
         return ENOMEM;
     }
+    *(key->data) = NULL;
     return 0;
 }
 
