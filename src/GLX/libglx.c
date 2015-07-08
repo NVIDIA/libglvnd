@@ -621,11 +621,15 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
     __glXThreadInitialize();
 
     const __GLXdispatchTableStatic *pDispatch;
-    Bool tmpRet, ret;
+    Bool ret;
     __GLXAPIState *oldApiState;
     GLXDrawable oldDraw, oldRead;
     GLXContext oldContext;
     Bool oldContextNeedsUnmap;
+
+    // This variable is set, but only used in asserts, so tell the compiler not
+    // to warn about it on a release build when asserts are disabled.
+    Bool tmpRet __attribute__((unused));
 
     // Look up the current context and drawables. If the current context and
     // drawables are the same as the new ones, then return early.

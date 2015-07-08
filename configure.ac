@@ -15,6 +15,9 @@ AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE([1.11 foreign silent-rules])
 AM_SILENT_RULES([yes])
 
+dnl Add an --enable-debug option
+AX_CHECK_ENABLE_DEBUG(no, DEBUG)
+
 dnl Checks for programs.
 AC_PROG_AWK
 AC_PROG_CXX
