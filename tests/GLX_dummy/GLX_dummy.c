@@ -439,8 +439,7 @@ static void dummyNopStub (void)
 }
 
 // XXX non-entry point ABI functions
-static void         *dummyGetProcAddress         (const GLubyte *procName,
-                                                  int isClientAPI)
+static void         *dummyGetProcAddress         (const GLubyte *procName)
 {
     int i;
     for (i = 0; i < ARRAY_LEN(procAddresses); i++) {

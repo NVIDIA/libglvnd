@@ -194,7 +194,7 @@ static GLVNDentrypointStub __glXFindVendorDispatchAddress(const char *procName, 
     // If we didn't find a GLX dispatch function, then check for a normal
     // OpenGL function. This should handle any case where a GL extension
     // function starts with "glX".
-    addr = vendor->staticDispatch->glxvc.getProcAddress((const GLubyte *) procName, 1);
+    addr = vendor->staticDispatch->glxvc.getProcAddress((const GLubyte *) procName);
     if (addr != NULL) {
         addr = __glDispatchGetProcAddress(procName);
     }
@@ -324,7 +324,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
         if (procName) {
             // Get the real address
             addr = dynDispatch->vendor->staticDispatch->
-                glxvc.getProcAddress(procName, GL_FALSE);
+                glxvc.getProcAddress(procName);
         }
 
         LKDHASH_WRLOCK(__glXPthreadFuncs, dynDispatch->hash);

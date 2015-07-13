@@ -307,7 +307,7 @@ static void FixupDispatchTable(__GLdispatchTable *dispatch)
             assert(curProc->procName);
 
             procAddr = (void*)(*dispatch->getProcAddress)(
-                (const GLubyte *)curProc->procName, GL_TRUE);
+                (const GLubyte *)curProc->procName);
 
             tbl[curProc->offset] = procAddr ? procAddr : (void *)noop_func;
             DBG_PRINTF(20, "extProc procName=%s, addr=%p, noop=%p\n",

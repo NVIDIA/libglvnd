@@ -113,8 +113,7 @@ __glapi_inittable_set_remaining_noop(struct _glapi_table *disp,
 void
 _glapi_init_table_from_callback(struct _glapi_table *table,
                                 size_t entries,
-                                void *(*get_proc_addr)(const unsigned char *name,
-                                                       int isClientAPI))
+                                void *(*get_proc_addr)(const unsigned char *name))
 {
 """
 
@@ -126,8 +125,7 @@ footer = """
 body_template = """
     if(!table->%(name)s) {
         void ** procp = (void **) &table->%(name)s;
-        *procp = (*get_proc_addr)((const unsigned char *)"gl%(entry_point)s",
-                                  GL_TRUE);
+        *procp = (*get_proc_addr)((const unsigned char *)"gl%(entry_point)s");
     }
 """
 

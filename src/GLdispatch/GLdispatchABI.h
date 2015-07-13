@@ -51,8 +51,7 @@ typedef struct __GLdispatchTableRec __GLdispatchTable;
 
 typedef void (*__GLdispatchProc)(void);
 
-typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName,
-                                            int isClientAPI);
+typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName);
 
 /*
  * Thread-local implementation used by libglvnd.  This is passed into

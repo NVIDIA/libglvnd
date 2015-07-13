@@ -316,16 +316,28 @@ typedef struct __GLX14EntryPointsRec {
 struct __GLXvendorCallbacksRec {
     /*!
      * This retrieves the pointer to the real GLX or core GL function.
-     * isClientAPI indicates whether libglvnd thinks this function is
-     * from GLX or a client API.  This can be used in vendor libraries
-     * for internal consistency checks.
+     *
+     * \param procName The name of the function.
+     * \return A pointer to a function, or \c NULL if the vendor does not
+     * support the function.
      */
-    void        *(*getProcAddress)        (const GLubyte *procName,
-                                           int isClientAPI);
+    void        *(*getProcAddress)        (const GLubyte *procName);
 
     /*!
      * This retrieves vendor-neutral functions which use the
      * __GLXdispatchTableDynamic API above to dispatch to the correct vendor.
+     *
+     * A vendor library must provide a dispatch function for all GLX functions
+     * that it supports. If \c getDispatchAddress returns NULL, but
+     * \c getProcAddress returns non-NULL, then libGLX will assume that the
+     * function is a GL function, not GLX.
+     *
+     * That allows libGLX to dispatch GL and GLX functions correctly, even in
+     * the case of a GL function that starts with "glX".
+     *
+     * \param procName The name of the function.
+     * \return A pointer to a function, or \c NULL if the vendor does not
+     * support the function or \p procName is not a GLX function.
      */
     void        *(*getDispatchAddress)    (const GLubyte *procName);
 

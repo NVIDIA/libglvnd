@@ -165,8 +165,7 @@ _glapi_create_table_from_handle(void *handle, const char *symbol_prefix);
 _GLAPI_EXPORT void
 _glapi_init_table_from_callback(struct _glapi_table *table,
                                 size_t entries,
-                                void *(*get_proc_addr)(const unsigned char *name,
-                                                       int isClientAPI));
+                                void *(*get_proc_addr)(const unsigned char *name));
 
 
 /*
