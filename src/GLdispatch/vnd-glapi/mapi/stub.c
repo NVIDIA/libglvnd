@@ -69,6 +69,11 @@ stub_compare(const void *key, const void *elem)
 const struct mapi_stub *
 stub_find_public(const char *name)
 {
+   /* Public entry points are stored without their 'gl' prefix */
+   if (name[0] == 'g' && name[1] == 'l') {
+       name += 2;
+   }
+
    return (const struct mapi_stub *) bsearch(name, public_stubs,
          ARRAY_SIZE(public_stubs), sizeof(public_stubs[0]), stub_compare);
 }

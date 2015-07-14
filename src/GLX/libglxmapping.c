@@ -265,22 +265,18 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
 __GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName)
 {
     __GLXextFuncPtr addr = NULL;
-    if (procName[0] == 'g' && procName[1] == 'l') {
-        if (procName[2] == 'X') {
-            /*
-             * For GLX functions, try to generate an entrypoint. We'll plug in
-             * a dispatch function for it if and when we load a vendor library
-             * that supports it.
-             */
-            if (procName[0] == 'g' && procName[1] == 'l' && procName[2] == 'X') {
-                __glXPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
-                addr = (__GLXextFuncPtr) glvndGenerateEntrypoint((const char *) procName);
-                __glXPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
-            }
-        } else {
-            /* For GL functions, request a dispatch stub from libGLdispatch. */
-            addr = __glDispatchGetProcAddress((const char *)procName);
-        }
+    /*
+     * For GLX functions, try to generate an entrypoint. We'll plug in
+     * a dispatch function for it if and when we load a vendor library
+     * that supports it.
+     */
+    if (procName[0] == 'g' && procName[1] == 'l' && procName[2] == 'X') {
+        __glXPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
+        addr = (__GLXextFuncPtr) glvndGenerateEntrypoint((const char *) procName);
+        __glXPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
+    } else {
+        /* For GL functions, request a dispatch stub from libGLdispatch. */
+        addr = __glDispatchGetProcAddress((const char *)procName);
     }
     return addr;
 }

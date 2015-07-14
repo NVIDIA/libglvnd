@@ -127,9 +127,8 @@ _glapi_add_dispatch( const char * const * function_names)
       const struct mapi_stub *stub;
       int slot;
 
-      if (!funcName || funcName[0] != 'g' || funcName[1] != 'l')
-         return -1;
-      funcName += 2;
+      if (!funcName)
+          return -1;
 
       stub = stub_find_public(funcName);
       if (!stub)
@@ -149,7 +148,7 @@ _glapi_add_dispatch( const char * const * function_names)
 
    /* generate missing stubs */
    for (i = 0; function_names[i] != NULL && i < 8; i++) {
-      const char * funcName = function_names[i] + 2;
+      const char * funcName = function_names[i];
       struct mapi_stub *stub;
 
       if (function_stubs[i])
@@ -172,10 +171,8 @@ _glapi_get_stub(const char *name, int generate)
 {
    const struct mapi_stub *stub;
 
-
-   if (!name || name[0] != 'g' || name[1] != 'l')
-      return NULL;
-   name += 2;
+    if (!name)
+        return NULL;
 
    stub = stub_find_public(name);
    if (!stub)
