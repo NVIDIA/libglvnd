@@ -45,15 +45,6 @@
     (*p_ ## proc) args;                                         \
 } while (0)
 
-#define CHECK_PROC_XFAIL(proc) do {                             \
-    printf("checking " #proc "\n");                             \
-    if ((p_ ## proc =                                           \
-         (PTR_ ## proc)glXGetProcAddress((GLubyte *)#proc))) {  \
-        printf("got unexpected " #proc "!\n");                  \
-        goto fail;                                              \
-    }                                                           \
-} while (0)
-
 PROC_DEFINES(void *, glXGetProcAddress, (GLubyte *procName));
 PROC_DEFINES(void, glXWaitGL, (void));
 PROC_DEFINES(void, glVertex3fv, (GLfloat *v));
@@ -61,7 +52,6 @@ PROC_DEFINES(void, glXExampleExtensionFunction,
              (Display *dpy, int screen, int *retval));
 PROC_DEFINES(void, glBogusFunc1, (int a, int b, int c));
 PROC_DEFINES(void, glBogusFunc2, (int a, int b, int c));
-PROC_DEFINES(void, OogaBooga, (int a, int b, int c));
 
 int main(int argc, char **argv)
 {
@@ -120,11 +110,6 @@ int main(int argc, char **argv)
      */
     CHECK_PROC(glBogusFunc1, (0, 0, 0));
     CHECK_PROC(glBogusFunc2, (1, 1, 1));
-
-    /*
-     * This will return NULL since OogaBooga is not prefixed with "gl".
-     */
-    CHECK_PROC_XFAIL(OogaBooga);
 
     // Success!
     return 0;
