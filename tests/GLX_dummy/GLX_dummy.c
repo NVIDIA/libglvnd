@@ -540,12 +540,62 @@ static void patch_x86_tls(char *writeEntry,
 #endif
 }
 
+static void patch_armv7_thumb_tsd(char *writeEntry,
+                                  const char *execEntry,
+                                  int stubSize)
+{
+#if defined(__arm__)
+    char *pSawVertex3fv = (char *)&__glXSawVertex3fv;
+
+    // Thumb bytecode
+    char tmpl[] = {
+        // ldr r0, 1f
+        0x48, 0x02,
+        // ldr r1, [r0]
+        0x68, 0x01,
+        // add r1, r1, #1
+        0xf1, 0x01, 0x01, 0x01,
+        // str r1, [r0]
+        0x60, 0x01,
+        // bx lr
+        0x47, 0x70,
+        // 1:
+        0x00, 0x00, 0x00, 0x00,
+    };
+
+    int offsetAddr = sizeof(tmpl) - 4;
+
+    if (stubSize < sizeof(tmpl)) {
+        return;
+    }
+
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    glvnd_byte_swap16((uint16_t *)tmpl, offsetAddr);
+#endif
+
+    *((uint32_t *)(tmpl + offsetAddr)) = (uint32_t)pSawVertex3fv;
+
+    // Make sure the base address has the Thumb mode bit
+    assert((uintptr_t)writeEntry & (uintptr_t)0x1);
+
+    // Get the actual beginning of the stub allocation
+    writeEntry -= 1;
+
+    memcpy(writeEntry, tmpl, sizeof(tmpl));
+
+    __builtin___clear_cache(writeEntry, writeEntry + sizeof(tmpl));
+#else
+    assert(0); // Should not be calling this
+#endif
+}
+
 static GLboolean dummyCheckPatchSupported(int type, int stubSize)
 {
     switch (type) {
         case __GLDISPATCH_STUB_X86_64_TLS:
         case __GLDISPATCH_STUB_X86_TLS:
         case __GLDISPATCH_STUB_X86_64_TSD:
+        case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
             return GL_TRUE;
         default:
             return GL_FALSE;
@@ -572,6 +622,9 @@ static GLboolean dummyInitiatePatch(int type,
                 break;
             case __GLDISPATCH_STUB_X86_TLS:
                 patch_x86_tls(writeAddr, execAddr, stubSize);
+                break;
+            case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
+                patch_armv7_thumb_tsd(writeAddr, execAddr, stubSize);
                 break;
             default:
                 assert(0);

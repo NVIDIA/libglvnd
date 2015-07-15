@@ -18,10 +18,14 @@ COMMON_CFLAGS = \
 	-I$(top_srcdir)/include        \
 	-Wno-error=unused-function
 
+COMMON_SOURCES = \
+	GLX_dummy.c                         \
+	$(top_srcdir)/src/util/utils_misc.c
+
 libGLX_dummy_la_CFLAGS = $(COMMON_CFLAGS)
-libGLX_dummy_la_SOURCES = GLX_dummy.c
+libGLX_dummy_la_SOURCES = $(COMMON_SOURCES)
 libGLX_dummy_la_LIBADD = $(top_builddir)/src/util/trace/libtrace.la
 
 libGLX_patchentry_la_CFLAGS = $(COMMON_CFLAGS) -DPATCH_ENTRYPOINTS
-libGLX_patchentry_la_SOURCES = GLX_dummy.c
+libGLX_patchentry_la_SOURCES = $(COMMON_SOURCES)
 libGLX_patchentry_la_LIBADD = $(top_builddir)/src/util/trace/libtrace.la

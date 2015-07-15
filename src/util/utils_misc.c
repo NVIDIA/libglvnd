@@ -30,7 +30,6 @@
 #include "utils_misc.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <sys/mman.h>
@@ -238,5 +237,16 @@ void GetTempDirs(const char **dirs)
     }
     dirs[count++] = "/tmp";
     dirs[count] = NULL;
+}
+
+void glvnd_byte_swap16(uint16_t* array, const size_t size)
+{
+    int i;
+
+    assert((size % 2) == 0);
+
+    for (i = 0; i < size / 2; i++) {
+        array[i] = (array[i] << 8) | (array[i] >> 8);
+    }
 }
 

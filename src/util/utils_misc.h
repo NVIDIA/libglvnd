@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, NVIDIA CORPORATION.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -31,6 +31,8 @@
 #define __UTILS_MISC_H
 
 #include <stddef.h>
+#include <stdlib.h>
+#include <stdint.h>
 
 /*
  * Various macros which may prove useful in various places
@@ -80,5 +82,13 @@ int AllocExecPages(size_t size, void **writePtr, void **execPtr);
  * Frees the pages allocated from \p allocExecMem.
  */
 void FreeExecPages(size_t size, void *writePtr, void *execPtr);
+
+/*!
+ * Swaps the bytes of an array.
+ *
+ * @param array The array.
+ * @param size  The size in bytes of the array, must be a multiple of 2.
+ */
+void glvnd_byte_swap16(uint16_t* array, const size_t size);
 
 #endif // !defined(__UTILS_MISC_H)

@@ -39,7 +39,8 @@ libGL_la_SOURCES =      \
 	libgl.c             \
 	$(MAPI)/entry.c     \
 	$(MAPI)/stub.c      \
-	g_libglglxwrapper.c
+	g_libglglxwrapper.c \
+	$(top_srcdir)/src/util/utils_misc.c
 
 BUILT_SOURCES = glapi_mapi_tmp.h g_libglglxwrapper.c
 CLEANFILES = $(BUILT_SOURCES)

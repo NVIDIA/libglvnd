@@ -16,7 +16,8 @@ MAPI_GLAPI_FILES = \
 	$(TOP)/$(MAPI_PREFIX)/mapi_glapi.c \
 	$(TOP)/$(MAPI_PREFIX)/stub.c \
 	$(TOP)/$(MAPI_PREFIX)/table.c \
-	$(MAPI_UTIL_FILES)
+	$(MAPI_UTIL_FILES) \
+	$(TOP)/src/util/utils_misc.c
 
 libglapi_la_SOURCES = \
 	$(MAPI_GLAPI_FILES) \
