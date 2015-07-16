@@ -212,14 +212,17 @@ void GetTempDirs(const char **dirs)
 {
     int count = 0;
 
-    dirs[count] = getenv("TMPDIR");
-    if (dirs[count] != NULL) {
-        count++;
-    }
+    // Don't use the environment variables if we're running as setuid.
+    if (getuid() == geteuid()) {
+        dirs[count] = getenv("TMPDIR");
+        if (dirs[count] != NULL) {
+            count++;
+        }
 
-    dirs[count] = getenv("HOME");
-    if (dirs[count] != NULL) {
-        count++;
+        dirs[count] = getenv("HOME");
+        if (dirs[count] != NULL) {
+            count++;
+        }
     }
     dirs[count++] = "/tmp";
     dirs[count] = NULL;
