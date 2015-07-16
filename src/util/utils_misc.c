@@ -36,6 +36,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #include <assert.h>
 
 #define TEMP_FILENAME_ARRAY_SIZE 4
@@ -147,20 +149,30 @@ void FreeExecPages(size_t size, void *writePtr, void *execPtr)
 
 int OpenTempFile(const char *tempdir)
 {
-    char *templateName = NULL;
     int fd = -1;
 
-    if (glvnd_asprintf(&templateName, "%s/.glvndXXXXXX", tempdir) < 0) {
-        return -1;
-    }
+#if defined(O_TMPFILE)
+    // If it's available, then try creating a file with O_TMPFILE first.
+    fd = open(tempdir, O_RDWR | O_TMPFILE | O_EXCL, S_IRUSR | S_IWUSR);
+#endif // defined(HAVE_O_TMPFILE)
 
-    fd = mkstemp(templateName);
-    if (fd >= 0) {
-        // Unlink the file so that we don't leave any clutter behind.
-        unlink(templateName);
+    if (fd < 0)
+    {
+        // If O_TMPFILE wasn't available or wasn't supported, then try mkstemp
+        // instead.
+        char *templateName = NULL;
+        if (glvnd_asprintf(&templateName, "%s/.glvndXXXXXX", tempdir) < 0) {
+            return -1;
+        }
+
+        fd = mkstemp(templateName);
+        if (fd >= 0) {
+            // Unlink the file so that we don't leave any clutter behind.
+            unlink(templateName);
+        }
+        free(templateName);
+        templateName = NULL;
     }
-    free(templateName);
-    templateName = NULL;
 
     // Make sure we can still use the file after it's unlinked.
     if (fd >= 0) {
