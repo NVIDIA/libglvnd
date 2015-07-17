@@ -31,6 +31,7 @@
 
 #include <pthread.h>
 #include <dlfcn.h>
+#include <string.h>
 
 #if defined(HASH_DEBUG)
 # include <stdio.h>
@@ -421,6 +422,12 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
     __GLXvendorInfo *vendor = NULL;
     Bool locked = False;
     int vendorID = -1;
+
+    // We'll use the vendor name to construct a DSO name, so make sure it
+    // doesn't contain any '/' characters.
+    if (strchr(vendorName, '/') != NULL) {
+        return NULL;
+    }
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, __glXVendorNameHash);
     HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
