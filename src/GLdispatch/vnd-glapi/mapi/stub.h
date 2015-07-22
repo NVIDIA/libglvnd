@@ -29,6 +29,7 @@
 #define _STUB_H_
 
 #include "entry.h"
+#include "glapi/glapi.h"
 
 struct mapi_stub;
 
@@ -56,17 +57,10 @@ mapi_func
 stub_get_addr(const struct mapi_stub *stub);
 #endif // !defined(STATIC_DISPATCH_ONLY)
 
-typedef void (*stub_get_offset_hook)(void *(*)(const char *));
-
-int
-stub_allow_override(void);
-
-void
-stub_get_offsets(
-    stub_get_offset_hook get_offset_hook
-);
-
-void
-stub_restore(void);
+/**
+ * Returns the \c __GLdispatchStubPatchCallbacks struct that should be used for
+ * patching the entrypoints, or \c NULL if patching is not supported.
+ */
+const __GLdispatchStubPatchCallbacks *stub_get_patch_callbacks(void);
 
 #endif /* _STUB_H_ */

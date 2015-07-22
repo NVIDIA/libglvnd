@@ -45,6 +45,7 @@
 #define _GLAPI_H
 
 #include <stddef.h>
+#include <GL/gl.h>
 #include "u_compiler.h"
 
 #ifdef __cplusplus
@@ -178,6 +179,93 @@ _glapi_noop_enable_warnings(unsigned char enable);
 _GLAPI_EXPORT void
 _glapi_set_warning_func(_glapi_proc func);
 
+/**
+ * Functions used for patching entrypoints. These functions are exported from
+ * an entrypoint library such as libGL.so or libOpenGL.so, and used in
+ * libGLdispatch.
+ *
+ * \note The \c startPatch, \c finishPatch, and \c abortPatch functions are
+ * currently unused, but will be used after some changes to
+ * __GLdispatchPatchCallbacks are finished.
+ */
+typedef struct __GLdispatchStubPatchCallbacksRec {
+    /**
+     * Called before trying to patch any entrypoints.
+     *
+     * If startPatch succeeds, then libGLdispatch will call \c getPatchOffsets
+     * to fetch the address of each function.
+     *
+     * After it finishes patching, libGLdispatch will call either
+     * \c finishPatch or \c abortPatch.
+     *
+     * \return GL_TRUE on success, GL_FALSE on failure.
+     */
+    GLboolean (* startPatch) (void);
+
+    /**
+     * Finishes any patching. This is called after \c startPatch if patching
+     * is successful.
+     */
+    void (* finishPatch) (void);
+
+    /**
+     * Finishes any patching, and restores the entrypoints to their original
+     * state.
+     *
+     * This is called if an error occurrs and libGLdispatch has to abort
+     * patching the entrypoints.
+     */
+    void (* abortPatch) (void);
+
+    /**
+     * Called by libGLdispatch to restore each entrypoint to its normal,
+     * unpatched behavior.
+     */
+    void (* restoreFuncs) (void);
+
+    /**
+     * Returns the address of a function to patch. This may or may not create a
+     * new stub function if one doesn't already exist.
+     *
+     * This function is passed to __GLdispatchPatchCallbacks::initiatePatch.
+     */
+    GLboolean (* getPatchOffset) (const char *name, void **writePtr, const void **execPtr);
+
+    /**
+     * Returns the type of the stub functions. This is one of the
+     * __GLDISPATCH_STUB_* values.
+     */
+    int (* getStubType) (void);
+
+    /**
+     * Returns the size of each stub.
+     */
+    int (* getStubSize) (void);
+
+} __GLdispatchStubPatchCallbacks;
+
+/*!
+ * This registers stubs with GLdispatch to be overwritten if a vendor library
+ * explicitly requests custom entrypoint code.  This is used by the wrapper
+ * interface libraries.
+ *
+ * This function returns an ID number, which is passed to
+ * \c __glDispatchUnregisterStubCallbacks to unregister the callbacks.
+ *
+ * \see stub_get_patch_callbacks for the table used for the entrypoints in
+ * libGL, libOpenGL, and libGLdispatch.
+ *
+ * \param callbacks A table of callback functions.
+ * \return A unique ID number, or -1 on failure.
+ */
+_GLAPI_EXPORT int __glDispatchRegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *callbacks);
+
+/*!
+ * This unregisters the GLdispatch stubs, and performs any necessary cleanup.
+ *
+ * \param stubId The ID number returned from \c __glDispatchRegisterStubCallbacks.
+ */
+_GLAPI_EXPORT void __glDispatchUnregisterStubCallbacks(int stubId);
 
 #ifdef __cplusplus
 }

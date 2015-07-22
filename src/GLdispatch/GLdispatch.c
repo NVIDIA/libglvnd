@@ -108,6 +108,8 @@ static int latestGeneration;
  * Dispatch stub list for entrypoint rewriting.
  */
 static struct glvnd_list dispatchStubList;
+static int nextDispatchStubID = 1;
+static int localDispatchStubId = -1;
 
 /*
  * Track the latest generation of the dispatch stub list so that vendor
@@ -126,11 +128,6 @@ static GLint64 dispatchStubListGeneration;
  * IDs must be non-zero.
  */
 static int firstUnusedVendorID = 1;
-
-/*
- * Dispatch stub list for entrypoint rewriting.
- */
-static struct glvnd_list dispatchStubList;
 
 /**
  * The key used to store the __GLdispatchAPIState for the current thread.
@@ -202,8 +199,7 @@ void __glDispatchInit(void)
         UnlockDispatch();
 
         // Register GLdispatch's static entrypoints for rewriting
-        __glDispatchRegisterStubCallbacks(stub_get_offsets,
-                                          stub_restore);
+        localDispatchStubId = __glDispatchRegisterStubCallbacks(stub_get_patch_callbacks());
     }
 
     clientRefcount++;
@@ -497,7 +493,7 @@ static int PatchingIsSafe(void)
     /*
      * Can only patch entrypoints on supported TLS access models
      */
-    if (!stub_allow_override()) {
+    if (glvnd_list_is_empty(&dispatchStubList)) {
         return 0;
     }
 
@@ -513,40 +509,50 @@ static int PatchingIsSafe(void)
 }
 
 typedef struct __GLdispatchStubCallbackRec {
-    void (*get_offsets_func)(__GLdispatchGetOffsetHook func);
-    void (*restore_func)(void);
+    __GLdispatchStubPatchCallbacks callbacks;
+    int id;
+    GLboolean isPatched;
 
     struct glvnd_list entry;
 } __GLdispatchStubCallback;
 
-void __glDispatchRegisterStubCallbacks(
-    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
-    void (*restore_func)(void)
-)
+int __glDispatchRegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *callbacks)
 {
+    if (callbacks == NULL) {
+        return -1;
+    }
+
     __GLdispatchStubCallback *stub = malloc(sizeof(*stub));
-    stub->get_offsets_func = get_offsets_func;
-    stub->restore_func = restore_func;
+    if (stub == NULL) {
+        return -1;
+    }
+
+    memcpy(&stub->callbacks, callbacks, sizeof(__GLdispatchStubPatchCallbacks));
+    stub->isPatched = GL_FALSE;
 
     LockDispatch();
+    stub->id = nextDispatchStubID++;
     glvnd_list_add(&stub->entry, &dispatchStubList);
     dispatchStubListGeneration++;
     UnlockDispatch();
+
+    return stub->id;
 }
 
-void __glDispatchUnregisterStubCallbacks(
-    void (*get_offsets_func)(__GLdispatchGetOffsetHook func),
-    void (*restore_func)(void)
-)
+void __glDispatchUnregisterStubCallbacks(int stubId)
 {
     __GLdispatchStubCallback *curStub, *tmpStub;
+    if (stubId < 0) {
+        return;
+    }
+
     LockDispatch();
 
     glvnd_list_for_each_entry_safe(curStub, tmpStub, &dispatchStubList, entry) {
-        if (get_offsets_func == curStub->get_offsets_func) {
-            assert(restore_func == curStub->restore_func);
-
+        if (curStub->id == stubId) {
             glvnd_list_del(&curStub->entry);
+            free(curStub);
+            break;
         }
     }
 
@@ -599,31 +605,46 @@ static int PatchEntrypoints(
     }
 
     if (patchCb) {
-        GLboolean needOffsets;
+        GLboolean anySuccess = GL_FALSE;
 
-        if (!patchCb->initiatePatch(entry_type,
-                                    entry_stub_size,
-                                    dispatchStubListGeneration,
-                                    &needOffsets)) {
-            // Patching unsupported on this platform
-            return 0;
-        }
-
-        if (needOffsets) {
-            // Fetch offsets for this vendor
-            glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-                stub->get_offsets_func(patchCb->getOffsetHook);
+        glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
+            if (patchCb->checkPatchSupported(stub->callbacks.getStubType(),
+                        stub->callbacks.getStubSize()))
+            {
+                if (stub->callbacks.startPatch()) {
+                    if (patchCb->initiatePatch(stub->callbacks.getStubType(),
+                                stub->callbacks.getStubSize(),
+                                stub->callbacks.getPatchOffset)) {
+                        stub->callbacks.finishPatch();
+                        stub->isPatched = GL_TRUE;
+                        anySuccess = GL_TRUE;
+                    } else {
+                        stub->callbacks.abortPatch();
+                        stub->isPatched = GL_FALSE;
+                    }
+                }
+            } else if (stub->isPatched) {
+                // The vendor library can't patch these stubs, but they were
+                // patched before. Restore them now.
+                stub->callbacks.restoreFuncs();
+                stub->isPatched = GL_FALSE;
             }
         }
 
-        patchCb->finalizePatch();
-
-        stubCurrentPatchCb = patchCb;
-        stubOwnerVendorID = vendorID;
+        if (anySuccess) {
+            stubCurrentPatchCb = patchCb;
+            stubOwnerVendorID = vendorID;
+        } else {
+            stubCurrentPatchCb = NULL;
+            stubOwnerVendorID = 0;
+        }
     } else {
         // Restore the stubs to the default implementation
         glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-            stub->restore_func();
+            if (stub->isPatched) {
+                stub->callbacks.restoreFuncs();
+                stub->isPatched = GL_FALSE;
+            }
         }
 
         stubCurrentPatchCb = NULL;

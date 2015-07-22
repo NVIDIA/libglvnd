@@ -222,41 +222,28 @@ stub_get_addr(const struct mapi_stub *stub)
    return (stub->addr) ? stub->addr : entry_get_public(stub->slot);
 }
 
-int
-stub_allow_override(void)
+static int stub_allow_override(void)
 {
     return !!entry_stub_size;
 }
 
-static void *stub_get_addr_by_name(const char *name)
+static GLboolean stubStartPatch(void)
 {
-    const struct mapi_stub *stub;
-
-    stub = stub_find_public(name);
-
-#if !defined(STATIC_DISPATCH_ONLY)
-    if (!stub) {
-        stub = stub_find_dynamic(name, 0);
-    }
-#endif // !defined(STATIC_DISPATCH_ONLY)
-
-    if (!stub) {
-        return NULL;
+    if (!stub_allow_override())
+    {
+        return GL_FALSE;
     }
 
-    return stub_get_addr(stub);
+    // Nothing else to do yet.
+    return GL_TRUE;
 }
 
-void
-stub_get_offsets(
-    stub_get_offset_hook get_offset_hook
-)
+static void stubFinishPatch(void)
 {
-    get_offset_hook(stub_get_addr_by_name);
+    // Nothing else to do yet.
 }
 
-void
-stub_restore(void)
+static void stubRestoreFuncs(void)
 {
     int i, slot;
     const struct mapi_stub *stub;
@@ -279,3 +266,68 @@ stub_restore(void)
     }
 #endif // !defined(STATIC_DISPATCH_ONLY)
 }
+
+static void stubAbortPatch(void)
+{
+    stubRestoreFuncs();
+}
+
+static GLboolean stubGetPatchOffset(const char *name, void **writePtr, const void **execPtr)
+{
+    const struct mapi_stub *stub;
+    void *addr = NULL;
+
+    stub = stub_find_public(name);
+
+#if !defined(STATIC_DISPATCH_ONLY)
+    if (!stub) {
+        stub = stub_find_dynamic(name, 0);
+    }
+#endif // !defined(STATIC_DISPATCH_ONLY)
+
+    if (stub) {
+        addr = stub_get_addr(stub);
+    }
+    if (writePtr != NULL) {
+        *writePtr = addr;
+    }
+    if (execPtr != NULL) {
+        *execPtr = addr;
+    }
+
+    return (addr != NULL ? GL_TRUE : GL_FALSE);
+}
+
+static int stubGetStubType(void)
+{
+    return entry_type;
+}
+
+static int stubGetStubSize(void)
+{
+    return entry_stub_size;
+}
+
+static const __GLdispatchStubPatchCallbacks stubPatchCallbacks =
+{
+    stubStartPatch,     // startPatch
+    stubFinishPatch,    // finishPatch
+    stubAbortPatch,     // abortPatch
+    stubRestoreFuncs,   // restoreFuncs
+    stubGetPatchOffset, // getPatchOffset
+    stubGetStubType,    // getStubType
+    stubGetStubSize,    // getStubSize
+};
+
+const __GLdispatchStubPatchCallbacks *stub_get_patch_callbacks(void)
+{
+    if (stub_allow_override())
+    {
+        return &stubPatchCallbacks;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
