@@ -150,6 +150,8 @@ static glvnd_key_t threadContextKey;
 
 static void SetCurrentAPIState(__GLdispatchAPIState *apiState);
 static void ThreadDestroyed(void *data);
+static int RegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *callbacks);
+
 
 /*
  * The vendor ID of the current "owner" of the entrypoint code.  0 if
@@ -195,28 +197,37 @@ int __glDispatchGetABIVersion(void)
     return GLDISPATCH_ABI_VERSION;
 }
 
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
+void __attribute__ ((constructor)) __glDispatchOnLoadInit(void)
+#else
+void _init(void)
+#endif
+{
+    // Here, we only initialize the pthreads imports. Everything else we'll
+    // deal with in __glDispatchInit.
+    glvndSetupPthreads(RTLD_DEFAULT, &pthreadFuncs);
+}
+
 void __glDispatchInit(void)
 {
-    if (clientRefcount == 0) {
-        /* Initialize pthreads imports */
-        glvndSetupPthreads(RTLD_DEFAULT, &pthreadFuncs);
+    LockDispatch();
 
+    if (clientRefcount == 0) {
         // Initialize the GLAPI layer.
         _glapi_init();
         pthreadFuncs.key_create(&threadContextKey, ThreadDestroyed);
 
-        LockDispatch();
         glvnd_list_init(&newProcList);
         glvnd_list_init(&extProcList);
         glvnd_list_init(&currentDispatchList);
         glvnd_list_init(&dispatchStubList);
-        UnlockDispatch();
 
         // Register GLdispatch's static entrypoints for rewriting
-        localDispatchStubId = __glDispatchRegisterStubCallbacks(stub_get_patch_callbacks());
+        localDispatchStubId = RegisterStubCallbacks(stub_get_patch_callbacks());
     }
 
     clientRefcount++;
+    UnlockDispatch();
 }
 
 int __glDispatchNewVendorID(void)
@@ -530,7 +541,14 @@ typedef struct __GLdispatchStubCallbackRec {
     struct glvnd_list entry;
 } __GLdispatchStubCallback;
 
-int __glDispatchRegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *callbacks)
+/**
+ * Does the same thing as __glDispatchRegisterStubCallbacks, but requires the
+ * caller to already be holding the dispatch lock.
+ *
+ * This is used in __glDispatchInit to register the libGLdispatch's own stub
+ * functions.
+ */
+int RegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *callbacks)
 {
     if (callbacks == NULL) {
         return -1;
@@ -544,13 +562,20 @@ int __glDispatchRegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *call
     memcpy(&stub->callbacks, callbacks, sizeof(__GLdispatchStubPatchCallbacks));
     stub->isPatched = GL_FALSE;
 
-    LockDispatch();
     stub->id = nextDispatchStubID++;
     glvnd_list_add(&stub->entry, &dispatchStubList);
     dispatchStubListGeneration++;
-    UnlockDispatch();
 
     return stub->id;
+}
+
+int __glDispatchRegisterStubCallbacks(const __GLdispatchStubPatchCallbacks *callbacks)
+{
+    int ret;
+    LockDispatch();
+    ret = RegisterStubCallbacks(callbacks);
+    UnlockDispatch();
+    return ret;
 }
 
 void __glDispatchUnregisterStubCallbacks(int stubId)
@@ -810,42 +835,48 @@ void __glDispatchReset(void)
  */
 void __glDispatchFini(void)
 {
-    __GLdispatchProcEntry *curProc, *tmpProc;
-    assert(clientRefcount > 0);
+    LockDispatch();
+
+    if (clientRefcount <= 0) {
+        assert(clientRefcount > 0);
+        UnlockDispatch();
+        return;
+    }
 
     clientRefcount--;
 
-    LockDispatch();
-    /* This frees the dispatchStubList */
-    UnregisterAllStubCallbacks();
+    if (clientRefcount == 0) {
+        __GLdispatchProcEntry *curProc, *tmpProc;
 
-    /* 
-     * Before we get here, client libraries should
-     * have cleared out the current dispatch list.
-     */
-    assert(glvnd_list_is_empty(&currentDispatchList));
+        /* This frees the dispatchStubList */
+        UnregisterAllStubCallbacks();
 
-    /*
-     * Clear out the getProcAddress lists.
-     */
-    glvnd_list_for_each_entry_safe(curProc, tmpProc, &newProcList, entry) {
-        glvnd_list_del(&curProc->entry);
-        free(curProc->procName);
-        free(curProc);
-    }
+        /* 
+         * Before we get here, client libraries should
+         * have cleared out the current dispatch list.
+         */
+        assert(glvnd_list_is_empty(&currentDispatchList));
 
-    glvnd_list_for_each_entry_safe(curProc, tmpProc, &extProcList, entry) {
-        // XXX: is there any glapi-specific cleanup that needs to happen
-        // here?
-        glvnd_list_del(&curProc->entry);
-        free(curProc->procName);
-        free(curProc);
+        /*
+         * Clear out the getProcAddress lists.
+         */
+        glvnd_list_for_each_entry_safe(curProc, tmpProc, &newProcList, entry) {
+            glvnd_list_del(&curProc->entry);
+            free(curProc->procName);
+            free(curProc);
+        }
+
+        glvnd_list_for_each_entry_safe(curProc, tmpProc, &extProcList, entry) {
+            glvnd_list_del(&curProc->entry);
+            free(curProc->procName);
+            free(curProc);
+        }
+
+        // Clean up GLAPI thread state
+        _glapi_destroy();
     }
 
     UnlockDispatch();
-
-    // Clean up GLAPI thread state
-    _glapi_destroy();
 }
 
 void __glDispatchCheckMultithreaded(void)

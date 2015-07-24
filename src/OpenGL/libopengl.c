@@ -62,4 +62,5 @@ void _fini(void)
 {
     // Unregister the GLdispatch entrypoints
     __glDispatchUnregisterStubCallbacks(patchStubId);
+    __glDispatchFini();
 }

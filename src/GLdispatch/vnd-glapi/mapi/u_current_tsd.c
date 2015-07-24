@@ -54,7 +54,6 @@ void
 u_current_init(void)
 {
     static int firstCall = 1;
-    assert(firstCall); // This should only ever be called once.
     if (firstCall) {
         u_current_init_tsd();
         firstCall = 0;
