@@ -67,7 +67,7 @@ else
 DT_AUX_FLAGS =
 endif
 
-libGL_la_LDFLAGS = -shared -version-info 1 $(DT_AUX_FLAGS)
+libGL_la_LDFLAGS = -shared -version-info 1 $(LINKER_FLAG_NO_UNDEFINED) $(DT_AUX_FLAGS)
 
 AM_CPPFLAGS = \
 	-I$(TOP)/src/GLdispatch/vnd-glapi/mapi \

@@ -65,7 +65,7 @@ libGLX_la_LIBADD += $(X11GLVND_DIR)/libx11glvnd_client.la
 libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
 libGLX_la_LIBADD += $(GLVND_PTHREAD_DIR)/libglvnd_pthread.la
 
-libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic
+libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)
 
 BUILT_SOURCES = g_libglxnoop.c
 

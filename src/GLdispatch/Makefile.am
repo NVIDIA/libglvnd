@@ -41,7 +41,7 @@ libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util/glvnd_pthread
 libGLdispatch_la_CFLAGS += -I$(srcdir)/vnd-glapi/mapi
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/include
 
-libGLdispatch_la_LDFLAGS = -shared
+libGLdispatch_la_LDFLAGS = -shared -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)
 
 libGLdispatch_la_SOURCES = \
 	GLdispatch.c

@@ -56,7 +56,7 @@ else
 DT_AUX_FLAGS =
 endif
 
-libGL_la_LDFLAGS = -shared -version-info 1 $(DT_AUX_FLAGS)
+libOpenGL_la_LDFLAGS = -shared -version-info 0 $(LINKER_FLAG_NO_UNDEFINED) $(DT_AUX_FLAGS)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
@@ -66,4 +66,4 @@ AM_CPPFLAGS = \
 	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_tmp.h\" \
 	-DSTATIC_DISPATCH_ONLY
 
-libGL_la_LIBADD = ../GLdispatch/libGLdispatch.la
+libOpenGL_la_LIBADD = ../GLdispatch/libGLdispatch.la

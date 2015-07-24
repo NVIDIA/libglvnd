@@ -249,6 +249,11 @@ AS_IF([test "x$HAVE_SYNC_INTRINSICS" = "xyes"],
       [AC_DEFINE([HAVE_SYNC_INTRINSICS], 1,
       [Define to 1 if the compiler supports __sync intrinsic functions.])])
 
+# See if the linker supports the --no-undefiend flag.
+AX_CHECK_LINK_FLAG([-Xlinker --no-undefined],
+      [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], ["-Xlinker --no-undefined"])],
+      [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], [""])])
+
 dnl default CFLAGS
 CFLAGS="$CFLAGS -Wall -Werror -std=gnu99 -include config.h -fvisibility=hidden $DEFINES"
 
