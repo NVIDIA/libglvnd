@@ -42,9 +42,20 @@
 #define MAPI_LAST_SLOT (MAPI_TABLE_NUM_STATIC + MAPI_TABLE_NUM_DYNAMIC - 1)
 
 struct mapi_stub {
-   const void *name;
+   /*!
+    * The name of a static stub function. This isn't really a pointer, it's an
+    * offset into public_string_pool.
+    */
+   const void *nameOffset;
+
    int slot;
    mapi_func addr;
+
+   /**
+    * The name of the function. This is only used for dynamic stubs. For static
+    * stubs, nameOffset is used instead.
+    */
+   char *nameBuffer;
 };
 
 /* define public_string_pool and public_stubs */
@@ -58,7 +69,7 @@ stub_compare(const void *key, const void *elem)
    const struct mapi_stub *stub = (const struct mapi_stub *) elem;
    const char *stub_name;
 
-   stub_name = &public_string_pool[(unsigned long) stub->name];
+   stub_name = &public_string_pool[(unsigned long) stub->nameOffset];
 
    return strcmp(name, stub_name);
 }
@@ -83,6 +94,23 @@ static struct mapi_stub dynamic_stubs[MAPI_TABLE_NUM_DYNAMIC];
 static int num_dynamic_stubs;
 static int next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
 
+void stub_cleanup_dynamic(void)
+{
+    int i;
+
+    // TODO: Free the memory for the generated stub functions.
+
+    // Free the copies of the stub names.
+    for (i=0; i<num_dynamic_stubs; i++) {
+        struct mapi_stub *stub = &dynamic_stubs[i];
+        free(stub->nameBuffer);
+        stub->nameBuffer = NULL;
+    }
+
+    num_dynamic_stubs = 0;
+    next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
+}
+
 /**
  * Add a dynamic stub.
  */
@@ -99,12 +127,24 @@ stub_add_dynamic(const char *name)
 
    stub = &dynamic_stubs[idx];
 
+   /*
+    * name is the pointer passed to glXGetProcAddress, so the caller may free
+    * or modify it later. Allocate a copy of the name to store.
+    */
+   stub->nameBuffer = strdup(name);
+   if (stub->nameBuffer == NULL) {
+       return NULL;
+   }
+
    /* dispatch to the last slot, which is reserved for no-op */
    stub->addr = entry_generate(MAPI_LAST_SLOT);
-   if (!stub->addr)
+   if (!stub->addr) {
+      free(stub->nameBuffer);
+      stub->nameBuffer = NULL;
       return NULL;
+   }
 
-   stub->name = (const void *) name;
+   stub->nameOffset = NULL;
    /* to be fixed later */
    stub->slot = -1;
 
@@ -131,7 +171,7 @@ stub_find_dynamic(const char *name, int generate)
 
    count = num_dynamic_stubs;
    for (i = 0; i < count; i++) {
-      if (strcmp(name, (const char *) dynamic_stubs[i].name) == 0) {
+      if (strcmp(name, (const char *) dynamic_stubs[i].nameBuffer) == 0) {
          stub = &dynamic_stubs[i];
          break;
       }
@@ -195,10 +235,11 @@ stub_get_name(const struct mapi_stub *stub)
    const char *name;
 
    if (stub >= public_stubs &&
-       stub < public_stubs + ARRAY_SIZE(public_stubs))
-      name = &public_string_pool[(unsigned long) stub->name];
-   else
-      name = (const char *) stub->name;
+       stub < public_stubs + ARRAY_SIZE(public_stubs)) {
+      name = &public_string_pool[(unsigned long) stub->nameOffset];
+   } else {
+      name = stub->nameBuffer;
+   }
 
    return name;
 }

@@ -35,6 +35,14 @@ struct mapi_stub;
 
 #if !defined(STATIC_DISPATCH_ONLY)
 
+/**
+ * Frees any memory that was allocated for any dynamic stub functions.
+ *
+ * This should only be called when the library is unloaded, since any generated
+ * functions won't work after this.
+ */
+void stub_cleanup_dynamic(void);
+
 const struct mapi_stub *
 stub_find_public(const char *name);
 
