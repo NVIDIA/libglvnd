@@ -719,8 +719,8 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
     /*
      * Update the API state with the new values.
      */
-    apiState->priv->dispatch = dispatch;
-    apiState->priv->vendorID = vendorID;
+    priv->dispatch = dispatch;
+    priv->vendorID = vendorID;
     priv->apiState = apiState;
     apiState->priv = priv;
 
