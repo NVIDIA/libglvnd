@@ -439,6 +439,11 @@ static void dummyNopStub (void)
 }
 
 // XXX non-entry point ABI functions
+static Bool          dummyCheckSupportsScreen    (Display *dpy, int screen)
+{
+    return True;
+}
+
 static void         *dummyGetProcAddress         (const GLubyte *procName)
 {
     int i;
@@ -633,6 +638,7 @@ static const __GLXapiImports dummyImports =
 
     /* Non-entry points */
     .glxvc = {
+        .checkSupportsScreen = dummyCheckSupportsScreen,
         .getProcAddress = dummyGetProcAddress,
         .getDispatchAddress = dummyGetDispatchAddress,
         .setDispatchIndex = dummySetDispatchIndex,
