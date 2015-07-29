@@ -38,6 +38,7 @@ enum {
     ENTRY_X86_TSD,
     ENTRY_PURE_C,
     ENTRY_X86_64_TSD,
+    ENTRY_ARMV7_THUMB_TSD,
     ENTRY_NUM_TYPES
 };
 

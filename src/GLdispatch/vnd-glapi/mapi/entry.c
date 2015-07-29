@@ -46,6 +46,8 @@
 #   else
 #      include "entry_x86-64_tsd.h"
 #   endif
+#elif defined(USE_ARMV7_ASM) && defined(__GNUC__)
+#   include "entry_armv7_tsd.h"
 #else
 #   include "entry_pure_c.h"
 #endif

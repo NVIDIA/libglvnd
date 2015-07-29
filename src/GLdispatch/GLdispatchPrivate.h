@@ -48,6 +48,8 @@ static inline void UNUSED __unused_tls_type_check(void)
     TLS_TYPE_CHECK(X86_64_TLS);
     TLS_TYPE_CHECK(X86_TSD);
     TLS_TYPE_CHECK(PURE_C);
+    TLS_TYPE_CHECK(X86_64_TSD);
+    TLS_TYPE_CHECK(ARMV7_THUMB_TSD);
     TLS_TYPE_CHECK(NUM_TYPES);
 }
 

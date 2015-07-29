@@ -1,4 +1,34 @@
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and/or associated documentation files (the
+ * "Materials"), to deal in the Materials without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Materials, and to
+ * permit persons to whom the Materials are furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * unaltered in all copies or substantial portions of the Materials.
+ * Any additions, deletions, or changes to the original source files
+ * must be clearly indicated in accompanying documentation.
+ *
+ * If only executable code is distributed, then the accompanying
+ * documentation must state that "this software is based in part on the
+ * work of the Khronos Group."
+ *
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+ */
+
 #include "glvnd_genentry.h"
+#include "utils_misc.h"
 
 #include <string.h>
 #include <stdint.h>
@@ -7,9 +37,11 @@
 #include <sys/mman.h>
 #include <assert.h>
 
-#include "utils_misc.h"
+#define USE_ASM (defined(USE_X86_ASM) ||    \
+                 defined(USE_X86_64_ASM) || \
+                 defined(USE_ARMV7_ASM))
 
-#if defined(__GNUC__) && (defined(USE_X86_ASM) || defined(USE_X86_64_ASM))
+#if defined(__GNUC__) && USE_ASM
 
 /// The maximum number of entrypoints that we can generate.
 #define GENERATED_ENTRYPOINT_MAX 4096
@@ -28,7 +60,6 @@ static const int DISPATCH_FUNC_OFFSET = 1;
 static const int DISPATCH_FUNC_OFFSET_REL = 5;
 
 #elif defined(USE_X86_64_ASM)
-
 // For x86_64, the offset from the entrypoint to the dispatch function might be
 // more than 2^31, and there's no JMP instruction that takes a 64-bit offset.
 static unsigned char STUB_TEMPLATE[] =
@@ -38,6 +69,23 @@ static unsigned char STUB_TEMPLATE[] =
 };
 
 static const int DISPATCH_FUNC_OFFSET = 2;
+
+#elif defined(USE_ARMV7_ASM)
+// Thumb bytecode
+static unsigned char STUB_TEMPLATE[] =
+{
+    // ldr ip, 1f
+    0xf8, 0xdf, 0xc0, 0x04,
+    // bx ip
+    0x47, 0x60,
+    // nop
+    0xbf, 0x00,
+    // Offset that needs to be patched
+    // 1:
+    0x00, 0x00, 0x00, 0x00,
+};
+
+static const int DISPATCH_FUNC_OFFSET = 8;
 
 #else
 #error "Can't happen -- not implemented"
@@ -166,6 +214,12 @@ int InitEntrypoints(void)
         }
         entrypointBufferWrite = (uint8_t *) writeBuf;
         entrypointBufferExec = (uint8_t *) execBuf;
+
+#if defined(USE_ARMV7_ASM)
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        glvnd_byte_swap16((uint16_t *)STUB_TEMPLATE, sizeof(STUB_TEMPLATE) - 4);
+#endif
+#endif
     }
     return 0;
 }
@@ -180,6 +234,11 @@ void GenerateEntrypointFunc(GLVNDGenEntrypoint *entry, int index)
 
     // Copy the template into our buffer.
     memcpy(entry->entrypointWrite, STUB_TEMPLATE, sizeof(STUB_TEMPLATE));
+
+#if defined(USE_ARMV7_ASM)
+    // Add 1 to the base address to force Thumb mode when jumping to the stub
+    entry->entrypointExec = (GLVNDentrypointStub)((char *)entry->entrypointExec + 1);
+#endif
 
     // Assign DefaultDispatchFunc as the dispatch function.
     SetDispatchFuncPointer(entry, (GLVNDentrypointStub) DefaultDispatchFunc);
@@ -197,11 +256,19 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
     *((intptr_t *) (code + DISPATCH_FUNC_OFFSET)) = offset;
 
 #elif defined(USE_X86_64_ASM)
-
     // For x86_64, we have to use a movabs instruction, which needs the
     // absolute address of the dispatch function.
     *((GLVNDentrypointStub *) (code + DISPATCH_FUNC_OFFSET)) = dispatch;
 
+#elif defined(USE_ARMV7_ASM)
+    *((uint32_t *)(code + DISPATCH_FUNC_OFFSET)) = (uint32_t)dispatch;
+
+    // Make sure the base address has the Thumb mode bit
+    assert((uintptr_t)entry->entrypointExec & (uintptr_t)0x1);
+
+    // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
+    __builtin___clear_cache((char *)entry->entrypointExec - 1,
+                            (char *)entry->entrypointExec + sizeof(STUB_TEMPLATE));
 #else
 #error "Can't happen -- not implemented"
 #endif
@@ -213,7 +280,7 @@ void *DefaultDispatchFunc(void)
     return NULL;
 }
 
-#else // defined(__GNUC__) && (defined(USE_X86_ASM) || defined(USE_X86_64_ASM))
+#else // defined(__GNUC__) && USE_ASM
 
 GLVNDentrypointStub glvndGenerateEntrypoint(const char *procName)
 {
@@ -228,4 +295,4 @@ void glvndUpdateEntrypoints(GLVNDentrypointUpdateCallback callback, void *param)
 {
 }
 
-#endif // defined(__GNUC__) && (defined(USE_X86_ASM) || defined(USE_X86_64_ASM))
+#endif // defined(__GNUC__) && USE_ASM

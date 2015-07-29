@@ -103,6 +103,9 @@ if test "x$enable_asm" = xyes; then
             ;;
         esac
         ;;
+    armv7l)
+        asm_arch=armv7l
+        ;;
     sparc*)
         case "$host_os" in
         linux*)
@@ -120,6 +123,10 @@ if test "x$enable_asm" = xyes; then
     x86_64)
         DEFINES="$DEFINES -DUSE_X86_64_ASM"
         AC_MSG_RESULT([yes, x86_64])
+        ;;
+    armv7l)
+        DEFINES="$DEFINES -DUSE_ARMV7_ASM"
+        AC_MSG_RESULT([yes, armv7l])
         ;;
     sparc)
         DEFINES="$DEFINES -DUSE_SPARC_ASM"
@@ -183,7 +190,7 @@ AC_ARG_ENABLE([tls],
 )
 
 AC_MSG_CHECKING([for initial-exec TLS])
-if test "x$asm_arch" != xx86 && test "x$enable_tls" = "xyes"; then
+if test "x$asm_arch" != xx86 && test "x$asm_arch" != xarmv7l && test "x$enable_tls" = "xyes"; then
     AC_COMPILE_IFELSE([AC_LANG_SOURCE([
        __thread int foo __attribute__((tls_model("initial-exec")));
     ])],

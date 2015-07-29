@@ -36,7 +36,8 @@ noinst_HEADERS =        \
 libOpenGL_la_SOURCES = \
 	libopengl.c        \
 	$(MAPI)/entry.c    \
-	$(MAPI)/stub.c
+	$(MAPI)/stub.c     \
+	$(top_srcdir)/src/util/utils_misc.c
 
 BUILT_SOURCES = glapi_mapi_tmp.h
 CLEANFILES = $(BUILT_SOURCES)
