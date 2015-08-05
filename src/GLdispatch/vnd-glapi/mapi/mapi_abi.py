@@ -438,7 +438,7 @@ class ABIPrinter(object):
             if ent.ret:
                 ret = 'return '
             stmt1 = self.indent
-            stmt1 += 'const struct mapi_table *_tbl = %s();' % (
+            stmt1 += 'const struct _glapi_table *_tbl = %s();' % (
                     self.current_get)
             stmt2 = self.indent
             stmt2 += 'mapi_func _func = ((const mapi_func *) _tbl)[%d];' % (

@@ -37,11 +37,6 @@
  * u_current.c.
  */
 
-#ifdef GLX_USE_TLS
-/* not used, but defined for compatibility */
-const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
-#endif /* GLX_USE_TLS */
-
 void
 _glapi_init(void)
 {
@@ -63,9 +58,19 @@ _glapi_set_multithread(void)
 }
 
 void
-_glapi_set_dispatch(struct _glapi_table *dispatch)
+_glapi_set_dispatch(const struct _glapi_table *dispatch)
 {
-   u_current_set((const struct mapi_table *) dispatch);
+    if (dispatch == NULL)
+    {
+        dispatch = (const struct _glapi_table *) table_noop_array;
+    }
+    u_current_set(dispatch);
+}
+
+const struct _glapi_table *
+_glapi_get_dispatch(void)
+{
+    return u_current_get();
 }
 
 /**
@@ -215,12 +220,3 @@ _glapi_get_proc_name(unsigned int offset)
    return stub ? stub_get_name(stub) : NULL;
 }
 
-void
-_glapi_noop_enable_warnings(unsigned char enable)
-{
-}
-
-void
-_glapi_set_warning_func(_glapi_proc func)
-{
-}

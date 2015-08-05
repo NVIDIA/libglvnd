@@ -28,10 +28,15 @@
 #include <assert.h>
 #include <stdlib.h>
 
-static INLINE const struct mapi_table *
+static INLINE const struct _glapi_table *
 entry_current_get(void)
 {
-   return u_current_get();
+#ifdef GLX_USE_TLS
+   return _glapi_tls_Current[GLAPI_CURRENT_DISPATCH];
+#else
+   return (likely(_glapi_Current[GLAPI_CURRENT_DISPATCH]) ?
+         _glapi_Current[GLAPI_CURRENT_DISPATCH] : _glapi_get_dispatch());
+#endif
 }
 
 /* C version of the public entries */

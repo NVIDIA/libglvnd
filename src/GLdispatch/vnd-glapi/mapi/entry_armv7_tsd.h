@@ -74,9 +74,9 @@ __asm__(".syntax unified\n\t");
  * Looks up the current dispatch table, finds the stub address at the given slot
  * then jumps to it.
  *
- * First tries to find a dispatch table in u_current[GLAPI_CURRENT_DISPATCH],
+ * First tries to find a dispatch table in _glapi_Current[GLAPI_CURRENT_DISPATCH],
  * if not found then it jumps to the 'lookup_dispatch' and calls
- * u_current_get_internal() then jumps back to the 'found_dispatch' label.
+ * _glapi_get_dispatch() then jumps back to the 'found_dispatch' label.
  *
  * The 'found_dispatch' section computes the correct offset in the dispatch
  * table then does a branch without link to the function address.
@@ -105,9 +105,9 @@ __asm__(".syntax unified\n\t");
     "pop {lr}\n\t"                          \
     "b 11b\n\t"                             \
     "1:\n\t"                                \
-    ".word " ENTRY_CURRENT_TABLE "\n\t"     \
+    ".word _glapi_Current\n\t"     \
     "2:\n\t"                                \
-    ".word " ENTRY_CURRENT_TABLE_GET "\n\t" \
+    ".word _glapi_get_dispatch\n\t" \
     "3:\n\t"                                \
     ".word " slot "\n\t"
 
@@ -197,9 +197,9 @@ entry_generate_default_code(char *entry, int slot)
 
     *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_SLOT)) = slot;
     *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
-        (uint32_t)u_current;
+        (uint32_t)_glapi_Current;
     *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
-        (uint32_t)u_current_get_internal;
+        (uint32_t)_glapi_get_dispatch;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
     __builtin___clear_cache(writeEntry, writeEntry + ARMV7_BYTECODE_SIZE);

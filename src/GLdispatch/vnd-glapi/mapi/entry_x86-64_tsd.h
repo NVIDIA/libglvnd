@@ -47,10 +47,10 @@ __asm__(".balign 4096\n"
    func ":"
 
 #define STUB_ASM_CODE(slot)         \
-    "movabs " ENTRY_CURRENT_TABLE ", %rax\n\t" \
+    "movabs _glapi_Current, %rax\n\t" \
     "test %rax, %rax\n\t"           \
     "jne 1f\n\t"                      \
-    "movabs $" ENTRY_CURRENT_TABLE_GET ", %rax\n" \
+    "movabs $_glapi_get_dispatch, %rax\n" \
     "push %rdi\n" \
     "push %rsi\n" \
     "push %rdx\n" \
@@ -95,7 +95,7 @@ static const unsigned char ENTRY_TEMPLATE[] =
     0x48, 0xa1, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
     0x48, 0x85, 0xc0, // <ENTRY+10>: test %rax,%rax
     0x75, 0x1c,       // <ENTRY+13>: jne <ENTRY+43>
-    // <ENTRY+15>: movabs $ENTRY_CURRENT_TABLE_GET, %rax
+    // <ENTRY+15>: movabs $_glapi_get_dispatch, %rax
     0x48, 0xb8, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80,
     0x57,                              // <ENTRY+25>: push %rdi
     0x56,                              // <ENTRY+26>: push %rsi
@@ -130,8 +130,8 @@ entry_generate_default_code(char *entry, int slot)
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
     *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
-    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) u_current;
-    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = (uintptr_t) u_current_get_internal;
+    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) _glapi_Current;
+    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = (uintptr_t) _glapi_get_dispatch;
 }
 
 mapi_func

@@ -88,51 +88,32 @@
  * \c _glapi_Context be hardcoded to \c NULL maintains binary compatability
  * between TLS enabled loaders and non-TLS DRI drivers.
  */
-/*@{*/
-#if defined(GLX_USE_TLS)
-
-PUBLIC __thread void *u_current[GLAPI_NUM_CURRENT_ENTRIES]
-    __attribute__((tls_model("initial-exec")))
-    = {
-        (void *) table_noop_array,
-      };
-
-#else
-
-PUBLIC void *u_current[GLAPI_NUM_CURRENT_ENTRIES]
-    = {
-        (void *) table_noop_array
-      };
-
-#ifdef THREADS
-static struct u_tsd u_current_tsd[GLAPI_NUM_CURRENT_ENTRIES];
-static int ThreadSafe;
-#endif /* THREADS */
-
-#endif /* defined(GLX_USE_TLS) */
-/*@}*/
-
 
 void
 u_current_destroy(void)
 {
-#if defined(THREADS) && defined(_WIN32)
-    int i;
-    for (i = 0; i < GLAPI_NUM_CURRENT_ENTRIES; i++) {
-        u_tsd_destroy(&u_current_tsd[i]);
-    }
-#endif
 }
 
 
-#if defined(THREADS) && !defined(GLX_USE_TLS)
+#if !defined(GLX_USE_TLS)
+
+const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES]
+    = {
+        (void *) table_noop_array
+      };
+
+static glvnd_key_t u_current_tsd[GLAPI_NUM_CURRENT_ENTRIES];
+static int ThreadSafe;
 
 static void
 u_current_init_tsd(void)
 {
     int i;
     for (i = 0; i < GLAPI_NUM_CURRENT_ENTRIES; i++) {
-        u_tsd_init(&u_current_tsd[i]);
+        if (pthreadFuncs.key_create(&u_current_tsd[i], NULL) != 0) {
+            perror("_glthread_: failed to allocate key for thread specific data");
+            abort();
+        }
     }
 }
 
@@ -154,11 +135,34 @@ u_current_set_multithreaded(void)
 
     ThreadSafe = 1;
     for (i = 0; i < GLAPI_NUM_CURRENT_ENTRIES; i++) {
-        u_current[i] = NULL;
+        _glapi_Current[i] = NULL;
     }
 }
 
+void u_current_set(const struct _glapi_table *tbl)
+{
+    if (pthreadFuncs.setspecific(u_current_tsd[GLAPI_CURRENT_DISPATCH], (void *) tbl) != 0) {
+        perror("_glthread_: thread failed to set thread specific data");
+        abort();
+    }
+    _glapi_Current[GLAPI_CURRENT_DISPATCH] = (ThreadSafe) ? NULL : (const void *) tbl;
+}
+
+const struct _glapi_table *u_current_get(void)
+{
+   return (const struct _glapi_table *) ((ThreadSafe) ?
+         pthreadFuncs.getspecific(u_current_tsd[GLAPI_CURRENT_DISPATCH]) : _glapi_Current[GLAPI_CURRENT_DISPATCH]);
+}
+
 #else
+
+__thread const void *_glapi_tls_Current[GLAPI_NUM_CURRENT_ENTRIES]
+    __attribute__((tls_model("initial-exec")))
+    = {
+        (void *) table_noop_array,
+      };
+
+const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES] = {};
 
 void
 u_current_init(void)
@@ -170,43 +174,16 @@ u_current_set_multithreaded(void)
 {
 }
 
-#endif
-
-
-
-/**
- * Set the global or per-thread dispatch table pointer.
- * If the dispatch parameter is NULL we'll plug in the no-op dispatch
- * table (__glapi_noop_table).
- */
 void
-u_current_set(const struct mapi_table *tbl)
+u_current_set(const struct _glapi_table *tbl)
 {
-   if (!tbl)
-      tbl = (const struct mapi_table *) table_noop_array;
-
-#if defined(GLX_USE_TLS)
-   u_current[GLAPI_CURRENT_DISPATCH] = (void *) tbl;
-#elif defined(THREADS)
-   u_tsd_set(&u_current_tsd[GLAPI_CURRENT_DISPATCH], (void *) tbl);
-   u_current[GLAPI_CURRENT_DISPATCH] = (ThreadSafe) ? NULL : (void *) tbl;
-#else
-   u_current[GLAPI_CURRENT_DISPATCH] = (void *) tbl;
-#endif
+   _glapi_tls_Current[GLAPI_CURRENT_DISPATCH] = (const void *) tbl;
 }
 
-/**
- * Return pointer to current dispatch table for calling thread.
- */
-struct mapi_table *
-u_current_get_internal(void)
+const struct _glapi_table *u_current_get(void)
 {
-#if defined(GLX_USE_TLS)
-   return (struct mapi_table *)u_current[GLAPI_CURRENT_DISPATCH];
-#elif defined(THREADS)
-   return (struct mapi_table *) ((ThreadSafe) ?
-         u_tsd_get(&u_current_tsd[GLAPI_CURRENT_DISPATCH]) : u_current[GLAPI_CURRENT_DISPATCH]);
-#else
-   return (struct mapi_table *)u_current[GLAPI_CURRENT_DISPATCH];
-#endif
+   return (const struct _glapi_table *) _glapi_tls_Current[GLAPI_CURRENT_DISPATCH];
 }
+
+#endif
+

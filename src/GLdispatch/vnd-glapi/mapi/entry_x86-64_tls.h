@@ -47,7 +47,7 @@ __asm__(".balign 4096\n"
    func ":"
 
 #define STUB_ASM_CODE(slot)                                 \
-   "movq " ENTRY_CURRENT_TABLE "@GOTTPOFF(%rip), %rax\n\t"  \
+   "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
    "movq %fs:(%rax), %r11\n\t"                              \
    "jmp *(8 * " slot ")(%r11)"
 
@@ -61,7 +61,7 @@ __asm__(".text\n");
 
 __asm__("x86_64_current_tls:\n\t"
     ENTRY_STUB_ALIGN_DIRECTIVE
-	"movq " ENTRY_CURRENT_TABLE "@GOTTPOFF(%rip), %rax\n\t"
+	"movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"
 	"ret");
 
 extern unsigned long

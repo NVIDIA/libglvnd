@@ -29,11 +29,6 @@
 #include "u_current.h"
 #include "u_macros.h"
 
-/* define macros for use by assembly dispatchers */
-#define ENTRY_CURRENT_TABLE U_STRINGIFY(u_current)
-
-#define ENTRY_CURRENT_TABLE_GET U_STRINGIFY(u_current_get_internal)
-
 #if defined(USE_X86_ASM) && defined(__GNUC__)
 #   ifdef GLX_USE_TLS
 #      include "entry_x86_tls.h"

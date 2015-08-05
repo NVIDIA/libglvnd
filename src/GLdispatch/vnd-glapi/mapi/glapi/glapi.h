@@ -83,34 +83,13 @@ enum {
 
 #if defined (GLX_USE_TLS)
 
-_GLAPI_EXPORT extern __thread void *
+_GLAPI_EXPORT extern const __thread void *
     _glapi_tls_Current[GLAPI_NUM_CURRENT_ENTRIES]
     __attribute__((tls_model("initial-exec")));
 
-_GLAPI_EXPORT extern const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
-
-# define GET_DISPATCH() ((struct _glapi_table *) \
-    _glapi_tls_Current[GLAPI_CURRENT_DISPATCH])
-
-#else
-
-_GLAPI_EXPORT extern void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
-
-# ifdef THREADS
-
-#  define GET_DISPATCH() \
-     (likely(_glapi_Current[GLAPI_CURRENT_DISPATCH]) ? \
-     (struct _glapi_table *)_glapi_Current[GLAPI_CURRENT_DISPATCH] : \
-      _glapi_get_dispatch())
-
-# else
-
-#  define GET_DISPATCH() ((struct _glapi_table *) \
-    _glapi_Current[GLAPI_CURRENT_DISPATCH])
-
-# endif
-
 #endif /* defined (GLX_USE_TLS) */
+
+_GLAPI_EXPORT extern const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 
 
 /**
@@ -133,51 +112,36 @@ void
 _glapi_set_multithread(void);
 
 
-_GLAPI_EXPORT void
-_glapi_set_dispatch(struct _glapi_table *dispatch);
+void
+_glapi_set_dispatch(const struct _glapi_table *dispatch);
 
 
-_GLAPI_EXPORT struct _glapi_table *
+_GLAPI_EXPORT const struct _glapi_table *
 _glapi_get_dispatch(void);
 
 
-_GLAPI_EXPORT unsigned int
+unsigned int
 _glapi_get_dispatch_table_size(void);
 
 
-_GLAPI_EXPORT int
+int
 _glapi_add_dispatch(const char * const * function_names);
 
-_GLAPI_EXPORT int
+int
 _glapi_get_proc_offset(const char *funcName);
 
 
-_GLAPI_EXPORT _glapi_proc
+_glapi_proc
 _glapi_get_proc_address(const char *funcName);
 
 
-_GLAPI_EXPORT const char *
+const char *
 _glapi_get_proc_name(unsigned int offset);
 
-
-_GLAPI_EXPORT struct _glapi_table *
-_glapi_create_table_from_handle(void *handle, const char *symbol_prefix);
-
-_GLAPI_EXPORT void
+void
 _glapi_init_table_from_callback(struct _glapi_table *table,
                                 size_t entries,
                                 void *(*get_proc_addr)(const unsigned char *name));
-
-
-/*
- * These stubs are kept so that the old DRI drivers still load.
- */
-_GLAPI_EXPORT void
-_glapi_noop_enable_warnings(unsigned char enable);
-
-
-_GLAPI_EXPORT void
-_glapi_set_warning_func(_glapi_proc func);
 
 /**
  * Functions used for patching entrypoints. These functions are exported from
