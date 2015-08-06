@@ -27,13 +27,15 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
+#include "entry.h"
+
 #include <string.h>
 #include <stdint.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <assert.h>
 
-#include "entry.h"
+#include "glapi/glapi.h"
 #include "u_macros.h"
 #include "u_current.h"
 #include "utils_misc.h"

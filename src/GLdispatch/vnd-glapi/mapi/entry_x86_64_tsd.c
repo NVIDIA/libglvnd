@@ -27,12 +27,16 @@
  *    Kyle Brenneman <kbrenneman@nvidia.com>
  */
 
+#include "entry.h"
+
 #include <assert.h>
 #include <stdint.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include "u_macros.h"
 #include "entryhelpers.h"
+
+#include "glapi/glapi.h"
 
 #define X86_64_ENTRY_SIZE 64
 

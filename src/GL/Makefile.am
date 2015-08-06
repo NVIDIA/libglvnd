@@ -35,11 +35,12 @@ noinst_HEADERS =        \
 	libgl.h             \
 	glapi_mapi_tmp.h
 
+include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
+
 libGL_la_SOURCES =      \
 	libgl.c             \
-	$(MAPI)/entry.c     \
+	$(MAPI_GLDISPATCH_ENTRY_FILES) \
 	$(MAPI)/stub.c      \
-	$(MAPI)/entryhelpers.c \
 	g_libglglxwrapper.c \
 	$(top_srcdir)/src/util/utils_misc.c
 

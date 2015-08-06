@@ -25,50 +25,30 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "entry.h"
 #include <assert.h>
-#include <stdint.h>
-#include "u_macros.h"
+#include <stdlib.h>
 
-#define X86_ENTRY_SIZE 32
+#include "glapi/glapi.h"
 
-__asm__(".text\n"
-        ".balign 32\n"
-        "x86_entry_start:");
+static INLINE const struct _glapi_table *
+entry_current_get(void)
+{
+#if defined (GLDISPATCH_USE_TLS)
+   return _glapi_tls_Current[GLAPI_CURRENT_DISPATCH];
+#else
+   return (likely(_glapi_Current[GLAPI_CURRENT_DISPATCH]) ?
+         _glapi_Current[GLAPI_CURRENT_DISPATCH] : _glapi_get_dispatch());
+#endif
+}
 
-#define STUB_ASM_ENTRY(func)        \
-   ".globl " func "\n"              \
-   ".type " func ", @function\n"    \
-   ".balign 32\n"                   \
-   func ":"
-
-#define STUB_ASM_CODE(slot)         \
-   "movl _glapi_Current, %eax\n\t" \
-   "testl %eax, %eax\n\t"           \
-   "je 1f\n\t"                      \
-   "jmp *(4 * " slot ")(%eax)\n"    \
-   "1:\n\t"                         \
-   "call _glapi_get_dispatch\n\t" \
-   "jmp *(4 * " slot ")(%eax)"
-
-#define MAPI_TMP_STUB_ASM_GCC
+/* C version of the public entries */
+#define MAPI_TMP_DEFINES
+#define MAPI_TMP_PUBLIC_DECLARES
+#define MAPI_TMP_PUBLIC_ENTRIES
 #include "mapi_tmp.h"
 
-
-__asm__(".balign 32\n"
-        "x86_entry_end:");
-
-#include <string.h>
-
-#if !defined(STATIC_DISPATCH_ONLY)
-#include "u_execmem.h"
-#else
-#define u_execmem_get_writable(addr) ((void *) (addr))
-#endif
-
-static const char x86_entry_start[];
-static const char x86_entry_end[];
-
-const int entry_type = ENTRY_X86_TSD;
+const int entry_type = ENTRY_PURE_C;
 const int entry_stub_size = 0;
 
 void
@@ -79,13 +59,14 @@ entry_init_public(void)
 void
 entry_generate_default_code(char *entry, int slot)
 {
-    assert(!"This should never be called");
+    assert(0);
 }
 
 mapi_func
 entry_get_public(int slot)
 {
-   return (mapi_func) ((char *)x86_entry_start + slot * X86_ENTRY_SIZE);
+   /* pubic_entries are defined by MAPI_TMP_PUBLIC_ENTRIES */
+   return public_entries[slot];
 }
 
 int entry_patch_start(void)
@@ -108,36 +89,14 @@ void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **ex
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)
-void
-entry_patch(mapi_func entry, int slot)
-{
-   char *code = (char *) u_execmem_get_writable(entry);
-
-   *((unsigned long *) (code + 11)) = slot * sizeof(mapi_func);
-   *((unsigned long *) (code + 22)) = slot * sizeof(mapi_func);
-}
-
 mapi_func
 entry_generate(int slot)
 {
-   const char *code_templ = x86_entry_end - X86_ENTRY_SIZE;
-   char *code;
-   char *writeEntry;
-   mapi_func entry;
+   return NULL;
+}
 
-   code = (char *) u_execmem_alloc(X86_ENTRY_SIZE);
-   if (!code)
-      return NULL;
-
-   writeEntry = (char *) u_execmem_get_writable(code);
-   memcpy(writeEntry, code_templ, X86_ENTRY_SIZE);
-   entry = (mapi_func) code;
-   entry_patch(entry, slot);
-
-   // Adjust the offset of the CALL instruction.
-   assert(*((uint8_t *) (writeEntry + 15)) == 0xE8);
-   *((uint32_t *) (writeEntry + 16)) += (code_templ - code);
-
-   return entry;
+void
+entry_patch(mapi_func entry, int slot)
+{
 }
 #endif // !defined(STATIC_DISPATCH_ONLY)

@@ -81,13 +81,13 @@ enum {
 };
 
 
-#if defined (GLX_USE_TLS)
+#if defined (GLDISPATCH_USE_TLS)
 
 _GLAPI_EXPORT extern const __thread void *
     _glapi_tls_Current[GLAPI_NUM_CURRENT_ENTRIES]
     __attribute__((tls_model("initial-exec")));
 
-#endif /* defined (GLX_USE_TLS) */
+#endif /* defined (GLDISPATCH_USE_TLS) */
 
 _GLAPI_EXPORT extern const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 

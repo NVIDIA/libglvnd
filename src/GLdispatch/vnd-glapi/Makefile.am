@@ -5,17 +5,18 @@ EXTRA_DIST = mapi
 TOP = $(top_srcdir)
 GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
 
+include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
+
 noinst_LTLIBRARIES = libglapi.la
 
 MAPI_UTIL_FILES = \
 	$(TOP)/$(MAPI_PREFIX)/u_execmem.c
 
 MAPI_GLAPI_FILES = \
-	$(TOP)/$(MAPI_PREFIX)/entry.c \
+	$(MAPI_GLDISPATCH_ENTRY_FILES) \
 	$(TOP)/$(MAPI_PREFIX)/mapi_glapi.c \
 	$(TOP)/$(MAPI_PREFIX)/stub.c \
 	$(TOP)/$(MAPI_PREFIX)/table.c \
-	$(TOP)/$(MAPI_PREFIX)/entryhelpers.c \
 	$(MAPI_UTIL_FILES) \
 	$(TOP)/src/util/utils_misc.c
 
@@ -24,7 +25,7 @@ libglapi_la_SOURCES = \
 	g_glapi_inittable.c
 
 # Select the appropriate file for looking up the current dispatch table.
-if GLX_USE_TLS
+if GLDISPATCH_USE_TLS
 libglapi_la_SOURCES += $(top_srcdir)/$(MAPI_PREFIX)/u_current_tls.c
 else
 libglapi_la_SOURCES += $(top_srcdir)/$(MAPI_PREFIX)/u_current_tsd.c

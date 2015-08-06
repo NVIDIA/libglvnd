@@ -33,11 +33,12 @@ GLAPI = $(MAPI)/glapi
 noinst_HEADERS =        \
 	glapi_mapi_tmp.h
 
+include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
+
 libOpenGL_la_SOURCES = \
 	libopengl.c        \
-	$(MAPI)/entry.c    \
+	$(MAPI_GLDISPATCH_ENTRY_FILES) \
 	$(MAPI)/stub.c     \
-	$(MAPI)/entryhelpers.c \
 	$(top_srcdir)/src/util/utils_misc.c
 
 BUILT_SOURCES = glapi_mapi_tmp.h

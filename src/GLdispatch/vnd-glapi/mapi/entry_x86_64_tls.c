@@ -25,12 +25,15 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "entry.h"
+
 #include <assert.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include "utils_misc.h"
 #include "u_macros.h"
 #include "entryhelpers.h"
+#include "glapi/glapi.h"
 
 #define ENTRY_STUB_ALIGN 32
 #define ENTRY_STUB_SIZE ENTRY_STUB_ALIGN

@@ -181,7 +181,6 @@ AC_FUNC_STRNLEN
 AC_CHECK_FUNCS([getpagesize gettimeofday memmove memset strdup strerror])
 
 dnl TLS detection
-dnl Note: The x86 TLS build doesn't work yet. Fall back to the TSD version until it does.
 AC_ARG_ENABLE([tls],
     [AS_HELP_STRING([--disable-tls],
         [disable TLS usage @<:@default=enabled on supported plaforms@:>@])],
@@ -190,20 +189,61 @@ AC_ARG_ENABLE([tls],
 )
 
 AC_MSG_CHECKING([for initial-exec TLS])
-if test "x$asm_arch" != xx86 && test "x$asm_arch" != xarmv7l && test "x$enable_tls" = "xyes"; then
+if test "x$enable_tls" = "xyes"; then
     AC_COMPILE_IFELSE([AC_LANG_SOURCE([
        __thread int foo __attribute__((tls_model("initial-exec")));
     ])],
-    [GLX_USE_TLS=yes],[GLX_USE_TLS=no])
+    [HAVE_INIT_TLS=yes],[HAVE_INIT_TLS=no])
 else
-    GLX_USE_TLS=no
+    HAVE_INIT_TLS=no
 fi
+AC_MSG_RESULT($HAVE_INIT_TLS)
 
-AC_MSG_RESULT($GLX_USE_TLS)
-AS_IF([test "x$GLX_USE_TLS" = "xyes"],
-      [AC_DEFINE([GLX_USE_TLS], 1,
-      [Define to 1 if ELF TLS with initial-exec addressing is available.])])
-AM_CONDITIONAL([GLX_USE_TLS], [test "x$GLX_USE_TLS" = "xyes"])
+# Figure out what implementation to use for the entrypoint stubs.
+# This will set an automake condition, which is then used in
+# src/GLdispatch/vnd-glapi/entry_files.mk.
+
+AC_MSG_CHECKING([for entrypoint stub type])
+case "x$asm_arch" in
+xx86)
+    # The x86 TLS stubs don't work, so use the TSD stubs instead.
+    gldispatch_entry_type=x86_tsd
+    gldispatch_use_tls=no
+    ;;
+xx86_64)
+    # For x86-64, both the TLS and TSD stubs work.
+    if test "x$HAVE_INIT_TLS" = "xyes" ; then
+        gldispatch_entry_type=x86_64_tls
+        gldispatch_use_tls=yes
+    else
+        gldispatch_entry_type=x86_64_tsd
+        gldispatch_use_tls=no
+    fi
+    ;;
+xarmv7l)
+    # For ARMv7, only the TSD stubs have been implemented yet.
+    gldispatch_entry_type=armv7_tsd
+    gldispatch_use_tls=no
+    ;;
+*)
+    # The C stubs will work with either TLS or TSD.
+    gldispatch_entry_type=pure_c
+    gldispatch_use_tls=$HAVE_INIT_TLS
+    ;;
+esac
+AC_MSG_RESULT([$gldispatch_entry_type, TLS=$gldispatch_use_tls])
+
+AS_IF([test "x$gldispatch_use_tls" = "xyes"],
+      [AC_DEFINE([GLDISPATCH_USE_TLS], 1,
+      [Define to 1 if libGLdispatch should use a TLS variable for the dispatch table.])])
+AM_CONDITIONAL([GLDISPATCH_USE_TLS], [test "x$gldispatch_use_tls" = "xyes"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_X86_TLS], [test "x$gldispatch_entry_type" = "xx86_tls"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_X86_TSD], [test "x$gldispatch_entry_type" = "xx86_tsd"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_X86_64_TLS], [test "x$gldispatch_entry_type" = "xx86_64_tls"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_X86_64_TSD], [test "x$gldispatch_entry_type" = "xx86_64_tsd"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_ARMV7_TSD], [test "x$gldispatch_entry_type" = "xarmv7_tsd"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_PURE_C], [test "x$gldispatch_entry_type" = "xpure_c"])
+
 
 AC_MSG_CHECKING([for constructor attributes])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([
