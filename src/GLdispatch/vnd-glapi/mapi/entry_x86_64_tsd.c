@@ -28,21 +28,23 @@
  */
 
 #include "entry.h"
+#include "entry_common.h"
 
 #include <assert.h>
 #include <stdint.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include "u_macros.h"
-#include "entryhelpers.h"
+#include <string.h>
 
+#include "u_macros.h"
 #include "glapi/glapi.h"
 
 #define X86_64_ENTRY_SIZE 64
 
 __asm__(".section wtext,\"ax\",@progbits\n");
 __asm__(".balign 4096\n"
-        "x86_64_entry_start:");
+       ".globl public_entry_start\n"
+        "public_entry_start:");
 
 #define STUB_ASM_ENTRY(func)        \
    ".globl " func "\n"              \
@@ -76,19 +78,9 @@ __asm__(".balign 4096\n"
 
 
 __asm__(".balign 4096\n"
-        "x86_64_entry_end:");
+       ".globl public_entry_end\n"
+        "public_entry_end:");
 __asm__(".text\n");
-
-#include <string.h>
-
-#if !defined(STATIC_DISPATCH_ONLY)
-#include "u_execmem.h"
-#else
-#define u_execmem_get_writable(addr) ((void *) (addr))
-#endif
-
-static char x86_64_entry_start[];
-static char x86_64_entry_end[];
 
 const int entry_type = ENTRY_X86_64_TSD;
 const int entry_stub_size = X86_64_ENTRY_SIZE;
@@ -122,15 +114,9 @@ static const int TEMPLATE_OFFSET_CURRENT_TABLE = 2;
 static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = 17;
 static const int TEMPLATE_OFFSET_SLOT = 45;
 
-void
-entry_init_public(void)
+void entry_generate_default_code(char *entry, int slot)
 {
-}
-
-void
-entry_generate_default_code(char *entry, int slot)
-{
-    char *writeEntry = (char *) u_execmem_get_writable(entry);
+    char *writeEntry = u_execmem_get_writable(entry);
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
     *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
@@ -138,46 +124,3 @@ entry_generate_default_code(char *entry, int slot)
     *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = (uintptr_t) _glapi_get_dispatch;
 }
 
-mapi_func
-entry_get_public(int slot)
-{
-   return (mapi_func) (x86_64_entry_start + slot * X86_64_ENTRY_SIZE);
-}
-
-int entry_patch_start(void)
-{
-    return entry_patch_start_helper(x86_64_entry_start, x86_64_entry_end);
-}
-
-int entry_patch_finish(void)
-{
-    return entry_patch_finish_helper(x86_64_entry_start, x86_64_entry_end);
-}
-
-void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
-{
-    *execPtr = (const void *) entry;
-    *writePtr = u_execmem_get_writable((void *) entry);
-}
-
-#if !defined(STATIC_DISPATCH_ONLY)
-void
-entry_patch(mapi_func entry, int slot)
-{
-   entry_generate_default_code((char *)entry, slot);
-}
-
-mapi_func
-entry_generate(int slot)
-{
-   void *code;
-
-   code = u_execmem_alloc(X86_64_ENTRY_SIZE);
-   if (!code)
-      return NULL;
-
-   entry_generate_default_code(code, slot);
-
-   return (mapi_func)code;
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)

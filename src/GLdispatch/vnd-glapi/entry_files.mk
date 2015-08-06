@@ -12,18 +12,20 @@ endif
 
 if GLDISPATCH_TYPE_X86_64_TLS
 MAPI_GLDISPATCH_ENTRY_FILES = $(top_srcdir)/$(MAPI_PREFIX)/entry_x86_64_tls.c
-MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entryhelpers.c
+MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entry_x86_64_common.c
+MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entry_common.c
 endif
 
 if GLDISPATCH_TYPE_X86_64_TSD
 MAPI_GLDISPATCH_ENTRY_FILES = $(top_srcdir)/$(MAPI_PREFIX)/entry_x86_64_tsd.c
-MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entryhelpers.c
+MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entry_x86_64_common.c
+MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entry_common.c
 endif
 
 
 if GLDISPATCH_TYPE_ARMV7_TSD
 MAPI_GLDISPATCH_ENTRY_FILES = $(top_srcdir)/$(MAPI_PREFIX)/entry_armv7_tsd.c
-MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entryhelpers.c
+MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entry_common.c
 endif
 
 if GLDISPATCH_TYPE_PURE_C

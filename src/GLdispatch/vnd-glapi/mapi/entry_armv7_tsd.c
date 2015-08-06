@@ -28,10 +28,10 @@
  */
 
 #include "entry.h"
+#include "entry_common.h"
 
 #include <string.h>
 #include <stdint.h>
-#include <sys/mman.h>
 #include <unistd.h>
 #include <assert.h>
 
@@ -39,13 +39,6 @@
 #include "u_macros.h"
 #include "u_current.h"
 #include "utils_misc.h"
-#include "entryhelpers.h"
-
-#if !defined(STATIC_DISPATCH_ONLY)
-#include "u_execmem.h"
-#else
-#define u_execmem_get_writable(addr) ((void *) (addr))
-#endif
 
 /*
  * See: https://sourceware.org/binutils/docs/as/ARM-Directives.html
@@ -107,9 +100,9 @@ __asm__(".syntax unified\n\t");
     "pop {lr}\n\t"                          \
     "b 11b\n\t"                             \
     "1:\n\t"                                \
-    ".word _glapi_Current\n\t"     \
+    ".word _glapi_Current\n\t"              \
     "2:\n\t"                                \
-    ".word _glapi_get_dispatch\n\t" \
+    ".word _glapi_get_dispatch\n\t"         \
     "3:\n\t"                                \
     ".word " slot "\n\t"
 
@@ -146,17 +139,16 @@ static unsigned char BYTECODE_TEMPLATE[] =
 
 __asm__(".section wtext,\"ax\"\n"
         ".balign 4096\n"
-        "armv7_entry_start:\n");
+       ".globl public_entry_start\n"
+        "public_entry_start:\n");
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
 __asm__(".balign 4096\n"
-        "armv7_entry_end:\n"
+       ".globl public_entry_end\n"
+        "public_entry_end:\n"
         ".text\n\t");
-
-static char armv7_entry_start[];
-static char armv7_entry_end[];
 
 /*
  * If built with -marm, let the assembler know that we are done with Thumb
@@ -184,8 +176,7 @@ entry_init_public(void)
 #endif
 }
 
-void
-entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(char *entry, int slot)
 {
     char *writeEntry;
 
@@ -207,21 +198,14 @@ entry_generate_default_code(char *entry, int slot)
     __builtin___clear_cache(writeEntry, writeEntry + ARMV7_BYTECODE_SIZE);
 }
 
+// Note: The rest of these functions could also be used for ARMv7 TLS stubs,
+// once those are implemented.
+
 mapi_func
 entry_get_public(int slot)
 {
     // Add 1 to the base address to force Thumb mode when jumping to the stub
-    return (mapi_func)(armv7_entry_start + (slot * ARMV7_ENTRY_SIZE) + 1);
-}
-
-int entry_patch_start(void)
-{
-    return entry_patch_start_helper(armv7_entry_start, armv7_entry_end);
-}
-
-int entry_patch_finish(void)
-{
-    return entry_patch_finish_helper(armv7_entry_start, armv7_entry_end);
+    return (mapi_func)(public_entry_start + (slot * entry_stub_size) + 1);
 }
 
 void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
@@ -233,26 +217,18 @@ void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **ex
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)
-void
-entry_patch(mapi_func entry, int slot)
+mapi_func entry_generate(int slot)
 {
-    entry_generate_default_code((char *)entry, slot);
-}
-
-mapi_func
-entry_generate(int slot)
-{
-    void *code;
-
-    code = u_execmem_alloc(ARMV7_BYTECODE_SIZE);
-    if (!code)
+    void *code = u_execmem_alloc(entry_stub_size);
+    if (!code) {
         return NULL;
+    }
 
     // Add 1 to the base address to force Thumb mode when jumping to the stub
     code = (void *)((char *)code + 1);
 
     entry_generate_default_code(code, slot);
 
-    return (mapi_func)code;
+    return (mapi_func) code;
 }
 #endif // !defined(STATIC_DISPATCH_ONLY)
