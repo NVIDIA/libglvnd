@@ -8,7 +8,6 @@ GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
 noinst_LTLIBRARIES = libglapi.la
 
 MAPI_UTIL_FILES = \
-	$(TOP)/$(MAPI_PREFIX)/u_current.c \
 	$(TOP)/$(MAPI_PREFIX)/u_execmem.c
 
 MAPI_GLAPI_FILES = \
@@ -24,7 +23,13 @@ libglapi_la_SOURCES = \
 	$(MAPI_GLAPI_FILES) \
 	g_glapi_inittable.c
 
-libglapi_la_LIBADD = $(SELINUX_LIBS)
+# Select the appropriate file for looking up the current dispatch table.
+if GLX_USE_TLS
+libglapi_la_SOURCES += $(top_srcdir)/$(MAPI_PREFIX)/u_current_tls.c
+else
+libglapi_la_SOURCES += $(top_srcdir)/$(MAPI_PREFIX)/u_current_tsd.c
+endif
+
 libglapi_la_LDFLAGS = -no-undefined
 
 include $(GLAPI)/gen/glapi_gen.mk

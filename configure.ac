@@ -203,6 +203,7 @@ AC_MSG_RESULT($GLX_USE_TLS)
 AS_IF([test "x$GLX_USE_TLS" = "xyes"],
       [AC_DEFINE([GLX_USE_TLS], 1,
       [Define to 1 if ELF TLS with initial-exec addressing is available.])])
+AM_CONDITIONAL([GLX_USE_TLS], [test "x$GLX_USE_TLS" = "xyes"])
 
 AC_MSG_CHECKING([for constructor attributes])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([
