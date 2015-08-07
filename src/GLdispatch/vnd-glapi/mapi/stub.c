@@ -36,6 +36,7 @@
 
 #if !defined(STATIC_DISPATCH_ONLY)
 #include "u_thread.h"
+#include "u_execmem.h"
 #endif
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
@@ -98,8 +99,6 @@ void stub_cleanup_dynamic(void)
 {
     int i;
 
-    // TODO: Free the memory for the generated stub functions.
-
     // Free the copies of the stub names.
     for (i=0; i<num_dynamic_stubs; i++) {
         struct mapi_stub *stub = &dynamic_stubs[i];
@@ -109,6 +108,7 @@ void stub_cleanup_dynamic(void)
 
     num_dynamic_stubs = 0;
     next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
+    u_execmem_free();
 }
 
 /**

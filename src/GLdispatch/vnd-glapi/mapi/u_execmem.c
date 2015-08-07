@@ -91,12 +91,21 @@ init_map(void)
         if (AllocExecPages(EXEC_MAP_SIZE, &writePtr, &execPtr) == 0) {
             exec_mem = (unsigned char *) execPtr;
             write_mem = (unsigned char *) writePtr;
+            head = 0;
         }
     }
 
     return (exec_mem != NULL);
 }
 
+void u_execmem_free(void)
+{
+    if (exec_mem != NULL) {
+        FreeExecPages(EXEC_MAP_SIZE, write_mem, exec_mem);
+        write_mem = NULL;
+        exec_mem = NULL;
+    }
+}
 
 #elif defined(_WIN32)
 

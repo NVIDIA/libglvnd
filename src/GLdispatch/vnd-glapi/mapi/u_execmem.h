@@ -21,4 +21,9 @@ void *u_execmem_alloc(unsigned int size);
  */
 void *u_execmem_get_writable(void *execPtr);
 
+/**
+ * Frees the memory allocated from u_execmem_alloc.
+ */
+void u_execmem_free(void);
+
 #endif /* _U_EXECMEM_H_ */
