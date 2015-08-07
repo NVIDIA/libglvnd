@@ -872,6 +872,8 @@ void __glDispatchFini(void)
             free(curProc);
         }
 
+        pthreadFuncs.key_delete(threadContextKey);
+
         // Clean up GLAPI thread state
         _glapi_destroy();
     }

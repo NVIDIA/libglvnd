@@ -32,14 +32,14 @@
 
 const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES]
     = {
-        (void *) table_noop_array
+        (const void *) table_noop_array
       };
 
 static glvnd_key_t u_current_tsd[GLAPI_NUM_CURRENT_ENTRIES];
 static int ThreadSafe;
 
-static void
-u_current_init_tsd(void)
+void
+u_current_init(void)
 {
     int i;
     for (i = 0; i < GLAPI_NUM_CURRENT_ENTRIES; i++) {
@@ -47,22 +47,18 @@ u_current_init_tsd(void)
             perror("_glthread_: failed to allocate key for thread specific data");
             abort();
         }
+        _glapi_Current[i] = (const void *) table_noop_array;
     }
-}
-
-void
-u_current_init(void)
-{
-    static int firstCall = 1;
-    if (firstCall) {
-        u_current_init_tsd();
-        firstCall = 0;
-    }
+    ThreadSafe = 0;
 }
 
 void
 u_current_destroy(void)
 {
+    int i;
+    for (i = 0; i < GLAPI_NUM_CURRENT_ENTRIES; i++) {
+        pthreadFuncs.key_delete(u_current_tsd[i]);
+    }
 }
 
 void
