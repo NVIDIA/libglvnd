@@ -595,6 +595,13 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
                 char *queriedVendorName = XGLVQueryScreenVendorMapping(dpy, screen);
                 vendor = __glXLookupVendorByName(queriedVendorName);
                 Xfree(queriedVendorName);
+
+                // Make sure that the vendor library can support this screen.
+                // If it can't, then we'll fall back to the indirect rendering
+                // library.
+                if (!vendor->staticDispatch->glxvc.checkSupportsScreen(dpy, screen)) {
+                    vendor = NULL;
+                }
             }
         }
 

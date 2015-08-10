@@ -315,6 +315,17 @@ typedef struct __GLX14EntryPointsRec {
  */
 struct __GLXvendorCallbacksRec {
     /*!
+     * Checks if the vendor library can support a given X screen. If this
+     * returns false, then libGLX will fall back to the indirect rendering
+     * library (if one exists).
+     *
+     * \param dpy The display connection.
+     * \param screen The screen number.
+     * \return True if the vendor library can support this screen.
+     */
+    Bool (* checkSupportsScreen) (Display *dpy, int screen);
+
+    /*!
      * This retrieves the pointer to the real GLX or core GL function.
      *
      * \param procName The name of the function.
