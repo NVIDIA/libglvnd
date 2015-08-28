@@ -156,8 +156,7 @@ static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
     pEntry->index = __glXNextUnusedHashIndex++;
 
     // Notify the vendor this is the index which should be used
-    vendor->staticDispatch->
-        glxvc.setDispatchIndex(procName, pEntry->index);
+    vendor->glxvc->setDispatchIndex(procName, pEntry->index);
 
     HASH_ADD_INT(_LH(__glXDispatchIndexHash),
                  index, pEntry);
@@ -182,8 +181,7 @@ static GLVNDentrypointStub __glXFindVendorDispatchAddress(const char *procName, 
 {
     __GLXextFuncPtr addr = NULL;
 
-    addr = vendor->staticDispatch->
-        glxvc.getDispatchAddress((const GLubyte *) procName);
+    addr = vendor->glxvc->getDispatchAddress((const GLubyte *) procName);
     if (addr != NULL) {
         // Allocate the new dispatch index.
         if (!AllocDispatchIndex(vendor, (const GLubyte *) procName)) {
@@ -195,7 +193,7 @@ static GLVNDentrypointStub __glXFindVendorDispatchAddress(const char *procName, 
     // If we didn't find a GLX dispatch function, then check for a normal
     // OpenGL function. This should handle any case where a GL extension
     // function starts with "glX".
-    addr = vendor->staticDispatch->glxvc.getProcAddress((const GLubyte *) procName);
+    addr = vendor->glxvc->getProcAddress((const GLubyte *) procName);
     if (addr != NULL) {
         addr = __glDispatchGetProcAddress(procName);
     }
@@ -320,8 +318,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
 
         if (procName) {
             // Get the real address
-            addr = dynDispatch->vendor->staticDispatch->
-                glxvc.getProcAddress(procName);
+            addr = dynDispatch->vendor->glxvc->getProcAddress(procName);
         }
 
         LKDHASH_WRLOCK(__glXPthreadFuncs, dynDispatch->hash);
@@ -412,12 +409,56 @@ void TeardownVendor(__GLXvendorInfo *vendor, Bool doLibraryUnload)
     free(vendor);
 }
 
+static GLboolean LookupVendorEntrypoints(__GLXvendorInfo *vendor)
+{
+#define LOADENTRYPOINT(ptr, name) do { \
+    vendor->staticDispatch.ptr = vendor->glxvc->getProcAddress((const GLubyte *) name); \
+    if (vendor->staticDispatch.ptr == NULL) { return GL_FALSE; } \
+    } while(0)
+
+    LOADENTRYPOINT(chooseVisual,          "glXChooseVisual"         );
+    LOADENTRYPOINT(copyContext,           "glXCopyContext"          );
+    LOADENTRYPOINT(createContext,         "glXCreateContext"        );
+    LOADENTRYPOINT(createGLXPixmap,       "glXCreateGLXPixmap"      );
+    LOADENTRYPOINT(destroyContext,        "glXDestroyContext"       );
+    LOADENTRYPOINT(destroyGLXPixmap,      "glXDestroyGLXPixmap"     );
+    LOADENTRYPOINT(getConfig,             "glXGetConfig"            );
+    LOADENTRYPOINT(isDirect,              "glXIsDirect"             );
+    LOADENTRYPOINT(makeCurrent,           "glXMakeCurrent"          );
+    LOADENTRYPOINT(swapBuffers,           "glXSwapBuffers"          );
+    LOADENTRYPOINT(useXFont,              "glXUseXFont"             );
+    LOADENTRYPOINT(waitGL,                "glXWaitGL"               );
+    LOADENTRYPOINT(waitX,                 "glXWaitX"                );
+    LOADENTRYPOINT(queryServerString,     "glXQueryServerString"    );
+    LOADENTRYPOINT(getClientString,       "glXGetClientString"      );
+    LOADENTRYPOINT(queryExtensionsString, "glXQueryExtensionsString");
+    LOADENTRYPOINT(chooseFBConfig,        "glXChooseFBConfig"       );
+    LOADENTRYPOINT(createNewContext,      "glXCreateNewContext"     );
+    LOADENTRYPOINT(createPbuffer,         "glXCreatePbuffer"        );
+    LOADENTRYPOINT(createPixmap,          "glXCreatePixmap"         );
+    LOADENTRYPOINT(createWindow,          "glXCreateWindow"         );
+    LOADENTRYPOINT(destroyPbuffer,        "glXDestroyPbuffer"       );
+    LOADENTRYPOINT(destroyPixmap,         "glXDestroyPixmap"        );
+    LOADENTRYPOINT(destroyWindow,         "glXDestroyWindow"        );
+    LOADENTRYPOINT(getFBConfigAttrib,     "glXGetFBConfigAttrib"    );
+    LOADENTRYPOINT(getFBConfigs,          "glXGetFBConfigs"         );
+    LOADENTRYPOINT(getSelectedEvent,      "glXGetSelectedEvent"     );
+    LOADENTRYPOINT(getVisualFromFBConfig, "glXGetVisualFromFBConfig");
+    LOADENTRYPOINT(makeContextCurrent,    "glXMakeContextCurrent"   );
+    LOADENTRYPOINT(queryContext,          "glXQueryContext"         );
+    LOADENTRYPOINT(queryDrawable,         "glXQueryDrawable"        );
+    LOADENTRYPOINT(selectEvent,           "glXSelectEvent"          );
+#undef LOADENTRYPOINT
+
+    return GL_TRUE;
+}
+
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 {
     __GLXvendorNameHash *pEntry = NULL;
     void *dlhandle = NULL;
     __PFNGLXMAINPROC glxMainProc;
-    const __GLXdispatchTableStatic *dispatch;
+    const __GLXapiImports *glxvc;
     __GLXdispatchTableDynamic *dynDispatch;
     __GLXvendorInfo *vendor = NULL;
     Bool locked = False;
@@ -473,11 +514,11 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             vendorID = __glDispatchNewVendorID();
             assert(vendorID >= 0);
 
-            dispatch = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
+            glxvc = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
                                       &glxExportsTable,
                                       vendorName,
                                       vendorID);
-            if (!dispatch) {
+            if (!glxvc) {
                 goto fail;
             }
 
@@ -494,11 +535,15 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
             vendor->dlhandle = dlhandle;
-            vendor->staticDispatch = dispatch;
+            vendor->glxvc = glxvc;
+
+            if (!LookupVendorEntrypoints(vendor)) {
+                goto fail;
+            }
 
             vendor->glDispatch = (__GLdispatchTable *)
                 __glDispatchCreateTable(
-                    dispatch->glxvc.getProcAddress
+                    vendor->glxvc->getProcAddress
                 );
             if (!vendor->glDispatch) {
                 goto fail;
@@ -599,7 +644,7 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
                 // Make sure that the vendor library can support this screen.
                 // If it can't, then we'll fall back to the indirect rendering
                 // library.
-                if (!vendor->staticDispatch->glxvc.checkSupportsScreen(dpy, screen)) {
+                if (!vendor->glxvc->checkSupportsScreen(dpy, screen)) {
                     vendor = NULL;
                 }
             }
@@ -624,8 +669,7 @@ const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int s
     __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
 
     if (vendor) {
-        assert(vendor->staticDispatch);
-        return vendor->staticDispatch;
+        return &vendor->staticDispatch;
     } else {
         return __glXDispatchNoopPtr;
     }
@@ -638,8 +682,7 @@ const __GLXdispatchTableStatic * __glXGetDrawableStaticDispatch(Display *dpy,
     __glXVendorFromDrawable(dpy, drawable, NULL, &vendor);
 
     if (vendor) {
-        assert(vendor->staticDispatch);
-        return vendor->staticDispatch;
+        return &vendor->staticDispatch;
     } else {
         return __glXDispatchNoopPtr;
     }

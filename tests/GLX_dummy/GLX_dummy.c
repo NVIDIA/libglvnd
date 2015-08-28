@@ -429,7 +429,40 @@ static struct {
     GL_PROC_ENTRY(End),
     GL_PROC_ENTRY(Vertex3fv),
     GL_PROC_ENTRY(MakeCurrentTestResults),
-    GLX_PROC_ENTRY(ExampleExtensionFunction)
+    GLX_PROC_ENTRY(ExampleExtensionFunction),
+
+    GLX_PROC_ENTRY(ChooseVisual),
+    GLX_PROC_ENTRY(CopyContext),
+    GLX_PROC_ENTRY(CreateContext),
+    GLX_PROC_ENTRY(CreateGLXPixmap),
+    GLX_PROC_ENTRY(DestroyContext),
+    GLX_PROC_ENTRY(DestroyGLXPixmap),
+    GLX_PROC_ENTRY(GetConfig),
+    GLX_PROC_ENTRY(IsDirect),
+    GLX_PROC_ENTRY(MakeCurrent),
+    GLX_PROC_ENTRY(SwapBuffers),
+    GLX_PROC_ENTRY(UseXFont),
+    GLX_PROC_ENTRY(WaitGL),
+    GLX_PROC_ENTRY(WaitX),
+    GLX_PROC_ENTRY(QueryServerString),
+    GLX_PROC_ENTRY(GetClientString),
+    GLX_PROC_ENTRY(QueryExtensionsString),
+    GLX_PROC_ENTRY(ChooseFBConfig),
+    GLX_PROC_ENTRY(CreateNewContext),
+    GLX_PROC_ENTRY(CreatePbuffer),
+    GLX_PROC_ENTRY(CreatePixmap),
+    GLX_PROC_ENTRY(CreateWindow),
+    GLX_PROC_ENTRY(DestroyPbuffer),
+    GLX_PROC_ENTRY(DestroyPixmap),
+    GLX_PROC_ENTRY(DestroyWindow),
+    GLX_PROC_ENTRY(GetFBConfigAttrib),
+    GLX_PROC_ENTRY(GetFBConfigs),
+    GLX_PROC_ENTRY(GetSelectedEvent),
+    GLX_PROC_ENTRY(GetVisualFromFBConfig),
+    GLX_PROC_ENTRY(MakeContextCurrent),
+    GLX_PROC_ENTRY(QueryContext),
+    GLX_PROC_ENTRY(QueryDrawable),
+    GLX_PROC_ENTRY(SelectEvent),
 };
 
 
@@ -642,54 +675,15 @@ static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 
 static const __GLXapiImports dummyImports =
 {
-    /* Entry points */
-    .glx14ep = {
-        .chooseVisual = dummyChooseVisual,
-        .copyContext = dummyCopyContext,
-        .createContext = dummyCreateContext,
-        .createGLXPixmap = dummyCreateGLXPixmap,
-        .destroyContext = dummyDestroyContext,
-        .destroyGLXPixmap = dummyDestroyGLXPixmap,
-        .getConfig = dummyGetConfig,
-        .isDirect = dummyIsDirect,
-        .makeCurrent = dummyMakeCurrent,
-        .swapBuffers = dummySwapBuffers,
-        .useXFont = dummyUseXFont,
-        .waitGL = dummyWaitGL,
-        .waitX = dummyWaitX,
-        .queryServerString = dummyQueryServerString,
-        .getClientString = dummyGetClientString,
-        .queryExtensionsString = dummyQueryExtensionsString,
-        .chooseFBConfig = dummyChooseFBConfig,
-        .createNewContext = dummyCreateNewContext,
-        .createPbuffer = dummyCreatePbuffer,
-        .createPixmap = dummyCreatePixmap,
-        .createWindow = dummyCreateWindow,
-        .destroyPbuffer = dummyDestroyPbuffer,
-        .destroyPixmap = dummyDestroyPixmap,
-        .destroyWindow = dummyDestroyWindow,
-        .getFBConfigAttrib = dummyGetFBConfigAttrib,
-        .getFBConfigs = dummyGetFBConfigs,
-        .getSelectedEvent = dummyGetSelectedEvent,
-        .getVisualFromFBConfig = dummyGetVisualFromFBConfig,
-        .makeContextCurrent = dummyMakeContextCurrent,
-        .queryContext = dummyQueryContext,
-        .queryDrawable = dummyQueryDrawable,
-        .selectEvent = dummySelectEvent,
-    },
-
-    /* Non-entry points */
-    .glxvc = {
-        .checkSupportsScreen = dummyCheckSupportsScreen,
-        .getProcAddress = dummyGetProcAddress,
-        .getDispatchAddress = dummyGetDispatchAddress,
-        .setDispatchIndex = dummySetDispatchIndex,
+    .checkSupportsScreen = dummyCheckSupportsScreen,
+    .getProcAddress = dummyGetProcAddress,
+    .getDispatchAddress = dummyGetDispatchAddress,
+    .setDispatchIndex = dummySetDispatchIndex,
 #if defined(PATCH_ENTRYPOINTS)
-        .patchCallbacks = &dummyPatchCallbacks,
+    .patchCallbacks = &dummyPatchCallbacks,
 #else
-        .patchCallbacks = NULL,
+    .patchCallbacks = NULL,
 #endif
-    }
 };
 
 PUBLIC __GLX_MAIN_PROTO(version, exports, vendorName)

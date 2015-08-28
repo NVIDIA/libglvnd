@@ -183,7 +183,7 @@ sub print_noop_funcs {
         $noop_defs .= "\n";
 
         if ($function->{"glx14ep"}) {
-            $fill_struct .= sprintf("%8s %*s = %s,\n",
+            $fill_struct .= sprintf("%4s %*s = %s,\n",
                                     " ",
                                     -$max_len, ".$struct_field",
                                     "__glX${name}Noop");
@@ -202,9 +202,7 @@ sub print_noop_funcs {
     print $noop_defs;
     print "\n";
     print "const __GLXdispatchTableStatic __glXDispatchNoop = {\n";
-    print "    .glx14ep = {\n";
     print $fill_struct;
-    print "    }\n";
     print "};\n";
     print "\n";
     print "const __GLXdispatchTableStatic *__glXDispatchNoopPtr = &__glXDispatchNoop;\n";
