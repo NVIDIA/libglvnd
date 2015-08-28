@@ -433,11 +433,6 @@ static struct {
 };
 
 
-static void dummyNopStub (void)
-{
-    // nop
-}
-
 // XXX non-entry point ABI functions
 static Bool          dummyCheckSupportsScreen    (Display *dpy, int screen)
 {
@@ -453,7 +448,7 @@ static void         *dummyGetProcAddress         (const GLubyte *procName)
         }
     }
 
-    return (void *)dummyNopStub;
+    return NULL;
 }
 
 static void         *dummyGetDispatchAddress     (const GLubyte *procName)
