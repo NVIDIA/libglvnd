@@ -52,9 +52,6 @@ stub_find_dynamic(const char *name, int generate);
 const struct mapi_stub *
 stub_find_by_slot(int slot);
 
-void
-stub_fix_dynamic(struct mapi_stub *stub, const struct mapi_stub *alias);
-
 const char *
 stub_get_name(const struct mapi_stub *stub);
 

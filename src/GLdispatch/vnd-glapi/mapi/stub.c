@@ -92,7 +92,6 @@ stub_find_public(const char *name)
 #if !defined(STATIC_DISPATCH_ONLY)
 static struct mapi_stub dynamic_stubs[MAPI_TABLE_NUM_DYNAMIC];
 static int num_dynamic_stubs;
-static int next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
 
 void stub_cleanup_dynamic(void)
 {
@@ -106,7 +105,6 @@ void stub_cleanup_dynamic(void)
     }
 
     num_dynamic_stubs = 0;
-    next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
     u_execmem_free();
 }
 
@@ -135,17 +133,15 @@ stub_add_dynamic(const char *name)
        return NULL;
    }
 
-   /* dispatch to the last slot, which is reserved for no-op */
-   stub->addr = entry_generate(MAPI_LAST_SLOT);
+   stub->nameOffset = NULL;
+   /* Assign the next unused slot. */
+   stub->slot = MAPI_TABLE_NUM_STATIC + idx;
+   stub->addr = entry_generate(stub->slot);
    if (!stub->addr) {
       free(stub->nameBuffer);
       stub->nameBuffer = NULL;
       return NULL;
    }
-
-   stub->nameOffset = NULL;
-   /* to be fixed later */
-   stub->slot = -1;
 
    num_dynamic_stubs = idx + 1;
 
@@ -200,23 +196,6 @@ stub_find_by_slot(int slot)
    if (stub)
       return stub;
    return search_table_by_slot(dynamic_stubs, num_dynamic_stubs, slot);
-}
-
-void
-stub_fix_dynamic(struct mapi_stub *stub, const struct mapi_stub *alias)
-{
-   int slot;
-
-   if (stub->slot >= 0)
-      return;
-
-   if (alias)
-      slot = alias->slot;
-   else
-      slot = next_dynamic_slot++;
-
-   entry_patch(stub->addr, slot);
-   stub->slot = slot;
 }
 #endif // !defined(STATIC_DISPATCH_ONLY)
 

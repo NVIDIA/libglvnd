@@ -125,9 +125,6 @@ _glapi_get_dispatch_table_size(void);
 
 
 int
-_glapi_add_dispatch(const char * const * function_names);
-
-int
 _glapi_get_proc_offset(const char *funcName);
 
 

@@ -80,7 +80,7 @@ typedef struct __GLdispatchProcEntryRec {
     char *procName;
 
     // Cached offset of this dispatch entry, retrieved from
-    // _glapi_add_dispatch()
+    // _glapi_get_proc_offset()
     int offset;
 
     // The generation in which this dispatch entry was defined.
@@ -91,12 +91,6 @@ typedef struct __GLdispatchProcEntryRec {
     // List handle
     struct glvnd_list entry;
 } __GLdispatchProcEntry;
-
-/*
- * List of new dispatch procs which need to be given prototypes at make current
- * time. Accesses to this need to be protected by the dispatch lock.
- */
-static struct glvnd_list newProcList;
 
 /*
  * List of valid extension procs which have been assigned prototypes. At make
@@ -170,7 +164,7 @@ static int isMultiThreaded = 0;
 
 /*
  * The dispatch lock. This should be taken around any code that manipulates the
- * above global variables or makes calls to _glapi_add_dispatch() or
+ * above global variables or makes calls to _glapi_get_proc_offset() or
  * _glapi_get_proc_offset().
  */
 struct {
@@ -217,7 +211,6 @@ void __glDispatchInit(void)
         _glapi_init();
         pthreadFuncs.key_create(&threadContextKey, ThreadDestroyed);
 
-        glvnd_list_init(&newProcList);
         glvnd_list_init(&extProcList);
         glvnd_list_init(&currentDispatchList);
         glvnd_list_init(&dispatchStubList);
@@ -274,46 +267,9 @@ static void FixupDispatchTable(__GLdispatchTable *dispatch)
     DBG_PRINTF(20, "dispatch=%p\n", dispatch);
     CheckDispatchLocked();
 
-    __GLdispatchProcEntry *curProc, *tmpProc;
-    const char *function_names[2];
+    __GLdispatchProcEntry *curProc;
     void *procAddr;
     void **tbl = (void **)dispatch->table;
-
-    /*
-     * For each proc in the newProcList, attempt to create a dispatch stub in
-     * glapi, then move the proc from the newProcList to the extProcList and do
-     * some cleanup.
-     */
-    glvnd_list_for_each_entry_safe(curProc, tmpProc, &newProcList, entry) {
-
-        DBG_PRINTF(20, "newProc procName=%s\n", curProc->procName);
-
-        /*
-         * _glapi_add_dispatch() has support for mapping multiple "equivalent"
-         * function names (for example, glUniform1fv() and glUniform1fvARB()) to
-         * one dispatch stub.  However, this becomes problematic in a
-         * multi-vendor scenario, as vendors may have differing viewpoints on
-         * whether two entrypoints are identical.  The GLX_ARB_create_context
-         * extension, for example, defines "forward-compatible" contexts in
-         * which calling the ARB version of a function is an error if the
-         * non-ARB version is available.  For vendors that support this
-         * extension, the ARB and non-ARB entrypoints are not identical.
-         *
-         * Hence, we only pass one function name per entrypoint to glapi.
-         */
-        function_names[0] = curProc->procName;
-        function_names[1] = NULL;
-
-        curProc->offset =
-            _glapi_add_dispatch((const char * const *)function_names);
-        DBG_PRINTF(20, "newProc offset=%d\n", curProc->offset);
-
-        assert(curProc->offset != -1);
-
-        glvnd_list_del(&curProc->entry);
-        glvnd_list_add(&curProc->entry, &extProcList);
-
-    }
 
     /*
      * For each proc in the extProcList, compare its gen# against that of
@@ -358,7 +314,6 @@ static __GLdispatchProcEntry *FindProcInList(const char *procName,
 
 PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
 {
-    GLint offset;
     _glapi_proc addr;
 
     /*
@@ -371,28 +326,20 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
 
     DBG_PRINTF(20, "addr=%p\n", addr);
     if (addr) {
-        /*
-         * Newly-generated entrypoints receive a temporary dispatch offset of
-         * -1 until they are given a real offset later by _glapi_add_dispatch().
-         * If this entrypoint hasn't already been added to the newProcList,
-         * do so now, and fix up tables accordingly. Any procs landed in the
-         * extProcList should already have a valid offset assigned to them,
-         * and hence we don't need to search that list as well.
-         */
-        offset = _glapi_get_proc_offset(procName);
-        if ((offset == -1) &&
-            !FindProcInList(procName, &newProcList)) {
+        if (!FindProcInList(procName, &extProcList))
+        {
             __GLdispatchTable *curDispatch;
             __GLdispatchProcEntry *pEntry = malloc(sizeof(*pEntry));
             pEntry->procName = strdup(procName);
-            pEntry->offset = -1; // To be assigned later
+            pEntry->offset = _glapi_get_proc_offset(procName);
+            assert(pEntry->offset >= 0);
 
             /*
              * Bump the latestGeneration, then assign it to this proc.
              */
             pEntry->generation = ++latestGeneration;
 
-            glvnd_list_add(&pEntry->entry, &newProcList);
+            glvnd_list_add(&pEntry->entry, &extProcList);
 
             /*
              * Fixup any current dispatch tables to contain the right pointer
@@ -839,12 +786,6 @@ void __glDispatchFini(void)
         /*
          * Clear out the getProcAddress lists.
          */
-        glvnd_list_for_each_entry_safe(curProc, tmpProc, &newProcList, entry) {
-            glvnd_list_del(&curProc->entry);
-            free(curProc->procName);
-            free(curProc);
-        }
-
         glvnd_list_for_each_entry_safe(curProc, tmpProc, &extProcList, entry) {
             glvnd_list_del(&curProc->entry);
             free(curProc->procName);
