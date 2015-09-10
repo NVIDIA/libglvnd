@@ -94,9 +94,4 @@ entry_generate(int slot)
 {
    return NULL;
 }
-
-void
-entry_patch(mapi_func entry, int slot)
-{
-}
 #endif // !defined(STATIC_DISPATCH_ONLY)

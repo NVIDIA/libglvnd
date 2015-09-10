@@ -74,10 +74,3 @@ int entry_patch_finish(void)
     return entry_patch_mprotect(PROT_READ | PROT_EXEC);
 }
 
-#if !defined(STATIC_DISPATCH_ONLY)
-void
-entry_patch(mapi_func entry, int slot)
-{
-    entry_generate_default_code((char *)entry, slot);
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)

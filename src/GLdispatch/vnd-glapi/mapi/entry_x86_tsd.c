@@ -111,22 +111,12 @@ void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **ex
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)
-void
-entry_patch(mapi_func entry, int slot)
-{
-   char *code = (char *) u_execmem_get_writable(entry);
-
-   *((unsigned long *) (code + 11)) = slot * sizeof(mapi_func);
-   *((unsigned long *) (code + 22)) = slot * sizeof(mapi_func);
-}
-
 mapi_func
 entry_generate(int slot)
 {
    const char *code_templ = x86_entry_end - X86_ENTRY_SIZE;
    char *code;
    char *writeEntry;
-   mapi_func entry;
 
    code = (char *) u_execmem_alloc(X86_ENTRY_SIZE);
    if (!code)
@@ -134,13 +124,15 @@ entry_generate(int slot)
 
    writeEntry = (char *) u_execmem_get_writable(code);
    memcpy(writeEntry, code_templ, X86_ENTRY_SIZE);
-   entry = (mapi_func) code;
-   entry_patch(entry, slot);
+
+   // Patch the dispatch table slot
+   *((uint32_t *) (writeEntry + 11)) = slot * sizeof(mapi_func);
+   *((uint32_t *) (writeEntry + 22)) = slot * sizeof(mapi_func);
 
    // Adjust the offset of the CALL instruction.
    assert(*((uint8_t *) (writeEntry + 15)) == 0xE8);
    *((uint32_t *) (writeEntry + 16)) += (code_templ - code);
 
-   return entry;
+   return (mapi_func) code;
 }
 #endif // !defined(STATIC_DISPATCH_ONLY)

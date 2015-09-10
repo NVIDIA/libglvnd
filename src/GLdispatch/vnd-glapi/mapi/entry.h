@@ -57,9 +57,6 @@ entry_generate(int slot);
 void
 entry_generate_default_code(char *entry, int slot);
 
-void
-entry_patch(mapi_func entry, int slot);
-
 /**
  * Called before starting entrypoint patching.
  *
