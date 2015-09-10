@@ -115,12 +115,6 @@ typedef struct __GLdispatchAPIStateRec {
 } __GLdispatchAPIState;
 
 /*!
- * Offset hook type used by GLdispatch wrapper libraries to implement entrypoint
- * rewriting.
- */
-typedef void (*__GLdispatchGetOffsetHook)(void *(*lookupStubOffset)(const char *));
-
-/*!
  * Gets the version number for the ABI between libGLdispatch and the
  * window-system libraries.
  *
@@ -223,22 +217,6 @@ PUBLIC void __glDispatchLoseCurrent(void);
  * which client API owns the context (EGL or GLX).
  */
 PUBLIC __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void);
-
-/*!
- * This gets the "offset" of the given entrypoint in the GL dispatch table
- * structure, or -1 if there was an error.  This is technically an opaque handle
- * which can be passed into __glDispatchSetEntry() later, but in practice
- * describes a real offset.  If the call succeeds, the offset remains valid for
- * the lifetime of libglvnd for all GL dispatch tables used by libglvnd.
- */
-PUBLIC GLint __glDispatchGetOffset(const GLubyte *procName);
-
-/*!
- * This sets the dispatch table entry given by <offset> to the entrypoint
- * address given by <addr>.
- */
-PUBLIC void __glDispatchSetEntry(__GLdispatchTable *dispatch,
-                                 GLint offset, __GLdispatchProc addr);
 
 /**
  * Checks to see if multiple threads are being used. This should be called

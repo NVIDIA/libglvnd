@@ -35,7 +35,6 @@
 #include "table.h"
 
 #if !defined(STATIC_DISPATCH_ONLY)
-#include "u_thread.h"
 #include "u_execmem.h"
 #endif
 
@@ -160,12 +159,9 @@ stub_add_dynamic(const char *name)
 struct mapi_stub *
 stub_find_dynamic(const char *name, int generate)
 {
-   u_mutex_declare_static(dynamic_mutex);
    struct mapi_stub *stub = NULL;
    int count, i;
    
-   u_mutex_lock(dynamic_mutex);
-
    if (generate)
       assert(!stub_find_public(name));
 
@@ -180,8 +176,6 @@ stub_find_dynamic(const char *name, int generate)
    /* generate a dynamic stub */
    if (generate && !stub)
          stub = stub_add_dynamic(name);
-
-   u_mutex_unlock(dynamic_mutex);
 
    return stub;
 }

@@ -408,27 +408,6 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
     return addr;
 }
 
-PUBLIC void __glDispatchSetEntry(__GLdispatchTable *dispatch,
-                                 GLint offset,
-                                 __GLdispatchProc addr)
-{
-    void **tbl;
-
-    LockDispatch();
-    if (dispatch) {
-        tbl = (void **)dispatch->table;
-        if (tbl) {
-            tbl[offset] = addr;
-        }
-    }
-    UnlockDispatch();
-}
-
-GLint __glDispatchGetOffset(const GLubyte *procName)
-{
-    return _glapi_get_proc_offset((const char *)procName);
-}
-
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback getProcAddress)
 {
     __GLdispatchTable *dispatch = malloc(sizeof(__GLdispatchTable));
