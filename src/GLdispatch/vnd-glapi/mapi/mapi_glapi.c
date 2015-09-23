@@ -33,7 +33,7 @@
 #include "stub.h"
 
 /*
- * Global variables and _glapi_get_dispatch are defined in
+ * Global variables and _glapi_get_current are defined in
  * u_current.c.
  */
 
@@ -58,7 +58,7 @@ _glapi_set_multithread(void)
 }
 
 void
-_glapi_set_dispatch(const struct _glapi_table *dispatch)
+_glapi_set_current(const struct _glapi_table *dispatch)
 {
     if (dispatch == NULL)
     {
@@ -68,7 +68,7 @@ _glapi_set_dispatch(const struct _glapi_table *dispatch)
 }
 
 const struct _glapi_table *
-_glapi_get_dispatch(void)
+_glapi_get_current(void)
 {
     return u_current_get();
 }

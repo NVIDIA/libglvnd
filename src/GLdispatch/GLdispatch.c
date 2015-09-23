@@ -679,7 +679,7 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
      * Set the current state in TLS.
      */
     SetCurrentAPIState(apiState);
-    _glapi_set_dispatch(dispatch->table);
+    _glapi_set_current(dispatch->table);
 
     return GL_TRUE;
 }
@@ -706,7 +706,7 @@ static void LoseCurrentInternal(__GLdispatchAPIState *curApiState,
 
     if (!threadDestroyed) {
         SetCurrentAPIState(NULL);
-        _glapi_set_dispatch(NULL);
+        _glapi_set_current(NULL);
     }
 }
 
@@ -753,7 +753,7 @@ void __glDispatchReset(void)
 
     /* Clear GLAPI TLS entries. */
     SetCurrentAPIState(NULL);
-    _glapi_set_dispatch(NULL);
+    _glapi_set_current(NULL);
 }
 
 /*

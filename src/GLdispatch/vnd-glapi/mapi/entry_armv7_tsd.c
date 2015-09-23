@@ -71,7 +71,7 @@ __asm__(".syntax unified\n\t");
  *
  * First tries to find a dispatch table in _glapi_Current[GLAPI_CURRENT_DISPATCH],
  * if not found then it jumps to the 'lookup_dispatch' and calls
- * _glapi_get_dispatch() then jumps back to the 'found_dispatch' label.
+ * _glapi_get_current() then jumps back to the 'found_dispatch' label.
  *
  * The 'found_dispatch' section computes the correct offset in the dispatch
  * table then does a branch without link to the function address.
@@ -102,7 +102,7 @@ __asm__(".syntax unified\n\t");
     "1:\n\t"                                \
     ".word _glapi_Current\n\t"              \
     "2:\n\t"                                \
-    ".word _glapi_get_dispatch\n\t"         \
+    ".word _glapi_get_current\n\t"         \
     "3:\n\t"                                \
     ".word " slot "\n\t"
 
@@ -192,7 +192,7 @@ void entry_generate_default_code(char *entry, int slot)
     *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
         (uint32_t)_glapi_Current;
     *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
-        (uint32_t)_glapi_get_dispatch;
+        (uint32_t)_glapi_get_current;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
     __builtin___clear_cache(writeEntry, writeEntry + ARMV7_BYTECODE_SIZE);

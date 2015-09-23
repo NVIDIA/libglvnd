@@ -50,7 +50,7 @@ __asm__(".text\n"
    "je 1f\n\t"                      \
    "jmp *(4 * " slot ")(%eax)\n"    \
    "1:\n\t"                         \
-   "call _glapi_get_dispatch\n\t" \
+   "call _glapi_get_current\n\t" \
    "jmp *(4 * " slot ")(%eax)"
 
 #define MAPI_TMP_STUB_ASM_GCC

@@ -38,7 +38,7 @@ entry_current_get(void)
    return _glapi_tls_Current[GLAPI_CURRENT_DISPATCH];
 #else
    return (likely(_glapi_Current[GLAPI_CURRENT_DISPATCH]) ?
-         _glapi_Current[GLAPI_CURRENT_DISPATCH] : _glapi_get_dispatch());
+         _glapi_Current[GLAPI_CURRENT_DISPATCH] : _glapi_get_current());
 #endif
 }
 

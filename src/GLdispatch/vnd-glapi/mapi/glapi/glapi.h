@@ -83,12 +83,26 @@ enum {
 
 #if defined (GLDISPATCH_USE_TLS)
 
+/**
+ * A pointer to each thread's dispatch table.
+ */
 _GLAPI_EXPORT extern const __thread void *
     _glapi_tls_Current[GLAPI_NUM_CURRENT_ENTRIES]
     __attribute__((tls_model("initial-exec")));
 
 #endif /* defined (GLDISPATCH_USE_TLS) */
 
+/**
+ * A pointer to the current dispatch table, used with the TSD versions of the
+ * dispatch functions.
+ *
+ * For applications that only render from a single thread, there's only one
+ * dispatch table. In that case, the dispatch functions will look up the
+ * dispatch table from this variable, so that they avoid the overhead of
+ * calling pthread_getspecific.
+ *
+ * With a multithreaded app, this variable will contain NULL.
+ */
 _GLAPI_EXPORT extern const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES];
 
 
@@ -112,12 +126,20 @@ void
 _glapi_set_multithread(void);
 
 
+/**
+ * Sets the dispatch table for the current thread.
+ *
+ * If \p dispatch is NULL, then a table of no-op functions will be assigned
+ * instead.
+ */
 void
-_glapi_set_dispatch(const struct _glapi_table *dispatch);
+_glapi_set_current(const struct _glapi_table *dispatch);
 
-
+/**
+ * Returns the dispatch table for the current thread.
+ */
 _GLAPI_EXPORT const struct _glapi_table *
-_glapi_get_dispatch(void);
+_glapi_get_current(void);
 
 
 unsigned int
