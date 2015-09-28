@@ -15,8 +15,7 @@ future this library may support EGL and OpenGL ES as well.
 Building the library
 ----------------------
 
-Run `./autogen.sh`. Run `./dbg_configure.sh` to build the library in debug
-mode, or `./configure` to build it in release mode. Finally, run `make`.
+Run `./autogen.sh`, then run `./configure` and `make`.
 
 
 Code overview
@@ -204,6 +203,11 @@ Issues
   mapping? How would this be implemented? Should we add new API calls to "GLX
   Next"?
 
+  * Note that the (drawable -> screen -> vendor) mapping is an internal detail
+	of libGLX. The ABI provided to the vendor library exposes a mapping from
+	drawables to (screen, vendor) pairs. The interface does not make any
+	assumptions about how screens and vendors correspond to each other.
+
 * Along the same lines, would it be useful to include a
   "glXGetProcAddressFromVendor()" or "glXGetProcAddressFromScreen()" entrypoint
   in a new GLX version to obviate the need for this library in future
@@ -255,17 +259,6 @@ Issues
   into XCloseDisplay()?
 
 * Should x11glvnd be an extension on top of GLX 1.4, or a "GLX Next" feature?
-
-TODO
-----
-
-* Refactor so the core OpenGL dispatch table, and the vendor-library ABI exposed
-  to manipulate this table, is independent of the libGLX ABI.
-
-* Fix glXGetClientString() to take a real "union" of strings, rather than just
-  concatenating them.
-
-* Implement libEGL, and libGLESv{1,2}.
 
 References
 ----------
