@@ -224,11 +224,27 @@ typedef struct __GLXapiImportsRec {
     void        (*setDispatchIndex)      (const GLubyte *procName, int index);
 
     /*!
-     * This notifies the vendor library when an X error should be generated
-     * due to a detected error in the GLX API stream.
+     * (OPTIONAL) This notifies the vendor library when an X error was
+     * generated due to a detected error in the GLX API stream.
+     *
+     * This may be \c NULL, in which case the vendor library is not notified of
+     * any errors.
+     *
+     * \note this is a notification only -- libGLX takes care of actually
+     * reporting the error.
+     *
+     * \param dpy The display connection.
+     * \param error The error code.
+     * \param resid The XID associated with the error, if any.
+     * \param opcode The minor opcode of the function that generated the error.
+     * \param coreX11error True if the error code is a core X11 error, or False
+     * if it's a GLX error code.
+     *
+     * \return True if libGLX should report the error to the application.
      */
-    void        (*notifyError)  (Display *dpy, char error,
-                                 char opcode, XID resid);
+    Bool        (*notifyError)  (Display *dpy, unsigned char error,
+                                 XID resid, unsigned char opcode,
+                                 Bool coreX11error);
 
     /*!
      * (OPTIONAL) Callbacks by which the vendor library may re-write libglvnd's

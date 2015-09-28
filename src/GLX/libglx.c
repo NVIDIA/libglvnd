@@ -437,56 +437,51 @@ static Bool IsContextCurrentToAnyOtherThread(GLXContext ctx)
     return !!pEntry && (current != ctx);
 }
 
-/*!
- * Given the Make{Context,}Current arguments passed in, tries to find the
- * screen of an appropriate vendor to notify when an X error occurs.  It's
- * possible none of the arguments in this list will produce a valid screen
- * number, so this will fall back to screen 0 if all else fails.
- */
-int FindAnyValidScreenFromMakeCurrent(Display *dpy,
-                                      GLXDrawable draw,
-                                      GLXDrawable read,
-                                      GLXContext context)
+static void __glXSendError(Display *dpy, unsigned char errorCode,
+        XID resourceID, unsigned char minorCode, Bool coreX11error)
 {
-    int screen;
+    __GLXdisplayInfo *dpyInfo = NULL;
+    xError error;
 
-    screen = __glXScreenFromContext(__glXGetCurrentContext());
-
-    if (screen < 0) {
-        screen = __glXScreenFromContext(context);
+    if (dpy == NULL) {
+        return;
     }
 
-    if (screen < 0) {
-        screen = __glXScreenFromDrawable(dpy, draw);
+    dpyInfo = __glXLookupDisplay(dpy);
+
+    if (dpyInfo == NULL || !dpyInfo->glxSupported) {
+        return;
     }
 
-    if (screen < 0) {
-        screen = __glXScreenFromDrawable(dpy, read);
+    LockDisplay(dpy);
+
+    error.type = X_Error;
+    error.errorCode = errorCode;
+    error.sequenceNumber = dpy->request;
+    error.resourceID = resourceID;
+    error.minorCode = minorCode;
+    error.majorCode = dpyInfo->glxMajorOpcode;
+    if (!coreX11error) {
+        error.errorCode += dpyInfo->glxFirstError;
     }
 
-    if (screen < 0) {
-        /* If no screens were found, fall back to 0 */
-        screen = 0;
-    }
+    _XError(dpy, &error);
 
-    return screen;
+    UnlockDisplay(dpy);
 }
 
-void NotifyVendorOfXError(int screen,
-                          Display *dpy,
-                          char errorOpcode,
-                          char minorOpcode,
-                          XID resid)
+static void NotifyXError(Display *dpy, unsigned char errorCode,
+        XID resourceID, unsigned char minorCode, Bool coreX11error,
+        __GLXvendorInfo *vendor)
 {
-    /*
-     * XXX: For now, libglvnd doesn't handle generating X errors directly.
-     * Instead, it tries to pass the error off to an available vendor library
-     * so the vendor can handle generating the X error.
-     */
-    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
     if (vendor != NULL && vendor->glxvc->notifyError != NULL) {
-        vendor->glxvc->notifyError(dpy, errorOpcode, minorOpcode, resid);
+        Bool ret = vendor->glxvc->notifyError(dpy, errorCode, resourceID,
+                minorCode, coreX11error);
+        if (!ret) {
+            return;
+        }
     }
+    __glXSendError(dpy, errorCode, resourceID, minorCode, coreX11error);
 }
 
 static Bool InternalLoseCurrent(void)
@@ -624,22 +619,6 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
     Bool ret;
     int screen;
 
-    /*
-     * If <ctx> is NULL and <draw> and <read> are not None, or if <draw> or
-     * <read> are set to None and <ctx> is not NULL, then a BadMatch error will
-     * be generated. GLX 1.4 section 3.3.7 (p. 27).
-     *
-     * However, GLX_ARB_create_context specifies that GL 3.0+ contexts may be
-     * made current without a default framebuffer, so the "or if..." part above
-     * is ignored here.
-     */
-    if (!context && (draw != None || read != None)) {
-        int errorScreen =
-            FindAnyValidScreenFromMakeCurrent(dpy, draw, read, context);
-        NotifyVendorOfXError(errorScreen, dpy, BadMatch, callerOpcode, 0);
-        return False;
-    }
-
     apiState = __glXGetCurrentAPIState();
 
     if (apiState != NULL) {
@@ -670,6 +649,24 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
         oldDpy = NULL;
         oldDraw = oldRead = None;
         oldContext = NULL;
+    }
+
+    /*
+     * If <ctx> is NULL and <draw> and <read> are not None, or if <draw> or
+     * <read> are set to None and <ctx> is not NULL, then a BadMatch error will
+     * be generated. GLX 1.4 section 3.3.7 (p. 27).
+     *
+     * However, GLX_ARB_create_context specifies that GL 3.0+ contexts may be
+     * made current without a default framebuffer, so the "or if..." part above
+     * is ignored here.
+     */
+    if (!context && (draw != None || read != None)) {
+        // Notify the vendor library and send the X error. Since we don't have
+        // a new context, instead notify the vendor library that owns the
+        // current context (if there is one).
+
+        NotifyXError(dpy, BadMatch, 0, callerOpcode, True, oldVendor);
+        return False;
     }
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
