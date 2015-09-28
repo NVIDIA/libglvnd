@@ -70,7 +70,14 @@ typedef struct __GLXdisplayInfoRec {
 
     DEFINE_LKDHASH(__GLXscreenXIDMappingHash, xidScreenHash);
 
-    int x11glvndSupported;
+    /// True if the server supports the GLX extension.
+    Bool glxSupported;
+
+    /// The major opcode for GLX, if it's supported.
+    int glxMajorOpcode;
+    int glxFirstError;
+
+    Bool x11glvndSupported;
     int x11glvndMajor;
     int x11glvndMinor;
 } __GLXdisplayInfo;

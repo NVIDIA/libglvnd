@@ -56,8 +56,6 @@
 #define GLX_MAJOR_VERSION 1
 #define GLX_MINOR_VERSION 4
 
-#define GLX_EXTENSION_NAME "GLX"
-
 GLVNDPthreadFuncs __glXPthreadFuncs;
 
 static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
@@ -813,20 +811,17 @@ PUBLIC Bool glXQueryVersion(Display *dpy, int *major, int *minor)
      */
     xGLXQueryVersionReq *req;
     xGLXQueryVersionReply reply;
-
-    int extMajor, extEvent, extError;
+    __GLXdisplayInfo *dpyInfo = NULL;
     Bool ret;
 
-    ret = XQueryExtension(dpy, GLX_EXTENSION_NAME, &extMajor, &extEvent, &extError);
-
-    if (ret == False) {
-        /* No extension! */
+    dpyInfo = __glXLookupDisplay(dpy);
+    if (dpyInfo == NULL || !dpyInfo->glxSupported) {
         return False;
     }
 
     LockDisplay(dpy);
     GetReq(GLXQueryVersion, req);
-    req->reqType = extMajor;
+    req->reqType = dpyInfo->glxMajorOpcode;
     req->glxCode = X_GLXQueryVersion;
     req->majorVersion = GLX_MAJOR_VERSION;
     req->minorVersion = GLX_MINOR_VERSION;

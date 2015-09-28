@@ -68,6 +68,8 @@
 #define FALLBACK_VENDOR_NAME "indirect"
 #endif
 
+#define GLX_EXTENSION_NAME "GLX"
+
 /*
  * Hash table containing a mapping from dispatch table index entries to
  * entry point names. This is used in  __glXFetchDispatchEntry() to query
@@ -742,8 +744,15 @@ static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
     LKDHASH_INIT(__glXPthreadFuncs, pEntry->info.xidScreenHash);
     __glXPthreadFuncs.rwlock_init(&pEntry->info.vendorLock, NULL);
 
+    // Check whether the server supports the GLX extension, and record the
+    // major opcode if it does.
+    pEntry->info.glxSupported = XQueryExtension(dpy, GLX_EXTENSION_NAME,
+            &pEntry->info.glxMajorOpcode, &eventBase,
+            &pEntry->info.glxFirstError);
+
+    // Check whether the server supports the x11glvnd extension.
     if (XGLVQueryExtension(dpy, &eventBase, &errorBase)) {
-        pEntry->info.x11glvndSupported = 1;
+        pEntry->info.x11glvndSupported = True;
         XGLVQueryVersion(dpy, &pEntry->info.x11glvndMajor,
                 &pEntry->info.x11glvndMinor);
     }
