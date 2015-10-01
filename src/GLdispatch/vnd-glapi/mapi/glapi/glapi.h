@@ -160,7 +160,8 @@ _glapi_get_proc_name(unsigned int offset);
 void
 _glapi_init_table_from_callback(struct _glapi_table *table,
                                 size_t entries,
-                                void *(*get_proc_addr)(const unsigned char *name));
+                                void *(*get_proc_addr)(const char *name, void *param),
+                                void *param);
 
 /**
  * Functions used for patching entrypoints. These functions are exported from

@@ -284,7 +284,8 @@ static void FixupDispatchTable(__GLdispatchTable *dispatch)
             assert(curProc->procName);
 
             procAddr = (void*)(*dispatch->getProcAddress)(
-                (const GLubyte *)curProc->procName);
+                curProc->procName,
+                dispatch->getProcAddressParam);
 
             tbl[curProc->offset] = procAddr ? procAddr : (void *)noop_func;
             DBG_PRINTF(20, "extProc procName=%s, addr=%p, noop=%p\n",
@@ -355,7 +356,8 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
     return addr;
 }
 
-PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback getProcAddress)
+PUBLIC __GLdispatchTable *__glDispatchCreateTable(
+        __GLgetProcAddressCallback getProcAddress, void *param)
 {
     __GLdispatchTable *dispatch = malloc(sizeof(__GLdispatchTable));
 
@@ -364,6 +366,7 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(__GLgetProcAddressCallback get
     dispatch->table = NULL;
 
     dispatch->getProcAddress = getProcAddress;
+    dispatch->getProcAddressParam = param;
 
     return dispatch;
 }
@@ -383,7 +386,7 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch)
 }
 
 static struct _glapi_table
-*CreateGLAPITable(__GLgetProcAddressCallback getProcAddress)
+*CreateGLAPITable(__GLgetProcAddressCallback getProcAddress, void *param)
 {
     size_t entries = _glapi_get_dispatch_table_size();
     struct _glapi_table *table = (struct _glapi_table *)
@@ -394,7 +397,8 @@ static struct _glapi_table
     if (table) {
         _glapi_init_table_from_callback(table,
                                         entries,
-                                        getProcAddress);
+                                        getProcAddress,
+                                        param);
     }
 
     return table;
@@ -656,7 +660,8 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
 
         // Lazily create the dispatch table if we haven't already
         if (!dispatch->table) {
-            dispatch->table = CreateGLAPITable(dispatch->getProcAddress);
+            dispatch->table = CreateGLAPITable(dispatch->getProcAddress,
+                    dispatch->getProcAddressParam);
         }
 
         FixupDispatchTable(dispatch);

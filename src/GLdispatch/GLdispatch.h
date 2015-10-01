@@ -58,6 +58,15 @@ enum {
     GLDISPATCH_API_EGL
 };
 
+/*!
+ * This opaque structure describes the core GL dispatch table.
+ */
+typedef struct __GLdispatchTableRec __GLdispatchTable;
+
+typedef void (*__GLdispatchProc)(void);
+
+typedef void *(*__GLgetProcAddressCallback)(const char *procName, void *param);
+
 /**
  * An opaque structure used for internal API state data.
  */
@@ -162,16 +171,14 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName);
  * client GLX or EGL context, and is passed into GLdispatch during make current.
  * A dispatch table is owned by a particular vendor.
  *
- * \param [in] getProcAddress a vendor library callback GLdispatch can use to
+ * \param[in] getProcAddress a vendor library callback GLdispatch can use to
  * query addresses of functions from the vendor. This callback also takes
- * a pointer to vendor-private data.
- * \param [in] destroyVendorData a vendor library callback to destroy private
- * data when the dispatch table is destroyed.
- * \param [in] vendorData a pointer to vendor library private data, which can
- * be used by the getProcAddress callback.
+ * a pointer to caller-private data.
+ * \param[in] param A pointer to pass to \p getProcAddress.
  */
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(
-    __GLgetProcAddressCallback getProcAddress
+    __GLgetProcAddressCallback getProcAddress,
+    void *param
 );
 
 /*!

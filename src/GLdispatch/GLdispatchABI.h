@@ -44,15 +44,6 @@ extern "C" {
  * these client ABIs.
  */
 
-/*!
- * This opaque structure describes the core GL dispatch table.
- */
-typedef struct __GLdispatchTableRec __GLdispatchTable;
-
-typedef void (*__GLdispatchProc)(void);
-
-typedef void *(*__GLgetProcAddressCallback)(const GLubyte *procName);
-
 /*
  * Thread-local implementation used by libglvnd.  This is passed into
  * the patch function callback via the type parameter.

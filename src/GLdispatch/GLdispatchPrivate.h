@@ -68,6 +68,7 @@ struct __GLdispatchTableRec {
 
     /*! Saved vendor library callbacks */
     __GLgetProcAddressCallback getProcAddress;
+    void *getProcAddressParam;
 
     /*! The real dispatch table */
     struct _glapi_table *table;

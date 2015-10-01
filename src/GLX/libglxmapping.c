@@ -453,6 +453,12 @@ static GLboolean LookupVendorEntrypoints(__GLXvendorInfo *vendor)
     return GL_TRUE;
 }
 
+static void *VendorGetProcAddressCallback(const char *procName, void *param)
+{
+    __GLXvendorInfo *vendor = (__GLXvendorInfo *) param;
+    return vendor->glxvc->getProcAddress((const GLubyte *) procName);
+}
+
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 {
     __GLXvendorNameHash *pEntry = NULL;
@@ -543,7 +549,8 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 
             vendor->glDispatch = (__GLdispatchTable *)
                 __glDispatchCreateTable(
-                    vendor->glxvc->getProcAddress
+                    VendorGetProcAddressCallback,
+                    vendor
                 );
             if (!vendor->glDispatch) {
                 goto fail;
