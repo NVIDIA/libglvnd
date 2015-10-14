@@ -85,6 +85,9 @@ static __GLXAPIState *CreateAPIState(__GLXvendorInfo *vendor);
 static void DestroyAPIState(__GLXAPIState *apiState);
 static Bool UpdateCurrentContext(GLXContext newCtx, GLXContext oldCtx);
 
+static void __glXSendError(Display *dpy, unsigned char errorCode,
+        XID resourceID, unsigned char minorCode, Bool coreX11error);
+
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
 {
@@ -130,6 +133,23 @@ PUBLIC GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis,
 }
 
 
+PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
+                               int render_type, GLXContext share_list,
+                               Bool direct)
+{
+    __glXThreadInitialize();
+
+    const int screen = __glXScreenFromFBConfig(config);
+    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
+
+    GLXContext context = pDispatch->createNewContext(dpy, config, render_type,
+                                                     share_list, direct);
+    __glXAddScreenContextMapping(dpy, context, screen, vendor);
+
+    return context;
+}
+
 PUBLIC void glXDestroyContext(Display *dpy, GLXContext context)
 {
     __glXThreadInitialize();
@@ -140,6 +160,166 @@ PUBLIC void glXDestroyContext(Display *dpy, GLXContext context)
     __glXNotifyContextDestroyed(context);
 
     pDispatch->destroyContext(dpy, context);
+}
+
+static Bool __glXIsDirect(Display *dpy, __GLXdisplayInfo *dpyInfo, GLXContextID context)
+{
+    xGLXIsDirectReq *req;
+    xGLXIsDirectReply reply;
+
+    assert(dpyInfo->glxSupported);
+
+    LockDisplay(dpy);
+
+    GetReq(GLXIsDirect, req);
+    req->reqType = dpyInfo->glxMajorOpcode;
+    req->glxCode = X_GLXIsDirect;
+    req->context = context;
+    _XReply(dpy, (xReply *) &reply, 0, False);
+
+    UnlockDisplay(dpy);
+    SyncHandle();
+
+    return reply.isDirect;
+}
+
+/**
+ * Finds the screen number for a context, using the context's XID. This
+ * function sends the request directly, so it doesn't rely on any vendor
+ * library.
+ *
+ * Adapted from Mesa's glXImportContextEXT implementation.
+ */
+static int __glXGetScreenForContextID(Display *dpy, __GLXdisplayInfo *dpyInfo,
+        GLXContextID contextID)
+{
+    xGLXQueryContextReply reply;
+    int *propList;
+    int majorVersion, minorVersion;
+    int screen = -1;
+    int i;
+
+    assert(dpyInfo->glxSupported);
+
+    // Check the version number so that we know which request to send.
+    if (!glXQueryVersion(dpy, &majorVersion, &minorVersion)) {
+        return -1;
+    }
+
+    /* Send the glXQueryContextInfoEXT request */
+    LockDisplay(dpy);
+
+    if (majorVersion > 1 || minorVersion >= 3) {
+        xGLXQueryContextReq *req;
+
+        GetReq(GLXQueryContext, req);
+
+        req->reqType = dpyInfo->glxMajorOpcode;
+        req->glxCode = X_GLXQueryContext;
+        req->context = contextID;
+    } else {
+        xGLXVendorPrivateReq *vpreq;
+        xGLXQueryContextInfoEXTReq *req;
+
+        GetReqExtra(GLXVendorPrivate,
+                sz_xGLXQueryContextInfoEXTReq - sz_xGLXVendorPrivateReq,
+                vpreq);
+        req = (xGLXQueryContextInfoEXTReq *) vpreq;
+        req->reqType = dpyInfo->glxMajorOpcode;
+        req->glxCode = X_GLXVendorPrivateWithReply;
+        req->vendorCode = X_GLXvop_QueryContextInfoEXT;
+        req->context = contextID;
+    }
+
+    _XReply(dpy, (xReply *) &reply, 0, False);
+
+    if (reply.n <= 0) {
+        UnlockDisplay(dpy);
+        SyncHandle();
+        return -1;
+    }
+
+    propList = malloc(reply.n * 8);
+    if (propList == NULL) {
+        UnlockDisplay(dpy);
+        SyncHandle();
+        return -1;
+    }
+    _XRead(dpy, (char *) propList, reply.n * 8);
+
+    UnlockDisplay(dpy);
+    SyncHandle();
+
+    for (i=0; i<reply.n; i++) {
+        int *prop = &propList[i * 2];
+        if (prop[0] == GLX_SCREEN) {
+            screen = prop[1];
+            break;
+        }
+    }
+    free(propList);
+    return screen;
+}
+
+static GLXContext glXImportContextEXT(Display *dpy, GLXContextID contextID)
+{
+    __GLXdisplayInfo *dpyInfo;
+    int screen;
+    __GLXvendorInfo *vendor;
+
+    dpyInfo = __glXLookupDisplay(dpy);
+    if (dpyInfo == NULL || !dpyInfo->glxSupported) {
+        return NULL;
+    }
+
+    /* The GLX_EXT_import_context spec says:
+    *
+    *     "If <contextID> does not refer to a valid context, then a BadContext
+    *     error is generated; if <contextID> refers to direct rendering
+    *     context then no error is generated but glXImportContextEXT returns
+    *     NULL."
+    *
+    * If contextID is None, generate BadContext on the client-side.  Other
+    * sorts of invalid contexts will be detected by the server in the
+    * __glXIsDirect call.
+    */
+    if (contextID == None) {
+        __glXSendError(dpy, GLXBadContext, contextID, X_GLXIsDirect, False);
+        return NULL;
+    }
+
+    if (__glXIsDirect(dpy, dpyInfo, contextID)) {
+        return NULL;
+    }
+
+    // Find the screen number for the context. We can't rely on a vendor
+    // library yet, so send the request manually.
+    screen = __glXGetScreenForContextID(dpy, dpyInfo, contextID);
+    if (screen < 0) {
+        return NULL;
+    }
+
+    vendor = __glXLookupVendorByScreen(dpy, screen);
+    if (vendor != NULL && vendor->staticDispatch.importContextEXT != NULL) {
+        GLXContext context = vendor->staticDispatch.importContextEXT(dpy, contextID);
+        __glXAddScreenContextMapping(dpy, context, screen, vendor);
+        return context;
+    } else {
+        return NULL;
+    }
+}
+
+static void glXFreeContextEXT(Display *dpy, GLXContext context)
+{
+    __glXThreadInitialize();
+
+    const int screen = __glXScreenFromContext(context);
+    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
+
+    if (vendor != NULL && vendor->staticDispatch.freeContextEXT != NULL) {
+        __glXNotifyContextDestroyed(context);
+        vendor->staticDispatch.freeContextEXT(dpy, context);
+    }
 }
 
 
@@ -1152,24 +1332,6 @@ PUBLIC GLXFBConfig *glXChooseFBConfig(Display *dpy, int screen,
 }
 
 
-PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
-                               int render_type, GLXContext share_list,
-                               Bool direct)
-{
-    __glXThreadInitialize();
-
-    const int screen = __glXScreenFromFBConfig(config);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
-
-    GLXContext context = pDispatch->createNewContext(dpy, config, render_type,
-                                                     share_list, direct);
-    __glXAddScreenContextMapping(dpy, context, screen, vendor);
-
-    return context;
-}
-
-
 PUBLIC GLXPbuffer glXCreatePbuffer(Display *dpy, GLXFBConfig config,
                             const int *attrib_list)
 {
@@ -1405,6 +1567,9 @@ void cacheInitializeOnce(void)
         LOCAL_FUNC_TABLE_ENTRY(glXUseXFont)
         LOCAL_FUNC_TABLE_ENTRY(glXWaitGL)
         LOCAL_FUNC_TABLE_ENTRY(glXWaitX)
+
+        LOCAL_FUNC_TABLE_ENTRY(glXImportContextEXT)
+        LOCAL_FUNC_TABLE_ENTRY(glXFreeContextEXT)
     };
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXProcAddressHash);

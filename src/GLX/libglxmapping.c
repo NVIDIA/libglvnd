@@ -452,6 +452,14 @@ static GLboolean LookupVendorEntrypoints(__GLXvendorInfo *vendor)
     LOADENTRYPOINT(selectEvent,           "glXSelectEvent"          );
 #undef LOADENTRYPOINT
 
+    // These functions are optional.
+#define LOADENTRYPOINT(ptr, name) do { \
+    vendor->staticDispatch.ptr = vendor->glxvc->getProcAddress((const GLubyte *) name); \
+    } while(0)
+    LOADENTRYPOINT(importContextEXT,            "glXImportContextEXT"           );
+    LOADENTRYPOINT(freeContextEXT,              "glXFreeContextEXT"             );
+#undef LOADENTRYPOINT
+
     return GL_TRUE;
 }
 

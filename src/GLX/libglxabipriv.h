@@ -38,6 +38,8 @@
 
 #include "libglxabi.h"
 
+#include <GL/glxext.h>
+
 /*!
  * This structure stores function pointers for all functions defined in GLX 1.4.
  */
@@ -166,6 +168,9 @@ typedef struct __GLXdispatchTableStaticRec {
     void         (*selectEvent)           (Display *dpy,
                                            GLXDrawable draw,
                                            unsigned long event_mask);
+
+    PFNGLXIMPORTCONTEXTEXTPROC importContextEXT;
+    PFNGLXFREECONTEXTEXTPROC freeContextEXT;
 } __GLXdispatchTableStatic;
 
 #endif
