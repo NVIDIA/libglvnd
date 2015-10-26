@@ -33,15 +33,15 @@ endif
 
 libglapi_la_LDFLAGS = -no-undefined
 
-include $(GLAPI)/gen/glapi_gen.mk
-glapi_mapi_tmp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi,$<,vnd-glapi)
+include $(top_srcdir)/src/generate/glvnd_gen.mk
+glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
+	$(call glapi_gen_mapi)
 
-g_glapi_inittable.c: $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_initdispatch_deps)
-	$(call glapi_gen_initdispatch,$<)
+g_glapi_inittable.c: $(glapi_gen_initdispatch_deps)
+	$(call glapi_gen_initdispatch)
 
-glapitable.h: $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_dispatch_deps)
-	$(call glapi_gen_glapitable_header, $<)
+glapitable.h: $(glapi_gen_glapitable_deps)
+	$(call glapi_gen_glapitable_header)
 
 BUILT_SOURCES = glapi_mapi_tmp.h g_glapi_inittable.c glapitable.h
 CLEANFILES = $(BUILT_SOURCES)

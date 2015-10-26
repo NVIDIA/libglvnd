@@ -44,10 +44,9 @@ libOpenGL_la_SOURCES = \
 BUILT_SOURCES = glapi_mapi_tmp.h
 CLEANFILES = $(BUILT_SOURCES)
 
-include $(GLAPI)/gen/glapi_gen.mk
-
-glapi_mapi_tmp.h : $(GLAPI)/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi,$<,vnd-glapi)
+include $(top_srcdir)/src/generate/glvnd_gen.mk
+glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
+	$(call glapi_gen_mapi)
 
 libOpenGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
