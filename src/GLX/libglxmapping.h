@@ -106,7 +106,7 @@ const __GLXdispatchTableStatic * __glXGetDrawableStaticDispatch(Display *dpy,
 void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
 void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context);
 int __glXScreenFromContext(GLXContext context);
-int __glXVendorFromContext(Display *dpy, GLXContext context, int *retScreen, __GLXvendorInfo **retVendor);
+int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor);
 
 void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
 void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config);

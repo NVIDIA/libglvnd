@@ -851,6 +851,7 @@ void __glXFreeDisplay(Display *dpy)
 
 typedef struct {
     void *ptr;
+    Display *dpy;
     int screen;
     UT_hash_handle hh;
 } __GLXscreenPointerMappingHash;
@@ -858,7 +859,7 @@ typedef struct {
 
 static DEFINE_INITIALIZED_LKDHASH(__GLXscreenPointerMappingHash, __glXScreenPointerMappingHash);
 
-static void AddScreenPointerMapping(void *ptr, int screen)
+static void AddScreenPointerMapping(void *ptr, Display *dpy, int screen)
 {
     __GLXscreenPointerMappingHash *pEntry;
 
@@ -877,9 +878,11 @@ static void AddScreenPointerMapping(void *ptr, int screen)
     if (pEntry == NULL) {
         pEntry = malloc(sizeof(*pEntry));
         pEntry->ptr = ptr;
+        pEntry->dpy = dpy;
         pEntry->screen = screen;
         HASH_ADD_PTR(_LH(__glXScreenPointerMappingHash), ptr, pEntry);
     } else {
+        pEntry->dpy = dpy;
         pEntry->screen = screen;
     }
 
@@ -908,10 +911,13 @@ static void RemoveScreenPointerMapping(void *ptr)
 }
 
 
-static int ScreenFromPointer(void *ptr)
+static int DisplayFromPointer(void *ptr, Display **retDisplay, int *retScreen,
+        __GLXvendorInfo **retVendor,
+        Display *expectedDisplay)
 {
     __GLXscreenPointerMappingHash *pEntry;
     int screen = -1;
+    Display *dpy = NULL;
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
 
@@ -919,23 +925,26 @@ static int ScreenFromPointer(void *ptr)
 
     if (pEntry != NULL) {
         screen = pEntry->screen;
+        dpy = pEntry->dpy;
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
 
-    return screen;
-}
+    // If the caller passed in the display pointer, make sure it matches the
+    // display that we've already recorded.
+    if (expectedDisplay != NULL && dpy != NULL && dpy != expectedDisplay) {
+        screen = -1;
+        dpy = NULL;
+    }
 
-/**
- * Common function for the various __glXVendorFrom* functions.
- */
-static int CommonVendorFromScreen(Display *dpy, int screen, int *retScreen, __GLXvendorInfo **retVendor)
-{
     if (retScreen != NULL) {
         *retScreen = screen;
     }
+    if (retDisplay != NULL) {
+        *retDisplay = dpy;
+    }
     if (retVendor != NULL) {
-        if (screen >= 0) {
+        if (dpy != NULL && screen >= 0) {
             *retVendor = __glXLookupVendorByScreen(dpy, screen);
         } else {
             *retVendor = NULL;
@@ -944,9 +953,12 @@ static int CommonVendorFromScreen(Display *dpy, int screen, int *retScreen, __GL
     return (screen >= 0 ? 0 : -1);
 }
 
+/**
+ * Common function for the various __glXVendorFrom* functions.
+ */
 void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor)
 {
-    AddScreenPointerMapping(context, screen);
+    AddScreenPointerMapping(context, dpy, screen);
 }
 
 
@@ -958,19 +970,20 @@ void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context)
 
 int __glXScreenFromContext(GLXContext context)
 {
-    return ScreenFromPointer(context);
+    int screen = -1;
+    DisplayFromPointer(context, NULL, &screen, NULL, NULL);
+    return screen;
 }
 
-int __glXVendorFromContext(Display *dpy, GLXContext context, int *retScreen, __GLXvendorInfo **retVendor)
+int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor)
 {
-    int screen = ScreenFromPointer(context);
-    return CommonVendorFromScreen(dpy, screen, retScreen, retVendor);
+    return DisplayFromPointer(context, retDisplay, retScreen, retVendor, NULL);
 }
 
 
 void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor)
 {
-    AddScreenPointerMapping(config, screen);
+    AddScreenPointerMapping(config, dpy, screen);
 }
 
 
@@ -982,13 +995,14 @@ void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config)
 
 int __glXScreenFromFBConfig(GLXFBConfig config)
 {
-    return ScreenFromPointer(config);
+    int screen = -1;
+    DisplayFromPointer(config, NULL, &screen, NULL, NULL);
+    return screen;
 }
 
 int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor)
 {
-    int screen = ScreenFromPointer(config);
-    return CommonVendorFromScreen(dpy, screen, retScreen, retVendor);
+    return DisplayFromPointer(config, NULL, retScreen, retVendor, dpy);
 }
 
 // Internally, we use the screen number to look up a vendor, so we don't need

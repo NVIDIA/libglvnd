@@ -132,19 +132,23 @@ typedef struct __GLXapiExportsRec {
     /*!
      * Looks up the screen and vendor for a context.
      *
-     * If no mapping is found, then \p retScreen and \p retVendor will be set
-     * to -1 and NULL, respectively.
+     * If no mapping is found, then \p retScreen will be set to -1, and
+     * \p retVendor and \p retDisplay will be set to NULL.
      *
-     * Either of \p retScreen or \p retVendor may be NULL if the screen or
-     * vendor are not required.
+     * \p retScreen, \p retVendor, and \p retDisplay may be NULL if the screen,
+     * vendor, or display are not required.
      *
-     * \param dpy The display connection.
+     * Note that this function does not take a display connection, since
+     * there are cases (e.g., glXGetContextIDEXT) that take a GLXContext but
+     * not a display. Instead, it will return the display that the context was
+     * created on.
+     *
      * \param context The context to look up.
      * \param[out] retScreen Returns the screen number.
      * \param[out] retVendor Returns the vendor.
      * \return Zero if a match was found, or non-zero if it was not.
      */
-    int (*vendorFromContext)(Display *dpy, GLXContext context, int *retScreen, __GLXvendorInfo **retVendor);
+    int (*vendorFromContext)(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor);
 
     void (*addScreenFBConfigMapping)(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
     void (*removeScreenFBConfigMapping)(Display *dpy, GLXFBConfig config);
