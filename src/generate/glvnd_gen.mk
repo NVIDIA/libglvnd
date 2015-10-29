@@ -1,10 +1,14 @@
 
-glapi_gen_gl_xml := $(top_srcdir)/src/generate/xml/gl.xml
+glapi_gen_gl_xml := \
+	$(top_srcdir)/src/generate/xml/gl.xml \
+	$(top_srcdir)/src/generate/xml/gl_other.xml
 glapi_gen_gl_deps := \
 	$(top_srcdir)/src/generate/genCommon.py \
 	$(glapi_gen_gl_xml)
 
-glapi_gen_glx_xml := $(top_srcdir)/src/generate/xml/glx.xml
+glapi_gen_glx_xml := \
+	$(top_srcdir)/src/generate/xml/glx.xml \
+	$(top_srcdir)/src/generate/xml/glx_other.xml
 glapi_gen_glx_deps := \
 	$(top_srcdir)/src/generate/genCommon.py \
 	$(glapi_gen_glx_xml)
@@ -50,7 +54,7 @@ glapi_gen_libopengl_exports_deps := \
 define glapi_gen_libopengl_exports
 @mkdir -p $(dir $@)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_libopengl_exports_script) \
-	$(glapi_gen_gl_xml) > $@
+	$(top_srcdir)/src/generate/xml/gl.xml > $@
 endef
 
 glapi_gen_libglglxstubs_script := $(top_srcdir)/src/generate/gen_libgl_glxstubs.py

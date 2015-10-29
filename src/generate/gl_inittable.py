@@ -121,7 +121,7 @@ __glapi_inittable_set_remaining_noop(struct _glapi_table *disp,
     # forever to compile.
     functionCount = 0
     entriesPerFunction = 100
-    for (index, func) in enumerate(genCommon.getFunctions(sys.argv[1])):
+    for (index, func) in enumerate(genCommon.getFunctions(sys.argv[1:])):
         if (index % entriesPerFunction == 0):
             if (index > 0):
                 print("}\n")

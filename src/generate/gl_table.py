@@ -53,7 +53,7 @@ typedef void (APIENTRY  *GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLe
 struct _glapi_table
 {""".lstrip("\n"))
 
-    for func in genCommon.getFunctions(sys.argv[1]):
+    for func in genCommon.getFunctions(sys.argv[1:]):
         print("   {f.rt} (GLAPIENTRYP {f.basename})({f.decArgs}); /* {f.slot} */".format(f=func))
     print("};\n")
     print("#endif /* !defined( _GLAPI_TABLE_H_ ) */")

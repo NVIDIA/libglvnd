@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<registry>
+    <comment>
+        These are functions that are exported from other libGL.so implementations
+        but are missing from the normal gl.xml list.
+    </comment>
+    <commands namespace="GL">
+        <!-- GL_NVX_anc_capture -->
+        <command>
+            <proto>void <name>glBindANCCaptureStreamBufferNVX</name></proto>
+            <param><ptype>GLuint</ptype> <name>video_capture_slot</name></param>
+            <param><ptype>GLuint</ptype> <name>stream</name></param>
+            <param><ptype>GLuint</ptype> <name>link</name></param>
+            <param><ptype>GLenum</ptype> <name>frame_region</name></param>
+            <param><ptype>GLenum</ptype> <name>anc_region</name></param>
+            <param><ptype>GLintptr</ptype> <name>offset</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetVideoCaptureANCStreamivNVX</name></proto>
+            <param><ptype>GLuint</ptype> <name>video_capture_slot</name></param>
+            <param><ptype>GLuint</ptype> <name>stream</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLenum</ptype> <name>frame_region</name></param>
+            <param><ptype>GLenum</ptype> <name>anc_region</name></param>
+            <param><ptype>GLint *</ptype> <name>params</name></param>
+        </command>
+
+        <!-- GL_EXT_transform_feedback2 -->
+        <command>
+            <proto>void <name>glGenTransformFeedbacksEXT</name></proto>
+            <param><ptype>GLsizei</ptype> <name>n</name></param>
+            <param><ptype>GLuint *</ptype> <name>ids</name></param>
+        </command>
+        <command>
+            <proto>void <name>glDeleteTransformFeedbacksEXT</name></proto>
+            <param><ptype>GLsizei</ptype> <name>n</name></param>
+            <param><ptype>const GLuint *</ptype> <name>ids</name></param>
+        </command>
+        <command>
+            <proto>void <name>glBindTransformFeedbackEXT</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+        </command>
+        <command>
+            <proto>GLboolean <name>glIsTransformFeedbackEXT</name></proto>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+        </command>
+        <command>
+            <proto>void <name>glPauseTransformFeedbackEXT</name></proto>
+        </command>
+        <command>
+            <proto>void <name>glResumeTransformFeedbackEXT</name></proto>
+        </command>
+        <command>
+            <proto>void <name>glDrawTransformFeedbackEXT</name></proto>
+            <param><ptype>GLenum</ptype> <name>mode</name></param>
+            <param><ptype>GLuint</ptype> <name>name</name></param>
+        </command>
+
+        <!-- GL_NVX_sysmem_buffer -->
+        <command>
+            <proto>void <name>glBufferDataSysmem</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLsizeiptr</ptype> <name>size</name></param>
+            <param><ptype>const GLvoid *</ptype> <name>data</name></param>
+            <param><ptype>GLenum</ptype> <name>usage</name></param>
+        </command>
+
+        <!-- GL_NVX_shared_sync_object -->
+        <command>
+            <proto>void <name>glFenceValueuiNVX</name></proto>
+            <param><ptype>GLsync</ptype> <name>sync</name></param>
+            <param><ptype>GLenum</ptype> <name>condition</name></param>
+            <param><ptype>GLbitfield</ptype> <name>flags</name></param>
+            <param><ptype>GLuint</ptype> <name>value</name></param>
+        </command>
+        <command>
+            <proto>void <name>glWaitSyncValueuiNVX</name></proto>
+            <param><ptype>GLsync</ptype> <name>sync</name></param>
+            <param><ptype>GLbitfield</ptype> <name>flags</name></param>
+            <param><ptype>GLuint64</ptype> <name>timeout</name></param>
+            <param><ptype>GLuint</ptype> <name>value</name></param>
+            <param><ptype>GLboolean</ptype> <name>GEQ</name></param>
+        </command>
+        <command>
+            <proto>GLenum <name>glClientWaitSyncValueuiNVX</name></proto>
+            <param><ptype>GLsync</ptype> <name>sync</name></param>
+            <param><ptype>GLbitfield</ptype> <name>flags</name></param>
+            <param><ptype>GLuint64</ptype> <name>timeout</name></param>
+            <param><ptype>GLuint</ptype> <name>value</name></param>
+            <param><ptype>GLboolean</ptype> <name>GEQ</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetSyncv64NVX</name></proto>
+            <param><ptype>GLsync</ptype> <name>sync</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLuint64EXT *</ptype> <name>value</name></param>
+        </command>
+
+        <!-- GL_NV_ES1_1_compatibility -->
+        <command>
+            <proto>void <name>glColor3x</name></proto>
+            <param><ptype>GLfixed</ptype> <name>red</name></param>
+            <param><ptype>GLfixed</ptype> <name>green</name></param>
+            <param><ptype>GLfixed</ptype> <name>blue</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiTexCoord1x</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLfixed</ptype> <name>s</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiTexCoord1xv</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>const GLfixed *</ptype> <name>v</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiTexCoord2x</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLfixed</ptype> <name>s</name></param>
+            <param><ptype>GLfixed</ptype> <name>t</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiTexCoord2xv</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>const GLfixed *</ptype> <name>v</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiTexCoord3x</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLfixed</ptype> <name>s</name></param>
+            <param><ptype>GLfixed</ptype> <name>t</name></param>
+            <param><ptype>GLfixed</ptype> <name>r</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiTexCoord3xv</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>const GLfixed *</ptype> <name>v</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultiTexCoord4xv</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>const GLfixed *</ptype> <name>v</name></param>
+        </command>
+
+        <!-- GL_NV_texture_array -->
+        <command>
+            <proto>void <name>glCompressedTexImage3DNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>internalformat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLint</ptype> <name>border</name></param>
+            <param><ptype>GLsizei</ptype> <name>imageSize</name></param>
+            <param><ptype>const GLvoid *</ptype> <name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCompressedTexSubImage3DNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>xoffset</name></param>
+            <param><ptype>GLint</ptype> <name>yoffset</name></param>
+            <param><ptype>GLint</ptype> <name>zoffset</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLsizei</ptype> <name>imageSize</name></param>
+            <param><ptype>const GLvoid *</ptype> <name>data</name></param>
+        </command>
+        <command>
+            <proto>void <name>glCopyTexSubImage3DNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>xoffset</name></param>
+            <param><ptype>GLint</ptype> <name>yoffset</name></param>
+            <param><ptype>GLint</ptype> <name>zoffset</name></param>
+            <param><ptype>GLint</ptype> <name>x</name></param>
+            <param><ptype>GLint</ptype> <name>y</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+        </command>
+        <command>
+            <proto>void <name>glFramebufferTextureLayerNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLenum</ptype> <name>attachment</name></param>
+            <param><ptype>GLuint</ptype> <name>texture</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>layer</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexImage3DNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>internalformat</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLint</ptype> <name>border</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>const GLvoid *</ptype> <name>pixels</name></param>
+        </command>
+        <command>
+            <proto>void <name>glTexSubImage3DNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLint</ptype> <name>xoffset</name></param>
+            <param><ptype>GLint</ptype> <name>yoffset</name></param>
+            <param><ptype>GLint</ptype> <name>zoffset</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+            <param><ptype>GLsizei</ptype> <name>depth</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>const GLvoid *</ptype> <name>pixels</name></param>
+        </command>
+
+        <!-- GL_KHR_debug -->
+        <command>
+            <proto>void <name>glPushDebugGroupOES</name></proto>
+            <param><ptype>GLenum</ptype> <name>source</name></param>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+            <param><ptype>GLsizei</ptype> <name>length</name></param>
+            <param><ptype>const GLchar *</ptype> <name>message</name></param>
+        </command>
+        <command>
+            <proto>void <name>glPopDebugGroupOES</name></proto>
+        </command>
+        <command>
+            <proto>void <name>glObjectLabelOES</name></proto>
+            <param><ptype>GLenum</ptype> <name>identifier</name></param>
+            <param><ptype>GLuint</ptype> <name>name</name></param>
+            <param><ptype>GLsizei</ptype> <name>length</name></param>
+            <param><ptype>const GLchar *</ptype> <name>label</name></param>
+        </command>
+        <command>
+            <proto>void <name>glObjectPtrLabelOES</name></proto>
+            <param><ptype>GLvoid*</ptype> <name>ptr</name></param>
+            <param><ptype>GLsizei</ptype> <name>length</name></param>
+            <param><ptype>const GLchar *</ptype> <name>label</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetObjectLabelOES</name></proto>
+            <param><ptype>GLenum</ptype> <name>identifier</name></param>
+            <param><ptype>GLuint</ptype> <name>name</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei *</ptype> <name>length</name></param>
+            <param><ptype>GLchar *</ptype> <name>label</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetObjectPtrLabelOES</name></proto>
+            <param><ptype>GLvoid*</ptype> <name>ptr</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufSize</name></param>
+            <param><ptype>GLsizei *</ptype> <name>length</name></param>
+            <param><ptype>GLchar *</ptype> <name>label</name></param>
+        </command>
+        <command>
+            <proto>void <name>glDebugMessageControlOES</name></proto>
+            <param><ptype>GLenum</ptype> <name>source</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLenum</ptype> <name>severity</name></param>
+            <param><ptype>GLsizei</ptype> <name>count</name></param>
+            <param><ptype>const GLuint *</ptype> <name>ids</name></param>
+            <param><ptype>GLboolean</ptype> <name>enabled</name></param>
+        </command>
+        <command>
+            <proto>void <name>glDebugMessageInsertOES</name></proto>
+            <param><ptype>GLenum</ptype> <name>source</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+            <param><ptype>GLenum</ptype> <name>severity</name></param>
+            <param><ptype>GLsizei</ptype> <name>length</name></param>
+            <param><ptype>const GLchar *</ptype> <name>buf</name></param>
+        </command>
+        <command>
+            <proto>void <name>glDebugMessageCallbackOES</name></proto>
+            <param><ptype>GLDEBUGPROC</ptype> <name>callback</name></param>
+            <param><ptype>const void *</ptype> <name>userParam</name></param>
+        </command>
+        <command>
+            <proto>GLuint <name>glGetDebugMessageLogOES</name></proto>
+            <param><ptype>GLuint</ptype> <name>count</name></param>
+            <param><ptype>GLsizei</ptype> <name>bufsize</name></param>
+            <param><ptype>GLenum *</ptype> <name>sources</name></param>
+            <param><ptype>GLenum *</ptype> <name>types</name></param>
+            <param><ptype>GLuint *</ptype> <name>ids</name></param>
+            <param><ptype>GLenum *</ptype> <name>severities</name></param>
+            <param><ptype>GLsizei *</ptype> <name>lengths</name></param>
+            <param><ptype>GLchar *</ptype> <name>messageLog</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetPointervOES</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLvoid* *</ptype> <name>params</name></param>
+        </command>
+
+        <!-- GL_VERSION_4_1 -->
+        <command>
+            <proto>void <name>glDepthRangeArraydvNV</name></proto>
+            <param><ptype>GLuint</ptype> <name>first</name></param>
+            <param><ptype>GLsizei</ptype> <name>count</name></param>
+            <param><ptype>const GLdouble *</ptype> <name>v</name></param>
+        </command>
+        <command>
+            <proto>void <name>glDepthRangeIndexeddNV</name></proto>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLdouble</ptype> <name>n</name></param>
+            <param><ptype>GLdouble</ptype> <name>f</name></param>
+        </command>
+
+        <!-- GL_NVX_devtools -->
+        <command>
+            <proto>void <name>glDevtoolsCorrelationIdNVX</name></proto>
+            <param><ptype>GLuint64</ptype> <name>id</name></param>
+        </command>
+        <command>
+            <proto>void <name>glDevtoolsInvokeStreamedCallbackNVX</name></proto>
+            <param><ptype>GLvoid*</ptype> <name>fnptr</name></param>
+            <param><ptype>GLvoid*</ptype> <name>userdata</name></param>
+        </command>
+
+        <!-- GL_NV_draw_mesh -->
+        <command>
+            <proto>void <name>glDrawMeshNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>mode</name></param>
+            <param><ptype>GLsizei</ptype> <name>count</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLsizei</ptype> <name>stride</name></param>
+            <param><ptype>const GLvoid *</ptype> <name>indicesTexCoord</name></param>
+            <param><ptype>const GLvoid *</ptype> <name>indicesNormal</name></param>
+            <param><ptype>const GLvoid *</ptype> <name>indicesVertex</name></param>
+        </command>
+
+        <!-- GL_NV_get_tex_image -->
+        <command>
+            <proto>void <name>glGetTexImageNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>format</name></param>
+            <param><ptype>GLenum</ptype> <name>type</name></param>
+            <param><ptype>GLvoid *</ptype> <name>pixels</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetCompressedTexImageNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>lod</name></param>
+            <param><ptype>GLvoid *</ptype> <name>img</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexLevelParameterfvNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLfloat *</ptype> <name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGetTexLevelParameterivNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+            <param><ptype>GLint</ptype> <name>level</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLint *</ptype> <name>params</name></param>
+        </command>
+
+        <!-- GL_EXT_direct_state_access -->
+        <command>
+            <proto>void <name>glGetNamedBufferParameteri64vEXT</name></proto>
+            <param><ptype>GLuint</ptype> <name>buffer</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLint64 *</ptype> <name>params</name></param>
+        </command>
+
+        <!-- GL_NV_timer_query -->
+        <command>
+            <proto>void <name>glGetQueryObjectui64vNV</name></proto>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLuint64 *</ptype> <name>params</name></param>
+        </command>
+        <command>
+            <proto>void <name>glQueryCounterNV</name></proto>
+            <param><ptype>GLuint</ptype> <name>id</name></param>
+            <param><ptype>GLenum</ptype> <name>target</name></param>
+        </command>
+
+        <!-- GL_NVX_gpu_sync_buffer -->
+        <command>
+            <proto>GLintptr <name>glGpuSyncCreateNVX</name></proto>
+        </command>
+        <command>
+            <proto>void <name>glGpuSyncDestroyNVX</name></proto>
+            <param><ptype>GLintptr</ptype> <name>sync</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGpuSyncAcquireNVX</name></proto>
+            <param><ptype>GLintptr</ptype> <name>sync</name></param>
+        </command>
+        <command>
+            <proto>void <name>glGpuSyncReleaseNVX</name></proto>
+            <param><ptype>GLintptr</ptype> <name>sync</name></param>
+        </command>
+
+        <!-- GL_EXT_ycbcr_422 -->
+        <command>
+            <proto>void <name>glLoadTransformEXT</name></proto>
+            <param><ptype>GLenum</ptype> <name>transform</name></param>
+        </command>
+        <command>
+            <proto>void <name>glMultTransformEXT</name></proto>
+            <param><ptype>GLenum</ptype> <name>transform</name></param>
+        </command>
+
+        <!-- GL_NVX_nvenc_interop -->
+        <command>
+            <proto>void <name>glNVENCInterOpFunctionNVX</name></proto>
+            <param><ptype>void *</ptype> <name>dataPtr</name></param>
+        </command>
+
+        <!-- GL_EXT_tessellation_shader -->
+        <command>
+            <proto>void <name>glPatchParameterfvEXT</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>const GLfloat *</ptype> <name>values</name></param>
+        </command>
+
+        <!-- GL_NV_tessellation_program5 -->
+        <command>
+            <proto>void <name>glPatchParameteriNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>GLint</ptype> <name>value</name></param>
+        </command>
+        <command>
+            <proto>void <name>glPatchParameterfvNV</name></proto>
+            <param><ptype>GLenum</ptype> <name>pname</name></param>
+            <param><ptype>const GLfloat *</ptype> <name>values</name></param>
+        </command>
+
+        <!-- GL_Autodesk_valid_back_buffer_hint -->
+        <command>
+            <proto>void <name>glWindowBackBufferHintAutodesk</name></proto>
+        </command>
+        <command>
+            <proto>GLboolean <name>glValidBackBufferHintAutodesk</name></proto>
+            <param><ptype>GLint</ptype> <name>x</name></param>
+            <param><ptype>GLint</ptype> <name>y</name></param>
+            <param><ptype>GLsizei</ptype> <name>width</name></param>
+            <param><ptype>GLsizei</ptype> <name>height</name></param>
+        </command>
+
+        <!-- GL_NV_viewport_swizzle -->
+        <command>
+            <proto>void <name>glViewportSwizzleNV</name></proto>
+            <param><ptype>GLuint</ptype> <name>index</name></param>
+            <param><ptype>GLenum</ptype> <name>swizzlex</name></param>
+            <param><ptype>GLenum</ptype> <name>swizzley</name></param>
+            <param><ptype>GLenum</ptype> <name>swizzlez</name></param>
+            <param><ptype>GLenum</ptype> <name>swizzlew</name></param>
+        </command>
+
+        <!-- Other functions -->
+        <command>
+            <proto>void <name>glPrimitiveRestart</name></proto>
+        </command>
+
+    </commands>
+</registry>

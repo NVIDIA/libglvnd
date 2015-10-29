@@ -179,7 +179,7 @@ def getDefaultReturnValue(func):
     return "0"
 
 def _main():
-    functions = genCommon.getFunctions(sys.argv[1])
+    functions = genCommon.getFunctions(sys.argv[1:])
     functions = [f for f in functions if(f.name not in _SKIP_GLX_FUNCTIONS)]
 
     sys.stdout.write(generateLibGLXStubs(functions))

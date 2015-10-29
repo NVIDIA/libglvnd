@@ -32,18 +32,22 @@ import xml.etree.cElementTree as etree
 
 MAPI_TABLE_NUM_DYNAMIC = 4096
 
-def getFunctions(xmlFile):
+def getFunctions(xmlFiles):
     """
     Reads an XML file and returns all of the functions defined in it.
 
     xmlFile should be the path to Khronos's gl.xml file. The return value is a
     sequence of FunctionDesc objects, ordered by slot number.
     """
-    root = etree.parse(xmlFile).getroot()
-    return getFunctionsFromRoot(root)
+    roots = [ etree.parse(xmlFile).getroot() for xmlFile in xmlFiles ]
+    return getFunctionsFromRoots(roots)
 
-def getFunctionsFromRoot(root):
-    functions = _getFunctionList(root)
+def getFunctionsFromRoots(roots):
+    functions = {}
+    for root in roots:
+        for func in _getFunctionList(root):
+            functions[func.name] = func
+    functions = functions.values()
 
     # Sort the function list by name.
     functions = sorted(functions, key=lambda f: f.name)

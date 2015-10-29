@@ -51,7 +51,7 @@ def _main():
                 names.add(commandElem.get("name"))
 
     # Make sure we limit this to the subset of what libGLdispatch contains.
-    names.intersection_update(f.name for f in genCommon.getFunctionsFromRoot(root))
+    names.intersection_update(f.name for f in genCommon.getFunctionsFromRoots([root]))
     for name in sorted(names):
         print(name)
 

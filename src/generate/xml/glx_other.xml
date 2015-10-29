@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<registry>
+    <comment>
+        These are functions that are exported from other libGL.so implementations
+        but are missing from the normal glx.xml list.
+    </comment>
+    <commands namespace="GLX">
+
+	<!-- GLX_NV_vertex_array_range -->
+	<command>
+		<proto>void *<name>glXAllocateMemoryNV</name></proto>
+		<param><ptype>GLsizei</ptype> <name>size</name></param>
+		<param><ptype>GLfloat</ptype> <name>readfreq</name></param>
+		<param><ptype>GLfloat</ptype> <name>writefreq</name></param>
+		<param><ptype>GLfloat</ptype> <name>priority</name></param>
+	</command>
+	<command>
+		<proto>void <name>glXFreeMemoryNV</name></proto>
+		<param><ptype>GLvoid *</ptype> <name>pointer</name></param>
+	</command>
+
+	<!-- GLX_SGI_video_sync -->
+	<command>
+		<proto>int <name>glXGetRefreshRateSGI</name></proto>
+		<param><ptype>unsigned int *</ptype> <name>rate</name></param>
+	</command>
+
+	<!-- Additional functions from Mesa. -->
+	<command>
+		<proto>const char *<name>glXGetDriverConfig</name></proto>
+		<param><ptype>const char *</ptype> <name>driverName</name></param>
+	</command>
+	<command>
+		<proto>const char *<name>glXGetScreenDriver</name></proto>
+		<param><ptype>Display *</ptype> <name>dpy</name></param>
+		<param><ptype>int</ptype> <name>scrNum</name></param>
+	</command>
+    </commands>
+</registry>
+
