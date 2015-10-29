@@ -1,0 +1,17 @@
+_glapi_get_current
+_glapi_Current
+_glapi_tls_Current
+__glDispatchCheckMultithreaded
+__glDispatchCreateTable
+__glDispatchDestroyTable
+__glDispatchFini
+__glDispatchGetABIVersion
+__glDispatchGetCurrentAPIState
+__glDispatchGetProcAddress
+__glDispatchInit
+__glDispatchLoseCurrent
+__glDispatchMakeCurrent
+__glDispatchNewVendorID
+__glDispatchRegisterStubCallbacks
+__glDispatchReset
+__glDispatchUnregisterStubCallbacks

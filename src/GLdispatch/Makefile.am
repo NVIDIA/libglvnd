@@ -43,6 +43,13 @@ libGLdispatch_la_CFLAGS += -I$(top_srcdir)/include
 
 libGLdispatch_la_LDFLAGS = -shared -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)
 
+if USE_DT_AUXILIARY
+else
+EXTRA_libGLdispatch_la_DEPENDENCIES = $(top_srcdir)/src/GLdispatch/export_list.sym
+libGLdispatch_la_LDFLAGS += \
+	-export-symbols $(top_srcdir)/src/GLdispatch/export_list.sym
+endif
+
 libGLdispatch_la_SOURCES = \
 	GLdispatch.c
 
