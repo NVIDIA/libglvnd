@@ -37,3 +37,14 @@ $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_initdispatch_script) \
 	$(glapi_gen_gl_xml) > $@
 endef
 
+glapi_gen_libopengl_exports_script := $(top_srcdir)/src/generate/gen_libOpenGL_exports.py
+glapi_gen_libopengl_exports_deps := \
+	$(glapi_gen_libopengl_exports_script) \
+	$(glapi_gen_gl_deps)
+
+define glapi_gen_libopengl_exports
+@mkdir -p $(dir $@)
+$(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_libopengl_exports_script) \
+	$(glapi_gen_gl_xml) > $@
+endef
+

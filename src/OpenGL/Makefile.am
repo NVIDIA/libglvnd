@@ -41,12 +41,15 @@ libOpenGL_la_SOURCES = \
 	$(MAPI)/stub.c     \
 	$(top_srcdir)/src/util/utils_misc.c
 
-BUILT_SOURCES = glapi_mapi_tmp.h
+BUILT_SOURCES = glapi_mapi_tmp.h opengl_exports.sym
 CLEANFILES = $(BUILT_SOURCES)
 
 include $(top_srcdir)/src/generate/glvnd_gen.mk
 glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi)
+
+opengl_exports.sym : $(glapi_gen_libopengl_exports_deps)
+	$(call glapi_gen_libopengl_exports)
 
 libOpenGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
@@ -57,7 +60,13 @@ else
 DT_AUX_FLAGS =
 endif
 
-libOpenGL_la_LDFLAGS = -shared -version-info 0 $(LINKER_FLAG_NO_UNDEFINED) $(DT_AUX_FLAGS)
+EXTRA_libOpenGL_la_DEPENDENCIES = $(builddir)/opengl_exports.sym
+
+libOpenGL_la_LDFLAGS = -shared \
+	-version-info 0 \
+	$(LINKER_FLAG_NO_UNDEFINED) \
+	-export-symbols $(builddir)/opengl_exports.sym \
+	$(DT_AUX_FLAGS)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
