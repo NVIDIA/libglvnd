@@ -55,7 +55,7 @@ void _init(void)
     patchStubId = __glDispatchRegisterStubCallbacks(stub_get_patch_callbacks());
 
     // Lookup function pointers from libGLX for the GLX entrypoints
-    __glXWrapperInit(__glXGetCachedProcAddress);
+    __glXWrapperInit();
 }
 
 #if defined(USE_ATTRIBUTE_CONSTRUCTOR)

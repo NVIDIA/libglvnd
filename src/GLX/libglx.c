@@ -1601,7 +1601,7 @@ static void CleanupProcAddressEntry(void *unused, __GLXprocAddressHash *pEntry)
  * This function is called externally by the libGL wrapper library to
  * retrieve libGLX entrypoints.
  */
-PUBLIC __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
+static __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
 {
     /*
      * If this is the first time GetProcAddress has been called,
@@ -1623,6 +1623,28 @@ PUBLIC __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
 
     return NULL;
 }
+
+PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
+        __GLXextFuncPtr *ptr, glvnd_mutex_t *mutex)
+{
+    __GLXextFuncPtr func;
+
+    if (mutex != NULL) {
+        __glXPthreadFuncs.mutex_lock(mutex);
+    }
+
+    func = *ptr;
+    if (func == NULL) {
+        func = glXGetProcAddress((const GLubyte *) name);
+        *ptr = func;
+    }
+
+    if (mutex != NULL) {
+        __glXPthreadFuncs.mutex_unlock(mutex);
+    }
+    return func;
+}
+
 
 static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
 {

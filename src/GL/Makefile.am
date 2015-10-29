@@ -51,11 +51,8 @@ include $(top_srcdir)/src/generate/glvnd_gen.mk
 glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi)
 
-GLX_GEN_STUBS = $(top_srcdir)/src/GLX/gen_stubs.pl
-GLX_FUNCS_SPEC = $(top_srcdir)/src/GLX/glx_funcs.spec
-
-g_libglglxwrapper.c : $(GLX_GEN_STUBS) $(GLX_FUNCS_SPEC)
-	$(AM_V_GEN)$(PERL) $(GLX_GEN_STUBS) "glwrap" $(GLX_FUNCS_SPEC) > $@
+g_libglglxwrapper.c : $(glapi_gen_libglglxstubs_deps)
+	$(call glapi_gen_libglglxstubs)
 
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
