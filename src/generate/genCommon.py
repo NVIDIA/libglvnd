@@ -32,12 +32,17 @@ import xml.etree.cElementTree as etree
 
 MAPI_TABLE_NUM_DYNAMIC = 4096
 
-_LIBOPENGL_FEATURE_NAMES = frozenset(( "GL_VERSION_1_0", "GL_VERSION_1_1",
-    "GL_VERSION_1_2", "GL_VERSION_1_3", "GL_VERSION_1_4", "GL_VERSION_1_5",
-    "GL_VERSION_2_0", "GL_VERSION_2_1", "GL_VERSION_3_0", "GL_VERSION_3_1",
-    "GL_VERSION_3_2", "GL_VERSION_3_3", "GL_VERSION_4_0", "GL_VERSION_4_1",
-    "GL_VERSION_4_2", "GL_VERSION_4_3", "GL_VERSION_4_4", "GL_VERSION_4_5",
-))
+_LIBRARY_FEATURE_NAMES = {
+    # libGL and libGLdiapatch both include every function.
+    "gl" : None,
+    "gldispatch" : None,
+    "opengl" : frozenset(( "GL_VERSION_1_0", "GL_VERSION_1_1",
+        "GL_VERSION_1_2", "GL_VERSION_1_3", "GL_VERSION_1_4", "GL_VERSION_1_5",
+        "GL_VERSION_2_0", "GL_VERSION_2_1", "GL_VERSION_3_0", "GL_VERSION_3_1",
+        "GL_VERSION_3_2", "GL_VERSION_3_3", "GL_VERSION_4_0", "GL_VERSION_4_1",
+        "GL_VERSION_4_2", "GL_VERSION_4_3", "GL_VERSION_4_4", "GL_VERSION_4_5",
+    )),
+}
 
 def getFunctions(xmlFiles):
     """
@@ -67,15 +72,22 @@ def getFunctionsFromRoots(roots):
 
     return functions
 
-def getLibOpenGLNamesFromRoots(roots):
+def getExportNamesFromRoots(target, roots):
     """
-    Goes through the <feature> tags from gl.xml and returns a set of names
-    that libOpenGL.so should export.
+    Goes through the <feature> tags from gl.xml and returns a set of OpenGL
+    functions that a library should export.
+
+    target should be one of "gl", "gldispatch", "opengl", "glesv1", or
+    "glesv2".
     """
+    featureNames = _LIBRARY_FEATURE_NAMES[target]
+    if (featureNames == None):
+        return set(func.name for func in getFunctionsFromRoots(roots))
+
     names = set()
     for root in roots:
         for featElem in root.findall("feature"):
-            if (featElem.get("name") in _LIBOPENGL_FEATURE_NAMES):
+            if (featElem.get("name") in featureNames):
                 for commandElem in featElem.findall("require/command"):
                     names.add(commandElem.get("name"))
     return names

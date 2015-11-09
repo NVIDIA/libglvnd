@@ -21,8 +21,13 @@ glapi_gen_mapi_deps := \
 # glapi_gen_mapi:
 # Generates the header file that's used to define all of the public entrypoint
 # functions in libGLdispatch.so, libOpenGL.so, and libGL.so.
-# $(1) specifies which set of functions to include. It should be either
-# "opengl" for libOpenGL.so or "gl" for libGL.so and libGLdispatch.so.
+# $(1) specifies which library we're building, which defines the set of
+# functions to include. It should be one of:
+# "opengl" for libOpenGL.so
+# "gl" for libGL.so
+# "gldispatch" for libGLdispatch.so
+# "glesv1" for libGLESv1_CM.so
+# "glesv2" for libGLESv2.so
 define glapi_gen_mapi
 @mkdir -p $(dir $@)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_mapi_script) \
@@ -51,6 +56,10 @@ $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_initdispatch_script) \
 	$(glapi_gen_gl_xml) > $@
 endef
 
+# glapi_gen_libopengl_exports:
+# Generates an export list for an entrypoint library.
+# $(1) specifies which library we're building, using the same names as
+# glapi_gen_mapi.
 glapi_gen_libopengl_exports_script := $(top_srcdir)/src/generate/gen_libOpenGL_exports.py
 glapi_gen_libopengl_exports_deps := \
 	$(glapi_gen_libopengl_exports_script) \
@@ -59,7 +68,7 @@ glapi_gen_libopengl_exports_deps := \
 define glapi_gen_libopengl_exports
 @mkdir -p $(dir $@)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_libopengl_exports_script) \
-	$(top_srcdir)/src/generate/xml/gl.xml > $@
+	$(1) $(top_srcdir)/src/generate/xml/gl.xml > $@
 endef
 
 glapi_gen_libglglxstubs_script := $(top_srcdir)/src/generate/gen_libgl_glxstubs.py

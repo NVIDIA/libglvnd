@@ -35,8 +35,11 @@ import xml.etree.cElementTree as etree
 import genCommon
 
 def _main():
-    root = etree.parse(sys.argv[1]).getroot()
-    names = genCommon.getLibOpenGLNamesFromRoots([root])
+    target = sys.argv[1]
+    xmlFiles = sys.argv[2:]
+    roots = [ etree.parse(filename).getroot() for filename in xmlFiles ]
+
+    names = genCommon.getExportNamesFromRoots(target, roots)
     for name in sorted(names):
         print(name)
 

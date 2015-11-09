@@ -49,7 +49,7 @@ glapi_mapi_opengl_tmp.h : $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi, opengl)
 
 opengl_exports.sym : $(glapi_gen_libopengl_exports_deps)
-	$(call glapi_gen_libopengl_exports)
+	$(call glapi_gen_libopengl_exports, opengl)
 
 libOpenGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
