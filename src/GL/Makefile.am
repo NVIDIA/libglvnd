@@ -49,7 +49,7 @@ CLEANFILES = $(BUILT_SOURCES)
 
 include $(top_srcdir)/src/generate/glvnd_gen.mk
 glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi)
+	$(call glapi_gen_mapi, gl)
 
 g_libglglxwrapper.c : $(glapi_gen_libglglxstubs_deps)
 	$(call glapi_gen_libglglxstubs)

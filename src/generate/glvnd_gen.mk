@@ -18,10 +18,15 @@ glapi_gen_mapi_deps := \
 	$(glapi_gen_mapi_script) \
 	$(glapi_gen_gl_deps)
 
+# glapi_gen_mapi:
+# Generates the header file that's used to define all of the public entrypoint
+# functions in libGLdispatch.so, libOpenGL.so, and libGL.so.
+# $(1) specifies which set of functions to include. It should be either
+# "opengl" for libOpenGL.so or "gl" for libGL.so and libGLdispatch.so.
 define glapi_gen_mapi
 @mkdir -p $(dir $@)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_mapi_script) \
-	$(glapi_gen_gl_xml) > $@
+	$(1) $(glapi_gen_gl_xml) > $@
 endef
 
 glapi_gen_glapitable_script := $(top_srcdir)/src/generate/gl_table.py

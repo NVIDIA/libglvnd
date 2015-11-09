@@ -32,6 +32,13 @@ import xml.etree.cElementTree as etree
 
 MAPI_TABLE_NUM_DYNAMIC = 4096
 
+_LIBOPENGL_FEATURE_NAMES = frozenset(( "GL_VERSION_1_0", "GL_VERSION_1_1",
+    "GL_VERSION_1_2", "GL_VERSION_1_3", "GL_VERSION_1_4", "GL_VERSION_1_5",
+    "GL_VERSION_2_0", "GL_VERSION_2_1", "GL_VERSION_3_0", "GL_VERSION_3_1",
+    "GL_VERSION_3_2", "GL_VERSION_3_3", "GL_VERSION_4_0", "GL_VERSION_4_1",
+    "GL_VERSION_4_2", "GL_VERSION_4_3", "GL_VERSION_4_4", "GL_VERSION_4_5",
+))
+
 def getFunctions(xmlFiles):
     """
     Reads an XML file and returns all of the functions defined in it.
@@ -59,6 +66,19 @@ def getFunctionsFromRoots(roots):
         functions[i] = functions[i]._replace(slot=i)
 
     return functions
+
+def getLibOpenGLNamesFromRoots(roots):
+    """
+    Goes through the <feature> tags from gl.xml and returns a set of names
+    that libOpenGL.so should export.
+    """
+    names = set()
+    for root in roots:
+        for featElem in root.findall("feature"):
+            if (featElem.get("name") in _LIBOPENGL_FEATURE_NAMES):
+                for commandElem in featElem.findall("require/command"):
+                    names.add(commandElem.get("name"))
+    return names
 
 class FunctionArg(collections.namedtuple("FunctionArg", "type name")):
     @property

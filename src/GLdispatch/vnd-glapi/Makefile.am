@@ -35,7 +35,7 @@ libglapi_la_LDFLAGS = -no-undefined
 
 include $(top_srcdir)/src/generate/glvnd_gen.mk
 glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi)
+	$(call glapi_gen_mapi, gl)
 
 g_glapi_inittable.c: $(glapi_gen_initdispatch_deps)
 	$(call glapi_gen_initdispatch)

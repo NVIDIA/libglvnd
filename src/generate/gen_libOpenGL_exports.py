@@ -34,24 +34,9 @@ import xml.etree.cElementTree as etree
 
 import genCommon
 
-_LIBOPENGL_FEATURE_NAMES = frozenset(( "GL_VERSION_1_0", "GL_VERSION_1_1",
-    "GL_VERSION_1_2", "GL_VERSION_1_3", "GL_VERSION_1_4", "GL_VERSION_1_5",
-    "GL_VERSION_2_0", "GL_VERSION_2_1", "GL_VERSION_3_0", "GL_VERSION_3_1",
-    "GL_VERSION_3_2", "GL_VERSION_3_3", "GL_VERSION_4_0", "GL_VERSION_4_1",
-    "GL_VERSION_4_2", "GL_VERSION_4_3", "GL_VERSION_4_4", "GL_VERSION_4_5",
-))
-
 def _main():
     root = etree.parse(sys.argv[1]).getroot()
-
-    names = set()
-    for featElem in root.findall("feature"):
-        if (featElem.get("name") in _LIBOPENGL_FEATURE_NAMES):
-            for commandElem in featElem.findall("require/command"):
-                names.add(commandElem.get("name"))
-
-    # Make sure we limit this to the subset of what libGLdispatch contains.
-    names.intersection_update(f.name for f in genCommon.getFunctionsFromRoots([root]))
+    names = genCommon.getLibOpenGLNamesFromRoots([root])
     for name in sorted(names):
         print(name)
 

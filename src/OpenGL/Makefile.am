@@ -31,7 +31,7 @@ MAPI = $(top_srcdir)/$(MAPI_PREFIX)
 GLAPI = $(MAPI)/glapi
 
 noinst_HEADERS =        \
-	glapi_mapi_tmp.h
+	glapi_mapi_opengl_tmp.h
 
 include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
 
@@ -41,12 +41,12 @@ libOpenGL_la_SOURCES = \
 	$(MAPI)/stub.c     \
 	$(top_srcdir)/src/util/utils_misc.c
 
-BUILT_SOURCES = glapi_mapi_tmp.h opengl_exports.sym
+BUILT_SOURCES = glapi_mapi_opengl_tmp.h opengl_exports.sym
 CLEANFILES = $(BUILT_SOURCES)
 
 include $(top_srcdir)/src/generate/glvnd_gen.mk
-glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi)
+glapi_mapi_opengl_tmp.h : $(glapi_gen_mapi_deps)
+	$(call glapi_gen_mapi, opengl)
 
 opengl_exports.sym : $(glapi_gen_libopengl_exports_deps)
 	$(call glapi_gen_libopengl_exports)
@@ -73,7 +73,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/GLdispatch/ \
 	-I$(top_srcdir)/src/util \
 	-I$(top_srcdir)/src/util/glvnd_pthread \
-	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_tmp.h\" \
+	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_opengl_tmp.h\" \
 	-DSTATIC_DISPATCH_ONLY
 
 libOpenGL_la_LIBADD = ../GLdispatch/libGLdispatch.la
