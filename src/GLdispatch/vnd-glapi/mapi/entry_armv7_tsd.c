@@ -202,10 +202,10 @@ void entry_generate_default_code(char *entry, int slot)
 // once those are implemented.
 
 mapi_func
-entry_get_public(int slot)
+entry_get_public(int index)
 {
     // Add 1 to the base address to force Thumb mode when jumping to the stub
-    return (mapi_func)(public_entry_start + (slot * entry_stub_size) + 1);
+    return (mapi_func)(public_entry_start + (index * entry_stub_size) + 1);
 }
 
 void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)

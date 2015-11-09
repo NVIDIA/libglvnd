@@ -86,9 +86,9 @@ entry_generate_default_code(char *entry, int slot)
 }
 
 mapi_func
-entry_get_public(int slot)
+entry_get_public(int index)
 {
-   return (mapi_func) ((char *)x86_entry_start + slot * X86_ENTRY_SIZE);
+   return (mapi_func) ((char *)x86_entry_start + index * X86_ENTRY_SIZE);
 }
 
 int entry_patch_start(void)

@@ -63,10 +63,10 @@ entry_generate_default_code(char *entry, int slot)
 }
 
 mapi_func
-entry_get_public(int slot)
+entry_get_public(int index)
 {
    /* pubic_entries are defined by MAPI_TMP_PUBLIC_ENTRIES */
-   return public_entries[slot];
+   return public_entries[index];
 }
 
 int entry_patch_start(void)

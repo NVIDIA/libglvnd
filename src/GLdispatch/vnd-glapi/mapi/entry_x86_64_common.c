@@ -53,9 +53,9 @@ void entry_init_public(void)
 {
 }
 
-mapi_func entry_get_public(int slot)
+mapi_func entry_get_public(int index)
 {
-    return (mapi_func)(public_entry_start + (slot * entry_stub_size));
+    return (mapi_func)(public_entry_start + (index * entry_stub_size));
 }
 
 void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)

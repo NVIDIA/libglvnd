@@ -48,9 +48,31 @@ extern const int entry_stub_size;
 void
 entry_init_public(void);
 
+/**
+ * Returns the address of an entrypoint.
+ *
+ * Note that \p index is the index into the array of public stubs, not the slot
+ * in the dispatch table. The public stub array may be different depending on
+ * which library is being built. For example, the array in libOpenGL.so is a
+ * subset of the array in libGLdispatch.so.
+ *
+ * \param index The index into the public stub table.
+ * \return A pointer to the function, suitable to hand back from
+ * glX/eglGetProcAddress.
+ */
 mapi_func
-entry_get_public(int slot);
+entry_get_public(int index);
 
+/**
+ * Generates an entrypoint for an extension function.
+ *
+ * This will allocate executable memory and generate an entrypoint function.
+ * This is used to dispatch any OpenGL functions that are not known at compile
+ * time.
+ *
+ * \param slot The slot in the dispatch table.
+ * \return A newly generated entrypoint function, or NULL on failure.
+ */
 mapi_func
 entry_generate(int slot);
 
