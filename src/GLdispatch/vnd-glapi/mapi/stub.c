@@ -233,7 +233,15 @@ mapi_func
 stub_get_addr(const struct mapi_stub *stub)
 {
    assert(stub->addr || (unsigned int) stub->slot < MAPI_TABLE_NUM_STATIC);
-   return (stub->addr) ? stub->addr : entry_get_public(stub->slot);
+   if (stub->addr != NULL)
+   {
+      return stub->addr;
+   }
+   else
+   {
+      int index = stub - public_stubs;
+      return entry_get_public(index);
+   }
 }
 
 static int stub_allow_override(void)
@@ -267,7 +275,7 @@ static void stubRestoreFuncsInternal(void)
     assert(stub_allow_override());
 
     for (stub = public_stubs, i = 0;
-         i < MAPI_TABLE_NUM_STATIC;
+         i < ARRAY_SIZE(public_stubs);
          stub++, i++) {
         slot = (stub->slot == -1) ? MAPI_LAST_SLOT : stub->slot;
         entry_generate_default_code((char *)stub_get_addr(stub), slot);
