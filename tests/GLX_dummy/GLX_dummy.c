@@ -540,8 +540,7 @@ static void patch_x86_tls(char *writeEntry,
                           int stubSize)
 {
 #if defined(__i386__)
-    char *pSawVertex3fv = (char *)&__glXSawVertex3fv;
-    int *p;
+    uintptr_t *p;
     char tmpl[] = {
         0xa1, 0x0, 0x0, 0x0, 0x0,   // mov 0x0, %eax
         0x83, 0xc0, 0x01,           // add $0x1, %eax
@@ -555,11 +554,14 @@ static void patch_x86_tls(char *writeEntry,
         return;
     }
 
-    p = (int *)&tmpl[1];
-    *p = (int)(pSawVertex3fv - (execEntry + 5));
+    // Patch the address of the __glXSawVertex3fv variable. Note that we patch
+    // in an absolute address in this case. Unlike x86-64, x86 does not allow
+    // PC-relative addressing for MOV instructions.
+    p = (uintptr_t *)&tmpl[1];
+    *p = (uintptr_t) &__glXSawVertex3fv;
 
-    p = (int *)&tmpl[9];
-    *p = (int)(pSawVertex3fv - (execEntry + 13));
+    p = (uintptr_t *)&tmpl[9];
+    *p = (uintptr_t) &__glXSawVertex3fv;
 
     memcpy(writeEntry, tmpl, sizeof(tmpl));
 
@@ -621,6 +623,7 @@ static GLboolean dummyCheckPatchSupported(int type, int stubSize)
     switch (type) {
         case __GLDISPATCH_STUB_X86_64_TLS:
         case __GLDISPATCH_STUB_X86_TLS:
+        case __GLDISPATCH_STUB_X86_TSD:
         case __GLDISPATCH_STUB_X86_64_TSD:
         case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
             return GL_TRUE;
@@ -648,6 +651,7 @@ static GLboolean dummyInitiatePatch(int type,
                 patch_x86_64_tls(writeAddr, execAddr, stubSize);
                 break;
             case __GLDISPATCH_STUB_X86_TLS:
+            case __GLDISPATCH_STUB_X86_TSD:
                 patch_x86_tls(writeAddr, execAddr, stubSize);
                 break;
             case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:

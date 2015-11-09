@@ -8,6 +8,8 @@ endif
 
 if GLDISPATCH_TYPE_X86_TSD
 MAPI_GLDISPATCH_ENTRY_FILES = $(top_srcdir)/$(MAPI_PREFIX)/entry_x86_tsd.c
+MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entry_x86_64_common.c
+MAPI_GLDISPATCH_ENTRY_FILES += $(top_srcdir)/$(MAPI_PREFIX)/entry_common.c
 endif
 
 if GLDISPATCH_TYPE_X86_64_TLS

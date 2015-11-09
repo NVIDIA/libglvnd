@@ -42,7 +42,7 @@
 /**
  * \file
  *
- * Common functions for the x86-64 TSD and x86-64 TLS stubs.
+ * Common functions for the x86 and x86-64 stubs.
  *
  * These functions are almost identical to the ones used for ARMv7, except that
  * the ARM stubs have to add 1 to the address of each entrypoint to force

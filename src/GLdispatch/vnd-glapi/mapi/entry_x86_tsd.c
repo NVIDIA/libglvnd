@@ -26,113 +26,83 @@
  */
 
 #include "entry.h"
+#include "entry_common.h"
 
 #include <assert.h>
 #include <stdint.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <string.h>
+
 #include "u_macros.h"
 #include "glapi/glapi.h"
 
 #define X86_ENTRY_SIZE 32
 
-__asm__(".text\n"
-        ".balign 32\n"
-        "x86_entry_start:");
+__asm__(".section wtext,\"ax\",@progbits\n");
+__asm__(".balign 4096\n"
+       ".globl public_entry_start\n"
+        "public_entry_start:");
 
 #define STUB_ASM_ENTRY(func)        \
    ".globl " func "\n"              \
    ".type " func ", @function\n"    \
-   ".balign 32\n"                   \
+   ".balign " U_STRINGIFY(X86_ENTRY_SIZE) "\n"                   \
    func ":"
 
 #define STUB_ASM_CODE(slot)         \
-   "movl _glapi_Current, %eax\n\t" \
-   "testl %eax, %eax\n\t"           \
-   "je 1f\n\t"                      \
-   "jmp *(4 * " slot ")(%eax)\n"    \
-   "1:\n\t"                         \
-   "call _glapi_get_current\n\t" \
-   "jmp *(4 * " slot ")(%eax)"
+    "movl _glapi_Current, %eax\n\t" \
+    "testl %eax, %eax\n\t"           \
+    "je 1f\n\t"                      \
+    "jmp *(4 * " slot ")(%eax)\n"    \
+    "1:\n\t"                         \
+    "call _glapi_get_current\n\t" \
+    "jmp *(4 * " slot ")(%eax)"
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
 
-__asm__(".balign 32\n"
-        "x86_entry_end:");
-
-#include <string.h>
-
-#if !defined(STATIC_DISPATCH_ONLY)
-#include "u_execmem.h"
-#else
-#define u_execmem_get_writable(addr) ((void *) (addr))
-#endif
-
-static const char x86_entry_start[];
-static const char x86_entry_end[];
+__asm__(".balign 4096\n"
+       ".globl public_entry_end\n"
+        "public_entry_end:");
+__asm__(".text\n");
 
 const int entry_type = ENTRY_X86_TSD;
-const int entry_stub_size = 0;
+const int entry_stub_size = X86_ENTRY_SIZE;
 
-void
-entry_init_public(void)
+static const unsigned char ENTRY_TEMPLATE[] =
 {
+    0xa1, 0x40, 0x30, 0x20, 0x10,       // <ENTRY>:    mov    _glapi_Current, %eax
+    0x85, 0xc0,                         // <ENTRY+5>:  test   %eax, %eax
+    0x74, 0x06,                         // <ENTRY+7>:  je     <ENTRY+15>
+    0xff, 0xa0, 0x40, 0x30, 0x20, 0x10, // <ENTRY+9>:  jmp    *slot(%eax)
+    0xe8, 0x40, 0x30, 0x20, 0x10,       // <ENTRY+15>: call   _glapi_get_current
+    0xff, 0xa0, 0x40, 0x30, 0x20, 0x10, // <ENTRY+20>: jmp    *slot(%eax)
+};
+
+// These are the offsets in ENTRY_TEMPLATE of the values that we have to patch.
+static const int TEMPLATE_OFFSET_CURRENT_TABLE = 1;
+static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = 16;
+static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET_RELATIVE = 20;
+static const int TEMPLATE_OFFSET_SLOT1 = 11;
+static const int TEMPLATE_OFFSET_SLOT2 = 22;
+
+void entry_generate_default_code(char *entry, int slot)
+{
+    char *writeEntry = u_execmem_get_writable(entry);
+    uintptr_t getTableOffset;
+
+    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+
+    *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT1)) = slot * sizeof(mapi_func);
+    *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT2)) = slot * sizeof(mapi_func);
+    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) _glapi_Current;
+
+    // Calculate the offset to patch for the CALL instruction to
+    // _glapi_get_current.
+    getTableOffset = (uintptr_t) _glapi_get_current;
+    getTableOffset -= (((uintptr_t) entry) + TEMPLATE_OFFSET_CURRENT_TABLE_GET_RELATIVE);
+    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = getTableOffset;
 }
 
-void
-entry_generate_default_code(char *entry, int slot)
-{
-    assert(!"This should never be called");
-}
-
-mapi_func
-entry_get_public(int index)
-{
-   return (mapi_func) ((char *)x86_entry_start + index * X86_ENTRY_SIZE);
-}
-
-int entry_patch_start(void)
-{
-    assert(!"This should never be called");
-    return 0;
-}
-
-int entry_patch_finish(void)
-{
-    assert(!"This should never be called");
-    return 0;
-}
-
-void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
-{
-    assert(!"This should never be called");
-    *writePtr = NULL;
-    *execPtr = NULL;
-}
-
-#if !defined(STATIC_DISPATCH_ONLY)
-mapi_func
-entry_generate(int slot)
-{
-   const char *code_templ = x86_entry_end - X86_ENTRY_SIZE;
-   char *code;
-   char *writeEntry;
-
-   code = (char *) u_execmem_alloc(X86_ENTRY_SIZE);
-   if (!code)
-      return NULL;
-
-   writeEntry = (char *) u_execmem_get_writable(code);
-   memcpy(writeEntry, code_templ, X86_ENTRY_SIZE);
-
-   // Patch the dispatch table slot
-   *((uint32_t *) (writeEntry + 11)) = slot * sizeof(mapi_func);
-   *((uint32_t *) (writeEntry + 22)) = slot * sizeof(mapi_func);
-
-   // Adjust the offset of the CALL instruction.
-   assert(*((uint8_t *) (writeEntry + 15)) == 0xE8);
-   *((uint32_t *) (writeEntry + 16)) += (code_templ - code);
-
-   return (mapi_func) code;
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)
