@@ -60,7 +60,7 @@ def _main():
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "main/glheader.h"
+#include "glheader.h"
 
 #include "glapi.h"
 #include "glapitable.h"
