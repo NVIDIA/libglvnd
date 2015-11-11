@@ -32,6 +32,7 @@ noinst_HEADERS = \
 	libglxmapping.h \
 	libglxnoop.h \
 	libglxgl.h \
+	libglxstring.h \
 	libglxthread.h
 
 lib_LTLIBRARIES = libGLX.la
