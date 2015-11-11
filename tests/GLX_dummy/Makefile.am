@@ -1,5 +1,5 @@
 noinst_HEADERS = GLX_dummy.h
-lib_LTLIBRARIES = libGLX_dummy.la libGLX_patchentry.la
+check_LTLIBRARIES = libGLX_dummy.la libGLX_patchentry.la
 
 check-local: libGLX_dummy_copy
 
@@ -22,10 +22,18 @@ COMMON_SOURCES = \
 	GLX_dummy.c                         \
 	$(top_srcdir)/src/util/utils_misc.c
 
+# The -rpath option forces libtool to create a shared library instead of just a
+# static library.
+COMMON_LDFLAGS = \
+	-shared \
+	-rpath /nowhere
+
 libGLX_dummy_la_CFLAGS = $(COMMON_CFLAGS)
 libGLX_dummy_la_SOURCES = $(COMMON_SOURCES)
 libGLX_dummy_la_LIBADD = $(top_builddir)/src/util/trace/libtrace.la
+libGLX_dummy_la_LDFLAGS = $(COMMON_LDFLAGS)
 
 libGLX_patchentry_la_CFLAGS = $(COMMON_CFLAGS) -DPATCH_ENTRYPOINTS
 libGLX_patchentry_la_SOURCES = $(COMMON_SOURCES)
 libGLX_patchentry_la_LIBADD = $(top_builddir)/src/util/trace/libtrace.la
+libGLX_patchentry_la_LDFLAGS = $(COMMON_LDFLAGS)
