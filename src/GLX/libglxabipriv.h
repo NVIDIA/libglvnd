@@ -36,7 +36,7 @@
  * by the vendor, though in practice they are one and the same.
  */
 
-#include "libglxabi.h"
+#include "glvnd/libglxabi.h"
 
 #include <GL/glxext.h>
 

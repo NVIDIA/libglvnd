@@ -1,4 +1,3 @@
-SUBDIRS = src tests
-noinst_HEADERS = include
+SUBDIRS = src tests include
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = README.md

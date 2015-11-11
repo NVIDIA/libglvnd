@@ -36,7 +36,7 @@
 #include <GL/glxint.h>
 
 #include "GLX_dummy.h"
-#include "libglxabi.h"
+#include "glvnd/libglxabi.h"
 #include "utils_misc.h"
 #include "trace.h"
 #include "compiler.h"

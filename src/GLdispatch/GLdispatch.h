@@ -32,7 +32,7 @@
 
 #include "glheader.h"
 #include "compiler.h"
-#include "GLdispatchABI.h"
+#include "glvnd/GLdispatchABI.h"
 
 /*!
  * The current version of the ABI between libGLdispatch and the window system

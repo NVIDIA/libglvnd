@@ -33,7 +33,7 @@
 #include <stdint.h>
 #include <GL/glx.h>
 
-#include "GLdispatchABI.h"
+#include "glvnd/GLdispatchABI.h"
 
 #if defined(__cplusplus)
 extern "C" {
