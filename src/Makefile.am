@@ -1,3 +1,9 @@
-SUBDIRS = util GLdispatch x11glvnd GLX OpenGL GL
+SUBDIRS = util \
+	GLdispatch \
+	x11glvnd \
+	GLX \
+	OpenGL \
+	GLESv2 \
+	GL
 
 EXTRA_DIST = generate
