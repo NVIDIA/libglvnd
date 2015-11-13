@@ -302,6 +302,7 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/GL/Makefile
                  src/OpenGL/Makefile
+                 src/GLESv1/Makefile
                  src/GLESv2/Makefile
                  src/GLX/Makefile
                  src/x11glvnd/Makefile
