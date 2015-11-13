@@ -27,53 +27,17 @@
 
 lib_LTLIBRARIES = libOpenGL.la
 
-MAPI = $(top_srcdir)/$(MAPI_PREFIX)
-GLAPI = $(MAPI)/glapi
+ENTRYPOINT_TARGET=opengl
+include $(top_srcdir)/src/OpenGL/entrypoint_common.mk
 
-noinst_HEADERS =        \
-	glapi_mapi_opengl_tmp.h
+libOpenGL_la_SOURCES = $(ENTRYPOINT_COMMON_FILES)
 
-include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
+libOpenGL_la_CFLAGS = $(ENTRYPOINT_COMMON_CFLAGS)
 
-libOpenGL_la_SOURCES = \
-	libopengl.c        \
-	$(MAPI_GLDISPATCH_ENTRY_FILES) \
-	$(MAPI)/stub.c     \
-	$(top_srcdir)/src/util/utils_misc.c
+EXTRA_libOpenGL_la_DEPENDENCIES = $(ENTRYPOINT_COMMON_DEPENDENCIES)
 
-BUILT_SOURCES = glapi_mapi_opengl_tmp.h opengl_exports.sym
-CLEANFILES = $(BUILT_SOURCES)
+libOpenGL_la_LDFLAGS = $(ENTRYPOINT_COMMON_LDFLAGS) \
+	-version-info 0
 
-include $(top_srcdir)/src/generate/glvnd_gen.mk
-glapi_mapi_opengl_tmp.h : $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi, opengl)
+libOpenGL_la_LIBADD = $(ENTRYPOINT_COMMON_LIBADD)
 
-opengl_exports.sym : $(glapi_gen_libopengl_exports_deps)
-	$(call glapi_gen_libopengl_exports, opengl)
-
-libOpenGL_la_CFLAGS = \
-	-I$(top_srcdir)/include
-
-if USE_DT_AUXILIARY
-DT_AUX_FLAGS = -Xlinker "--auxiliary=libGLdispatch.so.0"
-else
-DT_AUX_FLAGS =
-endif
-
-EXTRA_libOpenGL_la_DEPENDENCIES = $(builddir)/opengl_exports.sym
-
-libOpenGL_la_LDFLAGS = -shared \
-	-version-info 0 \
-	$(LINKER_FLAG_NO_UNDEFINED) \
-	-export-symbols $(builddir)/opengl_exports.sym \
-	$(DT_AUX_FLAGS)
-
-AM_CPPFLAGS = \
-	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
-	-I$(top_srcdir)/src/GLdispatch/ \
-	-I$(top_srcdir)/src/util \
-	-I$(top_srcdir)/src/util/glvnd_pthread \
-	-DMAPI_ABI_HEADER=\"$(builddir)/glapi_mapi_opengl_tmp.h\" \
-	-DSTATIC_DISPATCH_ONLY
-
-libOpenGL_la_LIBADD = ../GLdispatch/libGLdispatch.la

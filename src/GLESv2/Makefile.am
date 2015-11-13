@@ -27,50 +27,17 @@
 
 lib_LTLIBRARIES = libGLESv2.la
 
-MAPI = $(top_srcdir)/$(MAPI_PREFIX)
-GLAPI = $(MAPI)/glapi
+ENTRYPOINT_TARGET=glesv2
+include $(top_srcdir)/src/OpenGL/entrypoint_common.mk
 
-include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
+libGLESv2_la_SOURCES = $(ENTRYPOINT_COMMON_FILES)
 
-libGLESv2_la_SOURCES = \
-	$(top_srcdir)/src/OpenGL/libopengl.c \
-	$(MAPI_GLDISPATCH_ENTRY_FILES) \
-	$(MAPI)/stub.c     \
-	$(top_srcdir)/src/util/utils_misc.c
+libGLESv2_la_CFLAGS = $(ENTRYPOINT_COMMON_CFLAGS)
 
-BUILT_SOURCES = g_glapi_mapi_glesv2_tmp.h g_glesv2_exports.sym
-CLEANFILES = $(BUILT_SOURCES)
+EXTRA_libGLESv2_la_DEPENDENCIES = $(ENTRYPOINT_COMMON_DEPENDENCIES)
 
-include $(top_srcdir)/src/generate/glvnd_gen.mk
-g_glapi_mapi_glesv2_tmp.h : $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi, glesv2)
+libGLESv2_la_LDFLAGS = $(ENTRYPOINT_COMMON_LDFLAGS) \
+	-version-info 2
 
-g_glesv2_exports.sym : $(glapi_gen_libopengl_exports_deps)
-	$(call glapi_gen_libopengl_exports, glesv2)
+libGLESv2_la_LIBADD = $(ENTRYPOINT_COMMON_LIBADD)
 
-libGLESv2_la_CFLAGS = \
-	-I$(top_srcdir)/include
-
-if USE_DT_AUXILIARY
-DT_AUX_FLAGS = -Xlinker "--auxiliary=libGLdispatch.so.0"
-else
-DT_AUX_FLAGS =
-endif
-
-EXTRA_libGLESv2_la_DEPENDENCIES = $(builddir)/g_glesv2_exports.sym
-
-libGLESv2_la_LDFLAGS = -shared \
-	-version-info 2 \
-	$(LINKER_FLAG_NO_UNDEFINED) \
-	-export-symbols $(builddir)/g_glesv2_exports.sym \
-	$(DT_AUX_FLAGS)
-
-AM_CPPFLAGS = \
-	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
-	-I$(top_srcdir)/src/GLdispatch/ \
-	-I$(top_srcdir)/src/util \
-	-I$(top_srcdir)/src/util/glvnd_pthread \
-	-DMAPI_ABI_HEADER=\"$(builddir)/g_glapi_mapi_glesv2_tmp.h\" \
-	-DSTATIC_DISPATCH_ONLY
-
-libGLESv2_la_LIBADD = ../GLdispatch/libGLdispatch.la
