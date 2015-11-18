@@ -261,3 +261,83 @@ void glvnd_byte_swap16(uint16_t* array, const size_t size)
     }
 }
 
+int FindNextStringToken(const char **tok, size_t *len, const char *sep)
+{
+    // Skip to the end of the current name.
+    const char *ptr = *tok + *len;
+
+    // Skip any leading separators.
+    while (*ptr != '\x00' && strchr(sep, *ptr) != NULL) {
+        ptr++;
+    }
+
+    // Find the length of the current token.
+    *len = 0;
+    while (ptr[*len] != '\x00' && strchr(sep, ptr[*len]) == NULL) {
+        (*len)++;
+    }
+    *tok = ptr;
+    return (*len > 0 ? 1 : 0);
+}
+
+char **SplitString(const char *str, size_t *count, const char *sep)
+{
+    char **tokens = NULL;
+    char *tokenBuf;
+    size_t tokenCount = 0;
+    size_t totalLen = 0;
+    const char *tok;
+    size_t len;
+
+    if (count != NULL) {
+        *count = 0;
+    }
+
+    tok = str;
+    len = 0;
+    while (FindNextStringToken(&tok, &len, sep)) {
+        tokenCount++;
+        totalLen += len + 1;
+    }
+
+    if (tokenCount == 0) {
+        return NULL;
+    }
+
+    tokens = (char **) malloc((tokenCount + 1) * sizeof(char *)
+            + totalLen);
+    if (tokens == NULL) {
+        return NULL;
+    }
+
+    tokenBuf = (char *) (tokens + tokenCount + 1);
+
+    tok = str;
+    len = 0;
+    tokenCount = 0;
+    while (FindNextStringToken(&tok, &len, sep)) {
+        memcpy(tokenBuf, tok, len);
+        tokenBuf[len] = '\x00';
+        tokens[tokenCount++] = tokenBuf;
+        tokenBuf += len + 1;
+    }
+    tokens[tokenCount] = NULL;
+    if (count != NULL) {
+        *count = tokenCount;
+    }
+    return tokens;
+}
+
+int IsTokenInString(const char *str, const char *token, size_t tokenLen, const char *sep)
+{
+    const char *ptr = str;
+    size_t len = 0;
+
+    while (FindNextStringToken(&ptr, &len, sep)) {
+        if (tokenLen == len && strncmp(token, ptr, len) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
