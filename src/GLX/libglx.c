@@ -1212,7 +1212,7 @@ static char *MergeVersionStrings(char *currentString, const char *newString)
     }
     free(currentString);
 
-    if (ret > 0) {
+    if (ret >= 0) {
         return buf;
     } else {
         return NULL;
@@ -1780,9 +1780,6 @@ int AtomicDecrementClampAtZero(int volatile *val)
             assert(oldVal == 0);
         } else {
             newVal = oldVal - 1;
-            if (newVal < 0) {
-                newVal = 0;
-            }
             oldVal = AtomicCompareAndSwap(val, oldVal, newVal);
         }
     } while ((oldVal > 0) && (newVal != oldVal - 1));
