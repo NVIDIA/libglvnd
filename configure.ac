@@ -299,7 +299,8 @@ dnl default CFLAGS
 CFLAGS="$CFLAGS -Wall -Werror -std=gnu99 -include config.h -fvisibility=hidden $DEFINES"
 
 AC_CONFIG_FILES([Makefile
-		 include/Makefile
+                 libglvnd.pc
+                 include/Makefile
                  src/Makefile
                  src/GL/Makefile
                  src/OpenGL/Makefile

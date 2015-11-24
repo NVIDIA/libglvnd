@@ -1,0 +1,8 @@
+prefix=@prefix@
+includedir=@includedir@
+
+Name: libglvnd
+Description: Vendor-neutral OpenGL dispatch library vendor interface
+Version: @PACKAGE_VERSION@
+Libs:
+Cflags: -I${includedir}
