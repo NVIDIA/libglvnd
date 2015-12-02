@@ -6,7 +6,7 @@ noinst_HEADERS = \
 	winsys_dispatch.h \
 	trace.h
 
-EXTRA_DIST = uthash
+EXTRA_DIST = uthash cJSON
 
 noinst_LTLIBRARIES =
 AM_CPPFLAGS = -I$(top_srcdir)/include
@@ -31,3 +31,5 @@ noinst_LTLIBRARIES += libwinsys_dispatch.la
 libwinsys_dispatch_la_SOURCES = winsys_dispatch.c
 libwinsys_dispatch_la_CFLAGS = -I$(top_srcdir)/src/util/uthash/src
 
+noinst_LTLIBRARIES += libcJSON.la
+libcJSON_la_SOURCES = cJSON.c
