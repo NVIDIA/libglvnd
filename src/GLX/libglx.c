@@ -790,7 +790,6 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
                                   GLXDrawable read, GLXContext context,
                                   char callerOpcode)
 {
-    __glXThreadInitialize();
     __GLXAPIState *apiState;
     __GLXvendorInfo *oldVendor, *newVendor;
     Display *oldDpy;
@@ -799,6 +798,7 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
     Bool ret;
     int screen;
 
+    __glXThreadInitialize();
     apiState = __glXGetCurrentAPIState();
 
     if (apiState != NULL) {
@@ -818,13 +818,6 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
         }
     } else {
         // We don't have a current context already.
-
-        if (context == NULL) {
-            // If both contexts are NULL, then ignore the other parameters and
-            // return early.
-            return True;
-        }
-
         oldVendor = NULL;
         oldDpy = NULL;
         oldDraw = oldRead = None;
@@ -848,6 +841,13 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
         NotifyXError(dpy, BadMatch, 0, callerOpcode, True, oldVendor);
         return False;
     }
+
+    if (oldContext == NULL && context == NULL) {
+        // If both the old and new contexts are NULL, then there's nothing to
+        // do. Just return early.
+        return True;
+    }
+
 
     LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
 
