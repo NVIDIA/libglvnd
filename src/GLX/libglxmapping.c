@@ -795,6 +795,7 @@ static void CleanupDisplayInfoEntry(void *unused, __GLXdisplayInfoHash *pEntry)
 __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
 {
     __GLXdisplayInfoHash *pEntry = NULL;
+    __GLXdisplayInfoHash *foundEntry = NULL;
 
     if (dpy == NULL) {
         return NULL;
@@ -808,21 +809,26 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
         return &pEntry->info;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
-    HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
+    // Create the new __GLXdisplayInfoHash structure without holding the lock.
+    // If we run into an X error, we may wind up in __glXMappingTeardown before
+    // we can unlock it again, which would deadlock.
+    pEntry = InitDisplayInfoEntry(dpy);
     if (pEntry == NULL) {
-        pEntry = InitDisplayInfoEntry(dpy);
-        if (pEntry != NULL) {
-            HASH_ADD_PTR(_LH(__glXDisplayInfoHash), dpy, pEntry);
-        }
-    }
-
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
-    if (pEntry != NULL) {
-        return &pEntry->info;
-    } else {
         return NULL;
     }
+
+    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, foundEntry);
+    if (foundEntry == NULL) {
+        HASH_ADD_PTR(_LH(__glXDisplayInfoHash), dpy, pEntry);
+    } else {
+        // Another thread already created the hashtable entry.
+        free(pEntry);
+        pEntry = foundEntry;
+    }
+    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+
+    return &pEntry->info;
 }
 
 void __glXFreeDisplay(Display *dpy)
@@ -1191,9 +1197,6 @@ void __glXMappingTeardown(Bool doReset)
         LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
         __glXNextUnusedHashIndex = 0;
         LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
-
-        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdisplayInfoHash,
-                         __glXDisplayInfoHash, NULL, NULL, False);
 
         LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXscreenPointerMappingHash,
                          __glXScreenPointerMappingHash, NULL, NULL, False);

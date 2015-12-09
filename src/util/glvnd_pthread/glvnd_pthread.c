@@ -54,6 +54,10 @@ typedef struct GLVNDPthreadRealFuncsRec {
     int (*mutex_lock)(pthread_mutex_t *mutex);
     int (*mutex_unlock)(pthread_mutex_t *mutex);
 
+    int (* mutexattr_init) (pthread_mutexattr_t *attr);
+    int (* mutexattr_destroy) (pthread_mutexattr_t *attr);
+    int (* mutexattr_settype) (pthread_mutexattr_t *attr, int kind);
+
 #if defined(HAVE_PTHREAD_RWLOCK_T)
     int (*rwlock_init)(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr);
     int (*rwlock_destroy)(pthread_rwlock_t *rwlock);
@@ -155,6 +159,21 @@ static int st_mutex_lock(glvnd_mutex_t *mutex)
 }
 
 static int st_mutex_unlock(glvnd_mutex_t *mutex)
+{
+    return 0;
+}
+
+int st_mutexattr_init(glvnd_mutexattr_t *attr)
+{
+    return 0;
+}
+
+int st_mutexattr_destroy(glvnd_mutexattr_t *attr)
+{
+    return 0;
+}
+
+int st_mutexattr_settype(glvnd_mutexattr_t *attr, int kind)
 {
     return 0;
 }
@@ -280,6 +299,21 @@ static int mt_mutex_unlock(glvnd_mutex_t *mutex)
     return pthreadRealFuncs.mutex_unlock(mutex);
 }
 
+int mt_mutexattr_init(glvnd_mutexattr_t *attr)
+{
+    return pthreadRealFuncs.mutexattr_init(attr);
+}
+
+int mt_mutexattr_destroy(glvnd_mutexattr_t *attr)
+{
+    return pthreadRealFuncs.mutexattr_destroy(attr);
+}
+
+int mt_mutexattr_settype(glvnd_mutexattr_t *attr, int kind)
+{
+    return pthreadRealFuncs.mutexattr_settype(attr, kind);
+}
+
 static int mt_rwlock_init(glvnd_rwlock_t *rwlock, const glvnd_rwlockattr_t *attr)
 {
 #if defined(HAVE_PTHREAD_RWLOCK_T)
@@ -366,6 +400,10 @@ void glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
     GET_MT_FUNC(funcs, dlhandle, mutex_destroy);
     GET_MT_FUNC(funcs, dlhandle, mutex_lock);
     GET_MT_FUNC(funcs, dlhandle, mutex_unlock);
+    GET_MT_FUNC(funcs, dlhandle, mutexattr_init);
+    GET_MT_FUNC(funcs, dlhandle, mutexattr_destroy);
+    GET_MT_FUNC(funcs, dlhandle, mutexattr_settype);
+
 
     GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_init);
     GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_destroy);
@@ -397,6 +435,10 @@ fail:
     GET_ST_FUNC(funcs, mutex_destroy);
     GET_ST_FUNC(funcs, mutex_lock);
     GET_ST_FUNC(funcs, mutex_unlock);
+
+    GET_ST_FUNC(funcs, mutexattr_init);
+    GET_ST_FUNC(funcs, mutexattr_destroy);
+    GET_ST_FUNC(funcs, mutexattr_settype);
 
     GET_ST_FUNC(funcs, rwlock_init);
     GET_ST_FUNC(funcs, rwlock_destroy);

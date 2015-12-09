@@ -71,8 +71,8 @@ typedef struct __GLXcurrentContextHashRec {
     UT_hash_handle hh;
 } __GLXcurrentContextHash;
 
-static DEFINE_INITIALIZED_LKDHASH(__GLXcurrentContextHash,
-                                  __glXCurrentContextHash);
+static __GLXcurrentContextHash *currentContextHash = NULL;
+static pthread_mutex_t currentContextHashLock;
 
 /**
  * A list of current __GLXAPIState structures. This is used so that we can
@@ -465,9 +465,9 @@ static void ThreadDestroyed(__GLdispatchAPIState *apiState)
      * If a GLX context is current in this thread, remove it from the
      * current context hash before destroying the thread.
      */
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+    __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
     UpdateCurrentContext(NULL, glxState->currentContext);
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+    __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
 
     // Free the API state struct.
     DestroyAPIState(glxState);
@@ -509,9 +509,9 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
 {
     Bool canUnmap = True;
     __GLXcurrentContextHash *pEntry = NULL;
-    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+    __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
 
-    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
+    HASH_FIND(hh, currentContextHash, &ctx, sizeof(ctx), pEntry);
 
     if (pEntry) {
         canUnmap = False;
@@ -526,7 +526,7 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
         __glXRemoveScreenContextMapping(NULL, ctx);
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+    __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
 
 }
 
@@ -534,9 +534,9 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
  * Updates the current context.
  *
  * If both newCtx and oldCtx are not NULL, then it will replace the old context
- * with the new context in the __glXCurrentContextHash table.
+ * with the new context in the currentContextHash table.
  *
- * This function will remove the old context from the __glXCurrentContextHash
+ * This function will remove the old context from the currentContextHash
  * hashtable, and add the new context to it.
  *
  * If the old context was flagged for deletion, then it will also remove the
@@ -545,7 +545,7 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
  * \note that the only case where this function can fail is if \p oldCtx is NULL
  * and \p newCtx is not NULL, because it has to allocate a new hashtable entry.
  *
- * \note __glXCurrentContextHash must be write-locked before calling this
+ * \note currentContextHashLock must be locked before calling this
  * function.
  *
  * \param[in] newCtx The new context to make current, or \c NULL to just
@@ -563,10 +563,10 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
     if (oldCtx != NULL) {
         Bool needsUnmap;
 
-        HASH_FIND(hh, _LH(__glXCurrentContextHash), &oldCtx, sizeof(oldCtx), pEntry);
+        HASH_FIND(hh, currentContextHash, &oldCtx, sizeof(oldCtx), pEntry);
         assert(pEntry);
 
-        HASH_DELETE(hh, _LH(__glXCurrentContextHash), pEntry);
+        HASH_DELETE(hh, currentContextHash, pEntry);
         needsUnmap = pEntry->needsUnmap;
 
         if (newCtx != NULL)
@@ -575,7 +575,7 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
             // don't have to worry about malloc failing.
             pEntry->ctx = newCtx;
             pEntry->needsUnmap = False;
-            HASH_ADD(hh, _LH(__glXCurrentContextHash), ctx, sizeof(newCtx), pEntry);
+            HASH_ADD(hh, currentContextHash, ctx, sizeof(newCtx), pEntry);
         }
         else
         {
@@ -597,7 +597,7 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
         }
         pEntry->ctx = newCtx;
         pEntry->needsUnmap = False;
-        HASH_ADD(hh, _LH(__glXCurrentContextHash), ctx, sizeof(newCtx), pEntry);
+        HASH_ADD(hh, currentContextHash, ctx, sizeof(newCtx), pEntry);
     }
 
     return True;
@@ -612,7 +612,7 @@ static Bool IsContextCurrentToAnyOtherThread(GLXContext ctx)
     GLXContext current = glXGetCurrentContext();
     __GLXcurrentContextHash *pEntry = NULL;
 
-    HASH_FIND(hh, _LH(__glXCurrentContextHash), &ctx, sizeof(ctx), pEntry);
+    HASH_FIND(hh, currentContextHash, &ctx, sizeof(ctx), pEntry);
 
     return !!pEntry && (current != ctx);
 }
@@ -849,11 +849,11 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
     }
 
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+    __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
 
     if (IsContextCurrentToAnyOtherThread(context)) {
         // XXX throw BadAccess?
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+        __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
         return False;
     }
 
@@ -867,7 +867,7 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
              * context again.  This is incorrect application behavior, but we should
              * attempt to handle this failure gracefully.
              */
-            LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+            __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
             return False;
         }
         newVendor = __glXLookupVendorByScreen(dpy, screen);
@@ -934,7 +934,7 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
         }
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXCurrentContextHash);
+    __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
     return ret;
 }
 
@@ -1840,13 +1840,19 @@ void CurrentContextHashCleanup(void *unused, __GLXcurrentContextHash *pEntry)
 static void __glXAPITeardown(Bool doReset)
 {
     __GLXAPIState *apiState, *apiStateTemp;
+    __GLXcurrentContextHash *currContext, *currContextTemp;
 
     /*
      * XXX: This will leave dangling screen-context mappings, but they will be
      * cleared separately in __glXMappingTeardown().
      */
-    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXcurrentContextHash,
-                     __glXCurrentContextHash, CurrentContextHashCleanup, NULL, doReset);
+    __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
+    HASH_ITER(hh, currentContextHash, currContext, currContextTemp) {
+        HASH_DEL(currentContextHash, currContext);
+        free(currContext);
+    }
+    assert(currentContextHash == NULL);
+    __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
 
     glvnd_list_for_each_entry_safe(apiState, apiStateTemp, &currentAPIStateList, entry) {
         glvnd_list_del(&apiState->entry);
@@ -1885,6 +1891,8 @@ void __attribute__ ((constructor)) __glXInit(void)
 void _init(void)
 #endif
 {
+    glvnd_mutexattr_t mutexAttribs;
+
     if (__glDispatchGetABIVersion() != GLDISPATCH_ABI_VERSION) {
         fprintf(stderr, "libGLdispatch ABI version is incompatible with libGLX.\n");
         abort();
@@ -1895,6 +1903,19 @@ void _init(void)
     glvndSetupPthreads(RTLD_DEFAULT, &__glXPthreadFuncs);
 
     glvnd_list_init(&currentAPIStateList);
+
+    /*
+     * currentContextHashLock must be a recursive mutex, because we'll have it
+     * locked when we call into the vendor library's glXMakeCurrent
+     * implementation. If the vendor library generates an X error, then that
+     * will often result in a call to exit. In that case, the teardown code
+     * will try to lock the mutex again so that it can clean up the current
+     * context list.
+     */
+    __glXPthreadFuncs.mutexattr_init(&mutexAttribs);
+    __glXPthreadFuncs.mutexattr_settype(&mutexAttribs, PTHREAD_MUTEX_RECURSIVE);
+    __glXPthreadFuncs.mutex_init(&currentContextHashLock, &mutexAttribs);
+    __glXPthreadFuncs.mutexattr_destroy(&mutexAttribs);
 
     {
         /*

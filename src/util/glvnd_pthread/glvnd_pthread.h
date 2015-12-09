@@ -105,6 +105,10 @@ typedef struct GLVNDPthreadFuncsRec {
     int (*mutex_lock)(glvnd_mutex_t *mutex);
     int (*mutex_unlock)(glvnd_mutex_t *mutex);
 
+    int (* mutexattr_init) (glvnd_mutexattr_t *attr);
+    int (* mutexattr_destroy) (glvnd_mutexattr_t *attr);
+    int (* mutexattr_settype) (glvnd_mutexattr_t *attr, int kind);
+
     int (*rwlock_init)(glvnd_rwlock_t *rwlock, const glvnd_rwlockattr_t *attr);
     int (*rwlock_destroy)(glvnd_rwlock_t *rwlock);
     int (*rwlock_rdlock)(glvnd_rwlock_t *rwlock);
