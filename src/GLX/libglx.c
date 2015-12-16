@@ -441,7 +441,9 @@ void DisplayClosed(Display *dpy)
         // Clear out the current context, but don't call into the vendor
         // library or do anything that might require a valid display.
         __glDispatchLoseCurrent();
+        __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
         UpdateCurrentContext(NULL, apiState->currentContext);
+        __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
         DestroyAPIState(apiState);
     }
 
