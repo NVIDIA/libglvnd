@@ -103,7 +103,6 @@ int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScr
 
 void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
 void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config);
-int __glXScreenFromFBConfig(GLXFBConfig config);
 int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor);
 
 void __glXAddScreenVisualMapping(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor);

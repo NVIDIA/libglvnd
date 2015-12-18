@@ -979,13 +979,6 @@ void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config)
 }
 
 
-int __glXScreenFromFBConfig(GLXFBConfig config)
-{
-    int screen = -1;
-    DisplayFromPointer(config, NULL, &screen, NULL, NULL);
-    return screen;
-}
-
 int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor)
 {
     return DisplayFromPointer(config, NULL, retScreen, retVendor, dpy);
