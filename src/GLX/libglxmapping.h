@@ -99,7 +99,6 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
  */
 void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
 void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context);
-int __glXScreenFromContext(GLXContext context);
 int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor);
 
 void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);

@@ -961,13 +961,6 @@ void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context)
 }
 
 
-int __glXScreenFromContext(GLXContext context)
-{
-    int screen = -1;
-    DisplayFromPointer(context, NULL, &screen, NULL, NULL);
-    return screen;
-}
-
 int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor)
 {
     return DisplayFromPointer(context, retDisplay, retScreen, retVendor, NULL);

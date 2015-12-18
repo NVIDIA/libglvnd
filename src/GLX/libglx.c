@@ -124,6 +124,21 @@ static __GLXvendorInfo *CommonDispatchDrawable(Display *dpy, GLXDrawable draw,
     return vendor;
 }
 
+static __GLXvendorInfo *CommonDispatchContext(Display *dpy, GLXContext context,
+        unsigned char minorCode)
+{
+    __GLXvendorInfo *vendor = NULL;
+
+    if (context != NULL) {
+        __glXThreadInitialize();
+        __glXVendorFromContext(context, NULL, NULL, &vendor);
+    }
+    if (vendor == NULL) {
+        __glXSendError(dpy, GLXBadContext, 0, minorCode, False);
+    }
+    return vendor;
+}
+
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
 {
     __glXThreadInitialize();
@@ -144,10 +159,10 @@ PUBLIC void glXCopyContext(Display *dpy, GLXContext src, GLXContext dst,
      * implementation validate that both contexts are on the same
      * screen.
      */
-    const int screen = __glXScreenFromContext(src);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-
-    pDispatch->copyContext(dpy, src, dst, mask);
+    __GLXvendorInfo *vendor = CommonDispatchContext(dpy, src, X_GLXCopyContext);
+    if (vendor != NULL) {
+        vendor->staticDispatch.copyContext(dpy, src, dst, mask);
+    }
 }
 
 
@@ -187,14 +202,11 @@ PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
 
 PUBLIC void glXDestroyContext(Display *dpy, GLXContext context)
 {
-    __glXThreadInitialize();
-
-    const int screen = __glXScreenFromContext(context);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-
-    __glXNotifyContextDestroyed(context);
-
-    pDispatch->destroyContext(dpy, context);
+    __GLXvendorInfo *vendor = CommonDispatchContext(dpy, context, X_GLXDestroyContext);
+    if (vendor != NULL) {
+        __glXNotifyContextDestroyed(context);
+        vendor->staticDispatch.destroyContext(dpy, context);
+    }
 }
 
 static Bool __glXIsDirect(Display *dpy, __GLXdisplayInfo *dpyInfo, GLXContextID context)
@@ -346,11 +358,11 @@ static GLXContext glXImportContextEXT(Display *dpy, GLXContextID contextID)
 
 static void glXFreeContextEXT(Display *dpy, GLXContext context)
 {
+    __GLXvendorInfo *vendor = NULL;
+
     __glXThreadInitialize();
 
-    const int screen = __glXScreenFromContext(context);
-    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
-
+    __glXVendorFromContext(context, NULL, NULL, &vendor);
     if (vendor != NULL && vendor->staticDispatch.freeContextEXT != NULL) {
         __glXNotifyContextDestroyed(context);
         vendor->staticDispatch.freeContextEXT(dpy, context);
@@ -457,12 +469,12 @@ __GLXvendorInfo *__glXGetCurrentDynDispatch(void)
 
 PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
 {
-    __glXThreadInitialize();
-
-    const int screen = __glXScreenFromContext(context);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-
-    return pDispatch->isDirect(dpy, context);
+    __GLXvendorInfo *vendor = CommonDispatchContext(dpy, context, X_GLXIsDirect);
+    if (vendor != NULL) {
+        return vendor->staticDispatch.isDirect(dpy, context);
+    } else {
+        return False;
+    }
 }
 
 void DisplayClosed(Display *dpy)
@@ -832,7 +844,6 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
     GLXDrawable oldDraw, oldRead;
     GLXContext oldContext;
     Bool ret;
-    int screen;
 
     __glXThreadInitialize();
     apiState = __glXGetCurrentAPIState();
@@ -887,26 +898,25 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
 
     __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
 
-    if (IsContextCurrentToAnyOtherThread(context)) {
-        // XXX throw BadAccess?
-        __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
-        return False;
-    }
-
     if (context != NULL) {
-        screen = __glXScreenFromContext(context);
-        if (screen < 0) {
+        if (IsContextCurrentToAnyOtherThread(context)) {
+            __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+            NotifyXError(dpy, BadAccess, 0, callerOpcode, True, oldVendor);
+            return False;
+        }
+
+        if (__glXVendorFromContext(context, NULL, NULL, &newVendor) != 0) {
             /*
-             * XXX: We can run into this corner case if a GLX client calls
+             * We can run into this corner case if a GLX client calls
              * glXDestroyContext() on a current context, loses current to this
              * context (causing it to be freed), then tries to make current to the
              * context again.  This is incorrect application behavior, but we should
              * attempt to handle this failure gracefully.
              */
             __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+            NotifyXError(dpy, GLXBadContext, 0, callerOpcode, False, oldVendor);
             return False;
         }
-        newVendor = __glXLookupVendorByScreen(dpy, screen);
         assert(newVendor != NULL);
     } else {
         newVendor = NULL;
@@ -1509,12 +1519,12 @@ PUBLIC XVisualInfo *glXGetVisualFromFBConfig(Display *dpy, GLXFBConfig config)
 
 PUBLIC int glXQueryContext(Display *dpy, GLXContext context, int attribute, int *value)
 {
-    __glXThreadInitialize();
-
-    const int screen = __glXScreenFromContext(context);
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-
-    return pDispatch->queryContext(dpy, context, attribute, value);
+    __GLXvendorInfo *vendor = CommonDispatchContext(dpy, context, X_GLXQueryContext);
+    if (vendor != NULL) {
+        return vendor->staticDispatch.queryContext(dpy, context, attribute, value);
+    } else {
+        return GLX_BAD_CONTEXT;
+    }
 }
 
 
