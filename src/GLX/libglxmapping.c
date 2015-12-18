@@ -692,19 +692,6 @@ const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int s
     }
 }
 
-const __GLXdispatchTableStatic * __glXGetDrawableStaticDispatch(Display *dpy,
-                                                        GLXDrawable drawable)
-{
-    __GLXvendorInfo *vendor = NULL;
-    __glXVendorFromDrawable(dpy, drawable, NULL, &vendor);
-
-    if (vendor) {
-        return &vendor->staticDispatch;
-    } else {
-        return __glXDispatchNoopPtr;
-    }
-}
-
 __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen)
 {
     __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
@@ -1127,15 +1114,6 @@ void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable)
     }
 }
 
-
-int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable)
-{
-    __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
-    if (dpyInfo != NULL) {
-        return ScreenFromXID(dpy, dpyInfo, drawable);
-    }
-    return -1;
-}
 
 int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor)
 {

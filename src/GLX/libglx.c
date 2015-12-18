@@ -88,6 +88,41 @@ static Bool UpdateCurrentContext(GLXContext newCtx, GLXContext oldCtx);
 static void __glXSendError(Display *dpy, unsigned char errorCode,
         XID resourceID, unsigned char minorCode, Bool coreX11error);
 
+/*!
+ * A common helper for GLX functions that dispatch based on a drawable.
+ *
+ * This function will call __glXThreadInitialize and then look up the vendor
+ * for a drawable.
+ *
+ * If it can't find a vendor for the drawable, then it will call __glXSendError
+ * to generate an error.
+ *
+ * Note that if the server doesn't support the x11glvnd extension, then this
+ * will return the same vendor library whether or not the drawable is valid.
+ * In that case, we'll just rely on the vendor library to report the error if
+ * the drawable is not valid.
+ *
+ * \param dpy The display connection.
+ * \param draw The drawable XID.
+ * \param minorCode The minor opcode of the function being called.
+ * \param errorCode The error code to report if the drawable is invalid.
+ * \param coreX11error True if the error is a core X11 error code, or False if
+ *      it's a GLX error code.
+ */
+static __GLXvendorInfo *CommonDispatchDrawable(Display *dpy, GLXDrawable draw,
+        unsigned char minorCode, unsigned char errorCode, Bool coreX11error)
+{
+    __GLXvendorInfo *vendor = NULL;
+
+    if (draw != None) {
+        __glXThreadInitialize();
+        __glXVendorFromDrawable(dpy, draw, NULL, &vendor);
+    }
+    if (vendor == NULL) {
+        __glXSendError(dpy, errorCode, draw, minorCode, coreX11error);
+    }
+    return vendor;
+}
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
 {
@@ -341,13 +376,12 @@ PUBLIC GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixma
 
 PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, pix);
-
-    __glXRemoveScreenDrawableMapping(dpy, pix);
-
-    pDispatch->destroyGLXPixmap(dpy, pix);
+    __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, pix,
+            X_GLXDestroyGLXPixmap, GLXBadPixmap, False);
+    if (vendor != NULL) {
+        __glXRemoveScreenDrawableMapping(dpy, pix);
+        vendor->staticDispatch.destroyGLXPixmap(dpy, pix);
+    }
 }
 
 
@@ -1031,11 +1065,11 @@ PUBLIC Bool glXQueryVersion(Display *dpy, int *major, int *minor)
 
 PUBLIC void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, drawable);
-
-    pDispatch->swapBuffers(dpy, drawable);
+    __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, drawable,
+            X_GLXSwapBuffers, GLXBadDrawable, False);
+    if (vendor != NULL) {
+        vendor->staticDispatch.swapBuffers(dpy, drawable);
+    }
 }
 
 
@@ -1389,37 +1423,34 @@ PUBLIC GLXWindow glXCreateWindow(Display *dpy, GLXFBConfig config,
 
 PUBLIC void glXDestroyPbuffer(Display *dpy, GLXPbuffer pbuf)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, pbuf);
-
-    __glXRemoveScreenDrawableMapping(dpy, pbuf);
-
-    pDispatch->destroyPbuffer(dpy, pbuf);
+    __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, pbuf,
+            X_GLXDestroyPbuffer, GLXBadPbuffer, False);
+    if (vendor != NULL) {
+        __glXRemoveScreenDrawableMapping(dpy, pbuf);
+        vendor->staticDispatch.destroyPbuffer(dpy, pbuf);
+    }
 }
 
 
 PUBLIC void glXDestroyPixmap(Display *dpy, GLXPixmap pixmap)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, pixmap);
-
-    __glXRemoveScreenDrawableMapping(dpy, pixmap);
-
-    pDispatch->destroyPixmap(dpy, pixmap);
+    __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, pixmap,
+            X_GLXDestroyPixmap, GLXBadPixmap, False);
+    if (vendor != NULL) {
+        __glXRemoveScreenDrawableMapping(dpy, pixmap);
+        vendor->staticDispatch.destroyPixmap(dpy, pixmap);
+    }
 }
 
 
 PUBLIC void glXDestroyWindow(Display *dpy, GLXWindow win)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, win);
-
-    __glXRemoveScreenDrawableMapping(dpy, win);
-
-    pDispatch->destroyWindow(dpy, win);
+    __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, win,
+            X_GLXDestroyWindow, GLXBadWindow, False);
+    if (vendor != NULL) {
+        __glXRemoveScreenDrawableMapping(dpy, win);
+        vendor->staticDispatch.destroyWindow(dpy, win);
+    }
 }
 
 PUBLIC int glXGetFBConfigAttrib(Display *dpy, GLXFBConfig config,
@@ -1456,11 +1487,12 @@ PUBLIC GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
 PUBLIC void glXGetSelectedEvent(Display *dpy, GLXDrawable draw,
                          unsigned long *event_mask)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, draw);
-
-    pDispatch->getSelectedEvent(dpy, draw, event_mask);
+    // glXGetSelectedEvent uses the glXGetDrawableAttributes protocol.
+    __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, draw,
+            X_GLXGetDrawableAttributes, GLXBadDrawable, False);
+    if (vendor != NULL) {
+        vendor->staticDispatch.getSelectedEvent(dpy, draw, event_mask);
+    }
 }
 
 
@@ -1489,21 +1521,21 @@ PUBLIC int glXQueryContext(Display *dpy, GLXContext context, int attribute, int 
 PUBLIC void glXQueryDrawable(Display *dpy, GLXDrawable draw,
                       int attribute, unsigned int *value)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, draw);
-
-    return pDispatch->queryDrawable(dpy, draw, attribute, value);
+    __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, draw,
+            X_GLXGetDrawableAttributes, GLXBadDrawable, False);
+    if (vendor != NULL) {
+        vendor->staticDispatch.queryDrawable(dpy, draw, attribute, value);
+    }
 }
 
 
 PUBLIC void glXSelectEvent(Display *dpy, GLXDrawable draw, unsigned long event_mask)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetDrawableStaticDispatch(dpy, draw);
-
-    pDispatch->selectEvent(dpy, draw, event_mask);
+    __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, draw,
+            X_GLXChangeDrawableAttributes, GLXBadDrawable, False);
+    if (vendor != NULL) {
+        vendor->staticDispatch.selectEvent(dpy, draw, event_mask);
+    }
 }
 
 typedef struct {

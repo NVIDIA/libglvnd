@@ -93,12 +93,6 @@ __GLXvendorInfo *__glXGetDynDispatch(Display *dpy,
                                                const int screen);
 __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
 
-__GLXvendorInfo *__glXGetDrawableDynDispatch(Display *dpy,
-                                               GLXDrawable drawable);
-
-const __GLXdispatchTableStatic * __glXGetDrawableStaticDispatch(Display *dpy,
-                                                        GLXDrawable drawable);
-
 /*!
  * Various functions to manage mappings used to determine the screen
  * of a particular GLX call.
@@ -119,7 +113,6 @@ int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorIn
 
 void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor);
 void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable);
-int __glXScreenFromDrawable(Display *dpy, GLXDrawable drawable);
 int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
