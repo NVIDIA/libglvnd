@@ -150,9 +150,9 @@ typedef struct __GLXapiExportsRec {
      */
     int (*vendorFromContext)(GLXContext context, Display **retDisplay, __GLXvendorInfo **retVendor);
 
-    void (*addScreenFBConfigMapping)(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
-    void (*removeScreenFBConfigMapping)(Display *dpy, GLXFBConfig config);
-    int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor);
+    void (*addVendorFBConfigMapping)(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
+    void (*removeVendorFBConfigMapping)(Display *dpy, GLXFBConfig config);
+    int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
 
     void (*addScreenVisualMapping)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor);
     void (*removeScreenVisualMapping)(Display *dpy, const XVisualInfo *visual);

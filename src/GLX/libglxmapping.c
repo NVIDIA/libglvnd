@@ -362,8 +362,8 @@ static void InitExportsTable(void)
     glxExportsTable.removeVendorContextMapping = __glXRemoveVendorContextMapping;
     glxExportsTable.vendorFromContext = __glXVendorFromContext;
 
-    glxExportsTable.addScreenFBConfigMapping = __glXAddScreenFBConfigMapping;
-    glxExportsTable.removeScreenFBConfigMapping = __glXRemoveScreenFBConfigMapping;
+    glxExportsTable.addVendorFBConfigMapping = __glXAddVendorFBConfigMapping;
+    glxExportsTable.removeVendorFBConfigMapping = __glXRemoveVendorFBConfigMapping;
     glxExportsTable.vendorFromFBConfig = __glXVendorFromFBConfig;
 
     glxExportsTable.addScreenVisualMapping = __glXAddScreenVisualMapping;
@@ -968,21 +968,21 @@ int __glXVendorFromContext(GLXContext context, Display **retDisplay, __GLXvendor
 }
 
 
-void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor)
+void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor)
 {
-    AddScreenPointerMapping(config, dpy, screen, vendor);
+    AddScreenPointerMapping(config, dpy, -1, vendor);
 }
 
 
-void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config)
+void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config)
 {
     RemoveScreenPointerMapping(config);
 }
 
 
-int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor)
+int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor)
 {
-    return DisplayFromPointer(config, NULL, retScreen, retVendor, dpy);
+    return DisplayFromPointer(config, NULL, NULL, retVendor, dpy);
 }
 
 // Internally, we use the screen number to look up a vendor, so we don't need
