@@ -358,8 +358,8 @@ static void InitExportsTable(void)
     /* We use the real function since __glXGetCurrentContext is inline */
     glxExportsTable.getCurrentContext = glXGetCurrentContext;
 
-    glxExportsTable.addScreenContextMapping = __glXAddScreenContextMapping;
-    glxExportsTable.removeScreenContextMapping = __glXRemoveScreenContextMapping;
+    glxExportsTable.addVendorContextMapping = __glXAddVendorContextMapping;
+    glxExportsTable.removeVendorContextMapping = __glXRemoveVendorContextMapping;
     glxExportsTable.vendorFromContext = __glXVendorFromContext;
 
     glxExportsTable.addScreenFBConfigMapping = __glXAddScreenFBConfigMapping;
@@ -950,21 +950,21 @@ static int DisplayFromPointer(void *ptr, Display **retDisplay, int *retScreen,
 /**
  * Common function for the various __glXVendorFrom* functions.
  */
-void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor)
+void __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor)
 {
-    AddScreenPointerMapping(context, dpy, screen, vendor);
+    AddScreenPointerMapping(context, dpy, -1, vendor);
 }
 
 
-void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context)
+void __glXRemoveVendorContextMapping(Display *dpy, GLXContext context)
 {
     RemoveScreenPointerMapping(context);
 }
 
 
-int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor)
+int __glXVendorFromContext(GLXContext context, Display **retDisplay, __GLXvendorInfo **retVendor)
 {
-    return DisplayFromPointer(context, retDisplay, retScreen, retVendor, NULL);
+    return DisplayFromPointer(context, retDisplay, NULL, retVendor, NULL);
 }
 
 

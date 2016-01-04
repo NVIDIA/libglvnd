@@ -97,9 +97,9 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
  * Various functions to manage mappings used to determine the screen
  * of a particular GLX call.
  */
-void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
-void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context);
-int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor);
+void __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
+void __glXRemoveVendorContextMapping(Display *dpy, GLXContext context);
+int __glXVendorFromContext(GLXContext context, Display **retDisplay, __GLXvendorInfo **retVendor);
 
 void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
 void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config);

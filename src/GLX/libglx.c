@@ -131,7 +131,7 @@ static __GLXvendorInfo *CommonDispatchContext(Display *dpy, GLXContext context,
 
     if (context != NULL) {
         __glXThreadInitialize();
-        __glXVendorFromContext(context, NULL, NULL, &vendor);
+        __glXVendorFromContext(context, NULL, &vendor);
     }
     if (vendor == NULL) {
         __glXSendError(dpy, GLXBadContext, 0, minorCode, False);
@@ -184,17 +184,18 @@ PUBLIC void glXCopyContext(Display *dpy, GLXContext src, GLXContext dst,
 PUBLIC GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis,
                             GLXContext share_list, Bool direct)
 {
+    __GLXvendorInfo *vendor;
+
     __glXThreadInitialize();
 
-    const int screen = vis->screen;
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
-
-    GLXContext context = pDispatch->createContext(dpy, vis, share_list, direct);
-
-    __glXAddScreenContextMapping(dpy, context, screen, vendor);
-
-    return context;
+    vendor = __glXLookupVendorByScreen(dpy, vis->screen);
+    if (vendor != NULL) {
+        GLXContext context = vendor->staticDispatch.createContext(dpy, vis, share_list, direct);
+        __glXAddVendorContextMapping(dpy, context, vendor);
+        return context;
+    } else {
+        return NULL;
+    }
 }
 
 
@@ -203,12 +204,11 @@ PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
                                Bool direct)
 {
     GLXContext context = NULL;
-    int screen = -1;
-    __GLXvendorInfo *vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreateNewContext, &screen);
+    __GLXvendorInfo *vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreateNewContext, NULL);
     if (vendor != NULL) {
         context = vendor->staticDispatch.createNewContext(dpy, config, render_type,
                                                      share_list, direct);
-        __glXAddScreenContextMapping(dpy, context, screen, vendor);
+        __glXAddVendorContextMapping(dpy, context, vendor);
     }
     return context;
 }
@@ -362,7 +362,7 @@ static GLXContext glXImportContextEXT(Display *dpy, GLXContextID contextID)
     vendor = __glXLookupVendorByScreen(dpy, screen);
     if (vendor != NULL && vendor->staticDispatch.importContextEXT != NULL) {
         GLXContext context = vendor->staticDispatch.importContextEXT(dpy, contextID);
-        __glXAddScreenContextMapping(dpy, context, screen, vendor);
+        __glXAddVendorContextMapping(dpy, context, vendor);
         return context;
     } else {
         return NULL;
@@ -375,7 +375,7 @@ static void glXFreeContextEXT(Display *dpy, GLXContext context)
 
     __glXThreadInitialize();
 
-    __glXVendorFromContext(context, NULL, NULL, &vendor);
+    __glXVendorFromContext(context, NULL, &vendor);
     if (vendor != NULL && vendor->staticDispatch.freeContextEXT != NULL) {
         __glXNotifyContextDestroyed(context);
         vendor->staticDispatch.freeContextEXT(dpy, context);
@@ -585,7 +585,7 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
          * Note: this implies a lock ordering: the current context
          * hash lock must be taken before the screen pointer hash lock!
          */
-        __glXRemoveScreenContextMapping(NULL, ctx);
+        __glXRemoveVendorContextMapping(NULL, ctx);
     }
 
     __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
@@ -646,7 +646,7 @@ static Bool UpdateCurrentContext(GLXContext newCtx,
         }
 
         if (needsUnmap) {
-            __glXRemoveScreenContextMapping(NULL, oldCtx);
+            __glXRemoveVendorContextMapping(NULL, oldCtx);
         }
     } else {
         // We're adding a current context but we didn't have one before, so
@@ -919,7 +919,7 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
             return False;
         }
 
-        if (__glXVendorFromContext(context, NULL, NULL, &newVendor) != 0) {
+        if (__glXVendorFromContext(context, NULL, &newVendor) != 0) {
             /*
              * We can run into this corner case if a GLX client calls
              * glXDestroyContext() on a current context, loses current to this
@@ -1877,7 +1877,7 @@ void __glXThreadInitialize(void)
 void CurrentContextHashCleanup(void *unused, __GLXcurrentContextHash *pEntry)
 {
     if (pEntry->needsUnmap) {
-        __glXRemoveScreenContextMapping(NULL, pEntry->ctx);
+        __glXRemoveVendorContextMapping(NULL, pEntry->ctx);
     }
 }
 

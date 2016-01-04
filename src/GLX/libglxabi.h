@@ -121,13 +121,13 @@ typedef struct __GLXapiExportsRec {
      * vendor must be the ones returned for the XVisualInfo or GLXFBConfig that
      * the context is created from.
      */
-    void (*addScreenContextMapping)(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
+    void (*addVendorContextMapping)(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
 
     /*!
      * Removes a mapping from context to vendor. The context must have been
-     * added with \p addScreenContextMapping.
+     * added with \p addVendorContextMapping.
      */
-    void (*removeScreenContextMapping)(Display *dpy, GLXContext context);
+    void (*removeVendorContextMapping)(Display *dpy, GLXContext context);
 
     /*!
      * Looks up the screen and vendor for a context.
@@ -148,7 +148,7 @@ typedef struct __GLXapiExportsRec {
      * \param[out] retVendor Returns the vendor.
      * \return Zero if a match was found, or non-zero if it was not.
      */
-    int (*vendorFromContext)(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor);
+    int (*vendorFromContext)(GLXContext context, Display **retDisplay, __GLXvendorInfo **retVendor);
 
     void (*addScreenFBConfigMapping)(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
     void (*removeScreenFBConfigMapping)(Display *dpy, GLXFBConfig config);
