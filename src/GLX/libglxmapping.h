@@ -52,7 +52,7 @@ struct __GLXvendorInfoRec {
     __GLXdispatchTableStatic staticDispatch; //< static GLX dispatch table
 };
 
-typedef struct __GLXscreenXIDMappingHashRec __GLXscreenXIDMappingHash;
+typedef struct __GLXvendorXIDMappingHashRec __GLXvendorXIDMappingHash;
 
 /*!
  * Structure containing per-display information.
@@ -68,7 +68,7 @@ typedef struct __GLXdisplayInfoRec {
     __GLXvendorInfo **vendors;
     glvnd_rwlock_t vendorLock;
 
-    DEFINE_LKDHASH(__GLXscreenXIDMappingHash, xidScreenHash);
+    DEFINE_LKDHASH(__GLXvendorXIDMappingHash, xidVendorHash);
 
     /// True if the server supports the GLX extension.
     Bool glxSupported;
