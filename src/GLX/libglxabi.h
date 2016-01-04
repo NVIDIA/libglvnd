@@ -54,6 +54,37 @@ extern "C" {
  * - core GL dispatch table: this is a structure maintained by the API library
  *   which contains both GL core (static) and GL extension (dynamic) functions.
  *
+ * Note that while the implementations of most GLX functions in a vendor
+ * library is mostly unchanged from a traditional, single-vendor driver, libGLX
+ * has additional requirements for GLXContext and GLXFBConfig handle values.
+ *
+ * First, all GLXContext and GLXFBConfig handles have to be unique between
+ * vendor libraries. That is, every GLXContext or GLXFBConfig handle must map
+ * to exactly one vendor library, so that libGLX knows which library to dispatch
+ * to.
+ *
+ * To do that, all GLXContext and GLXFBConfig handles *must* be a pointer to an
+ * address that the vendor library somehow controls. The address doesn't need
+ * to be readable or writable, but it must be an address that no other vendor
+ * library would use.
+ *
+ * The address could be a pointer to a structure, or an address in a statically
+ * or dynamically allocated array. It could even be a file mapping, or even an
+ * offset into wherever the vendor library itself is mapped.
+ *
+ * A vendor library may not, however, use anything like an index or an XID for
+ * a GLXContext or GLXFBConfig handle.
+ *
+ * GLXContext handles must also be globally unique across all display
+ * connections in the entire process. That is, a vendor library may not return
+ * the same GLXContext handle for two different contexts, even if they're on
+ * different displays or different servers.
+ *
+ * GLXFBConfigs may be duplicated between multiple displays, as long as they
+ * are still unique between vendors. Some applications even depend on this:
+ * They will look up a GLXFBConfig handle with one connection, and then try to
+ * use that config on another connection.
+ *
  * @{
  */
 
@@ -74,12 +105,19 @@ typedef struct __GLXvendorInfoRec __GLXvendorInfo;
  * API library exports                                                      *
  ****************************************************************************/
 
+/*!
+ * Functions exported by libGLX.so.
+ *
+ * These functions are exported by libGLX, and should be used by the
+ * vendor-implemented dispatch functions to lookup and call into the right
+ * vendor.
+ *
+ * These functions should only be called from the GLX dispatch functions, never
+ * from the actual implementation of any function. libGLX.so may be holding a
+ * non-recursive lock when it calls into the vendor library, so trying to call
+ * back into libGLX could deadlock.
+ */
 typedef struct __GLXapiExportsRec {
-    /************************************************************************
-     * The following routines are used by vendor-implemented GLX dispatch
-     * functions to lookup and call into the right vendor.
-     ************************************************************************/
-
     /*!
      * This fetches the appropriate dynamic GLX dispatch table given the display
      * and screen number.
