@@ -846,13 +846,14 @@ typedef struct {
     void *ptr;
     Display *dpy;
     int screen;
+    __GLXvendorInfo *vendor;
     UT_hash_handle hh;
 } __GLXscreenPointerMappingHash;
 
 
 static DEFINE_INITIALIZED_LKDHASH(__GLXscreenPointerMappingHash, __glXScreenPointerMappingHash);
 
-static void AddScreenPointerMapping(void *ptr, Display *dpy, int screen)
+static void AddScreenPointerMapping(void *ptr, Display *dpy, int screen, __GLXvendorInfo *vendor)
 {
     __GLXscreenPointerMappingHash *pEntry;
 
@@ -860,7 +861,7 @@ static void AddScreenPointerMapping(void *ptr, Display *dpy, int screen)
         return;
     }
 
-    if (screen < 0) {
+    if (vendor == NULL) {
         return;
     }
 
@@ -873,10 +874,12 @@ static void AddScreenPointerMapping(void *ptr, Display *dpy, int screen)
         pEntry->ptr = ptr;
         pEntry->dpy = dpy;
         pEntry->screen = screen;
+        pEntry->vendor = vendor;
         HASH_ADD_PTR(_LH(__glXScreenPointerMappingHash), ptr, pEntry);
     } else {
         pEntry->dpy = dpy;
         pEntry->screen = screen;
+        pEntry->vendor = vendor;
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
@@ -910,6 +913,7 @@ static int DisplayFromPointer(void *ptr, Display **retDisplay, int *retScreen,
 {
     __GLXscreenPointerMappingHash *pEntry;
     int screen = -1;
+    __GLXvendorInfo *vendor = NULL;
     Display *dpy = NULL;
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, __glXScreenPointerMappingHash);
@@ -918,6 +922,7 @@ static int DisplayFromPointer(void *ptr, Display **retDisplay, int *retScreen,
 
     if (pEntry != NULL) {
         screen = pEntry->screen;
+        vendor = pEntry->vendor;
         dpy = pEntry->dpy;
     }
 
@@ -937,13 +942,9 @@ static int DisplayFromPointer(void *ptr, Display **retDisplay, int *retScreen,
         *retDisplay = dpy;
     }
     if (retVendor != NULL) {
-        if (dpy != NULL && screen >= 0) {
-            *retVendor = __glXLookupVendorByScreen(dpy, screen);
-        } else {
-            *retVendor = NULL;
-        }
+        *retVendor = vendor;
     }
-    return (screen >= 0 ? 0 : -1);
+    return (vendor != NULL ? 0 : -1);
 }
 
 /**
@@ -951,7 +952,7 @@ static int DisplayFromPointer(void *ptr, Display **retDisplay, int *retScreen,
  */
 void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor)
 {
-    AddScreenPointerMapping(context, dpy, screen);
+    AddScreenPointerMapping(context, dpy, screen, vendor);
 }
 
 
@@ -969,7 +970,7 @@ int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScr
 
 void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor)
 {
-    AddScreenPointerMapping(config, dpy, screen);
+    AddScreenPointerMapping(config, dpy, screen, vendor);
 }
 
 
