@@ -135,6 +135,7 @@ static DEFINE_INITIALIZED_LKDHASH(__GLXdisplayInfoHash, __glXDisplayInfoHash);
 struct __GLXscreenXIDMappingHashRec {
     XID xid;
     int screen;
+    __GLXvendorInfo *vendor;
     UT_hash_handle hh;
 };
 
@@ -1008,7 +1009,7 @@ int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorIn
  */
 
 
-static void AddScreenXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid, int screen)
+static void AddScreenXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid, int screen, __GLXvendorInfo *vendor)
 {
     __GLXscreenXIDMappingHash *pEntry = NULL;
 
@@ -1016,7 +1017,7 @@ static void AddScreenXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid
         return;
     }
 
-    if (screen < 0) {
+    if (vendor == NULL) {
         return;
     }
 
@@ -1028,9 +1029,11 @@ static void AddScreenXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid
         pEntry = malloc(sizeof(*pEntry));
         pEntry->xid = xid;
         pEntry->screen = screen;
+        pEntry->vendor = vendor;
         HASH_ADD(hh, _LH(dpyInfo->xidScreenHash), xid, sizeof(xid), pEntry);
     } else {
         pEntry->screen = screen;
+        pEntry->vendor = vendor;
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
@@ -1058,10 +1061,12 @@ static void RemoveScreenXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID 
 }
 
 
-static int ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
+static void ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid,
+        int *retScreen, __GLXvendorInfo **retVendor)
 {
     __GLXscreenXIDMappingHash *pEntry;
     int screen = -1;
+    __GLXvendorInfo *vendor = NULL;
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
 
@@ -1069,17 +1074,28 @@ static int ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
 
     if (pEntry) {
         screen = pEntry->screen;
+        vendor = pEntry->vendor;
         LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
     } else {
         LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidScreenHash);
 
         if (dpyInfo->x11glvndSupported) {
             screen = XGLVQueryXIDScreenMapping(dpy, xid);
-            AddScreenXIDMapping(dpy, dpyInfo, xid, screen);
+            if (screen >= 0 && screen < ScreenCount(dpy)) {
+                vendor = __glXLookupVendorByScreen(dpy, screen);
+                if (vendor != NULL) {
+                    AddScreenXIDMapping(dpy, dpyInfo, xid, screen, vendor);
+                }
+            }
         }
     }
 
-    return screen;
+    if (retScreen != NULL) {
+        *retScreen = screen;
+    }
+    if (retVendor != NULL) {
+        *retVendor = vendor;
+    }
 }
 
 
@@ -1087,7 +1103,7 @@ void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int scree
 {
     __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
     if (dpyInfo != NULL) {
-        AddScreenXIDMapping(dpy, dpyInfo, drawable, screen);
+        AddScreenXIDMapping(dpy, dpyInfo, drawable, screen, vendor);
     }
 }
 
@@ -1108,8 +1124,7 @@ int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, 
     __GLXvendorInfo *vendor = NULL;
     if (dpyInfo != NULL) {
         if (dpyInfo->x11glvndSupported) {
-            screen = ScreenFromXID(dpy, dpyInfo, drawable);
-            vendor = __glXLookupVendorByScreen(dpy, screen);
+            ScreenFromXID(dpy, dpyInfo, drawable, &screen, &vendor);
         } else {
             // We'll use the same vendor for every screen in this case.
             screen = -1;
