@@ -158,20 +158,23 @@ typedef struct __GLXapiExportsRec {
     void (*removeScreenVisualMapping)(Display *dpy, const XVisualInfo *visual);
     int (*vendorFromVisual)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
 
-    void (*addScreenDrawableMapping)(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor);
-    void (*removeScreenDrawableMapping)(Display *dpy, GLXDrawable drawable);
+    void (*addVendorDrawableMapping)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
+    void (*removeVendorDrawableMapping)(Display *dpy, GLXDrawable drawable);
 
     /*!
-     * Looks up the screen and vendor for a drawable.
+     * Looks up the vendor for a drawable.
      *
-     * If the server does not support the x11glvnd extension, then this
-     * function may not be able to determine the screen number for a drawable.
-     * In that case, it will return -1 for the screen number.
+     * If the drawable was created from another GLX function, then this will
+     * return the same vendor library that was used to create it.
      *
-     * Even without x11glvnd, this function will still return a vendor
-     * suitable for indirect rendering.
+     * If the drawable was not created from GLX (a regular X window, for
+     * example), then libGLX.so will use the x11glvnd server extension to
+     * figure out a vendor library.
+     *
+     * All of this should be opaque to a dispatch function, since the only
+     * thing that matters is finding out which vendor to dispatch to.
      */
-    int (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor);
+    int (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
 
 } __GLXapiExports;
 

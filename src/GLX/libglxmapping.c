@@ -370,8 +370,8 @@ static void InitExportsTable(void)
     glxExportsTable.removeScreenVisualMapping = __glXRemoveScreenVisualMapping;
     glxExportsTable.vendorFromVisual = __glXVendorFromVisual;
 
-    glxExportsTable.addScreenDrawableMapping = __glXAddScreenDrawableMapping;
-    glxExportsTable.removeScreenDrawableMapping = __glXRemoveScreenDrawableMapping;
+    glxExportsTable.addVendorDrawableMapping = __glXAddVendorDrawableMapping;
+    glxExportsTable.removeVendorDrawableMapping = __glXRemoveVendorDrawableMapping;
     glxExportsTable.vendorFromDrawable = __glXVendorFromDrawable;
 
 }
@@ -1091,7 +1091,7 @@ static void ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid,
 }
 
 
-void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor)
+void __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor)
 {
     __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
     if (dpyInfo != NULL) {
@@ -1100,7 +1100,7 @@ void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int scree
 }
 
 
-void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable)
+void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable)
 {
     __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
     if (dpyInfo != NULL) {
@@ -1109,7 +1109,7 @@ void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable)
 }
 
 
-int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor)
+int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor)
 {
     __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
     __GLXvendorInfo *vendor = NULL;
@@ -1122,9 +1122,6 @@ int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, 
         }
     }
 
-    if (retScreen != NULL) {
-        *retScreen = -1;
-    }
     if (retVendor != NULL) {
         *retVendor = vendor;
     }

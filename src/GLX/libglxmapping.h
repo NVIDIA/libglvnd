@@ -109,9 +109,9 @@ void __glXAddScreenVisualMapping(Display *dpy, const XVisualInfo *visual, __GLXv
 void __glXRemoveScreenVisualMapping(Display *dpy, const XVisualInfo *visual);
 int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
 
-void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor);
-void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable);
-int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor);
+void __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
+void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable);
+int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
 __GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName);

@@ -116,7 +116,7 @@ static __GLXvendorInfo *CommonDispatchDrawable(Display *dpy, GLXDrawable draw,
 
     if (draw != None) {
         __glXThreadInitialize();
-        __glXVendorFromDrawable(dpy, draw, NULL, &vendor);
+        __glXVendorFromDrawable(dpy, draw, &vendor);
     }
     if (vendor == NULL) {
         __glXSendError(dpy, errorCode, draw, minorCode, coreX11error);
@@ -385,17 +385,18 @@ static void glXFreeContextEXT(Display *dpy, GLXContext context)
 
 PUBLIC GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixmap)
 {
+    __GLXvendorInfo *vendor;
+
     __glXThreadInitialize();
 
-    const int screen = vis->screen;
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
-
-    GLXPixmap pmap = pDispatch->createGLXPixmap(dpy, vis, pixmap);
-
-    __glXAddScreenDrawableMapping(dpy, pmap, screen, vendor);
-
-    return pmap;
+    vendor = __glXLookupVendorByScreen(dpy, vis->screen);
+    if (vendor != NULL) {
+        GLXPixmap pmap = vendor->staticDispatch.createGLXPixmap(dpy, vis, pixmap);
+        __glXAddVendorDrawableMapping(dpy, pmap, vendor);
+        return pmap;
+    } else {
+        return None;
+    }
 }
 
 
@@ -404,7 +405,7 @@ PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
     __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, pix,
             X_GLXDestroyGLXPixmap, GLXBadPixmap, False);
     if (vendor != NULL) {
-        __glXRemoveScreenDrawableMapping(dpy, pix);
+        __glXRemoveVendorDrawableMapping(dpy, pix);
         vendor->staticDispatch.destroyGLXPixmap(dpy, pix);
     }
 }
@@ -1395,11 +1396,10 @@ PUBLIC GLXPbuffer glXCreatePbuffer(Display *dpy, GLXFBConfig config,
                             const int *attrib_list)
 {
     GLXPbuffer pbuffer = None;
-    int screen = -1;
-    __GLXvendorInfo *vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreatePbuffer, &screen);
+    __GLXvendorInfo *vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreatePbuffer, NULL);
     if (vendor != NULL) {
         pbuffer = vendor->staticDispatch.createPbuffer(dpy, config, attrib_list);
-        __glXAddScreenDrawableMapping(dpy, pbuffer, screen, vendor);
+        __glXAddVendorDrawableMapping(dpy, pbuffer, vendor);
     }
     return pbuffer;
 }
@@ -1409,11 +1409,10 @@ PUBLIC GLXPixmap glXCreatePixmap(Display *dpy, GLXFBConfig config,
                           Pixmap pixmap, const int *attrib_list)
 {
     GLXPixmap glxPixmap = None;
-    int screen = -1;
-    __GLXvendorInfo *vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreatePixmap, &screen);
+    __GLXvendorInfo *vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreatePixmap, NULL);
     if (vendor != NULL) {
         glxPixmap = vendor->staticDispatch.createPixmap(dpy, config, pixmap, attrib_list);
-        __glXAddScreenDrawableMapping(dpy, glxPixmap, screen, vendor);
+        __glXAddVendorDrawableMapping(dpy, glxPixmap, vendor);
     }
     return glxPixmap;
 }
@@ -1423,11 +1422,10 @@ PUBLIC GLXWindow glXCreateWindow(Display *dpy, GLXFBConfig config,
                           Window win, const int *attrib_list)
 {
     GLXWindow glxWindow = None;
-    int screen = -1;
-    __GLXvendorInfo *vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreateWindow, &screen);
+    __GLXvendorInfo *vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreateWindow, NULL);
     if (vendor != NULL) {
         glxWindow = vendor->staticDispatch.createWindow(dpy, config, win, attrib_list);
-        __glXAddScreenDrawableMapping(dpy, glxWindow, screen, vendor);
+        __glXAddVendorDrawableMapping(dpy, glxWindow, vendor);
     }
     return glxWindow;
 }
@@ -1438,7 +1436,7 @@ PUBLIC void glXDestroyPbuffer(Display *dpy, GLXPbuffer pbuf)
     __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, pbuf,
             X_GLXDestroyPbuffer, GLXBadPbuffer, False);
     if (vendor != NULL) {
-        __glXRemoveScreenDrawableMapping(dpy, pbuf);
+        __glXRemoveVendorDrawableMapping(dpy, pbuf);
         vendor->staticDispatch.destroyPbuffer(dpy, pbuf);
     }
 }
@@ -1449,7 +1447,7 @@ PUBLIC void glXDestroyPixmap(Display *dpy, GLXPixmap pixmap)
     __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, pixmap,
             X_GLXDestroyPixmap, GLXBadPixmap, False);
     if (vendor != NULL) {
-        __glXRemoveScreenDrawableMapping(dpy, pixmap);
+        __glXRemoveVendorDrawableMapping(dpy, pixmap);
         vendor->staticDispatch.destroyPixmap(dpy, pixmap);
     }
 }
@@ -1460,7 +1458,7 @@ PUBLIC void glXDestroyWindow(Display *dpy, GLXWindow win)
     __GLXvendorInfo *vendor = CommonDispatchDrawable(dpy, win,
             X_GLXDestroyWindow, GLXBadWindow, False);
     if (vendor != NULL) {
-        __glXRemoveScreenDrawableMapping(dpy, win);
+        __glXRemoveVendorDrawableMapping(dpy, win);
         vendor->staticDispatch.destroyWindow(dpy, win);
     }
 }
