@@ -131,7 +131,7 @@ static __GLXvendorInfo *CommonDispatchContext(Display *dpy, GLXContext context,
 
     if (context != NULL) {
         __glXThreadInitialize();
-        __glXVendorFromContext(context, NULL, &vendor);
+        __glXVendorFromContext(context, &vendor);
     }
     if (vendor == NULL) {
         __glXSendError(dpy, GLXBadContext, 0, minorCode, False);
@@ -375,7 +375,7 @@ static void glXFreeContextEXT(Display *dpy, GLXContext context)
 
     __glXThreadInitialize();
 
-    __glXVendorFromContext(context, NULL, &vendor);
+    __glXVendorFromContext(context, &vendor);
     if (vendor != NULL && vendor->staticDispatch.freeContextEXT != NULL) {
         __glXNotifyContextDestroyed(context);
         vendor->staticDispatch.freeContextEXT(dpy, context);
@@ -919,7 +919,7 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
             return False;
         }
 
-        if (__glXVendorFromContext(context, NULL, &newVendor) != 0) {
+        if (__glXVendorFromContext(context, &newVendor) != 0) {
             /*
              * We can run into this corner case if a GLX client calls
              * glXDestroyContext() on a current context, loses current to this

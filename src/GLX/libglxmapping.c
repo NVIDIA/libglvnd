@@ -845,22 +845,6 @@ void __glXFreeDisplay(Display *dpy)
 
 typedef struct {
     void *ptr;
-    /*
-     * Note that the display pointer is needed for GLXContext handles, because
-     * at least one function (glXGetContextIDEXT) takes a GLXContext handle
-     * without a display, so we have to be able to look up the display.
-     *
-     * For GLXFBConfig handles, it's not used for anything. Originally, it was
-     * used for error-checking, to make sure that the config is used with the
-     * correct display. But, some applications actually depend on being able to
-     * look up a GLXFBConfig using one display connection and then using it on
-     * another connection.
-     *
-     * To deal with that case, libGLX only cares about being able to map a
-     * GLXFBConfig handle to a vendor library. Any additional error-checking
-     * has to be in the vendor library itself.
-     */
-    Display *dpy;
     __GLXvendorInfo *vendor;
     UT_hash_handle hh;
 } __GLXscreenPointerMappingHash;
@@ -870,7 +854,7 @@ static __GLXscreenPointerHashtable contextHashtable = { NULL, GLVND_RWLOCK_INITI
 static __GLXscreenPointerHashtable fbconfigHashtable = { NULL, GLVND_RWLOCK_INITIALIZER };
 
 static void AddScreenPointerMapping(__GLXscreenPointerHashtable *table,
-        void *ptr, Display *dpy, __GLXvendorInfo *vendor)
+        void *ptr, __GLXvendorInfo *vendor)
 {
     __GLXscreenPointerMappingHash *pEntry;
 
@@ -889,11 +873,9 @@ static void AddScreenPointerMapping(__GLXscreenPointerHashtable *table,
     if (pEntry == NULL) {
         pEntry = malloc(sizeof(*pEntry));
         pEntry->ptr = ptr;
-        pEntry->dpy = dpy;
         pEntry->vendor = vendor;
         HASH_ADD_PTR(_LH(*table), ptr, pEntry);
     } else {
-        pEntry->dpy = dpy;
         pEntry->vendor = vendor;
     }
 
@@ -921,12 +903,10 @@ static void RemoveScreenPointerMapping(__GLXscreenPointerHashtable *table, void 
 }
 
 static int VendorFromPointer(__GLXscreenPointerHashtable *table, void *ptr,
-        Display **retDisplay,
         __GLXvendorInfo **retVendor)
 {
     __GLXscreenPointerMappingHash *pEntry;
     __GLXvendorInfo *vendor = NULL;
-    Display *dpy = NULL;
 
     LKDHASH_RDLOCK(__glXPthreadFuncs, *table);
 
@@ -934,14 +914,10 @@ static int VendorFromPointer(__GLXscreenPointerHashtable *table, void *ptr,
 
     if (pEntry != NULL) {
         vendor = pEntry->vendor;
-        dpy = pEntry->dpy;
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, *table);
 
-    if (retDisplay != NULL) {
-        *retDisplay = dpy;
-    }
     if (retVendor != NULL) {
         *retVendor = vendor;
     }
@@ -953,7 +929,7 @@ static int VendorFromPointer(__GLXscreenPointerHashtable *table, void *ptr,
  */
 void __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor)
 {
-    AddScreenPointerMapping(&contextHashtable, context, dpy, vendor);
+    AddScreenPointerMapping(&contextHashtable, context, vendor);
 }
 
 
@@ -963,15 +939,15 @@ void __glXRemoveVendorContextMapping(Display *dpy, GLXContext context)
 }
 
 
-int __glXVendorFromContext(GLXContext context, Display **retDisplay, __GLXvendorInfo **retVendor)
+int __glXVendorFromContext(GLXContext context, __GLXvendorInfo **retVendor)
 {
-    return VendorFromPointer(&contextHashtable, context, retDisplay, retVendor);
+    return VendorFromPointer(&contextHashtable, context, retVendor);
 }
 
 
 void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor)
 {
-    AddScreenPointerMapping(&fbconfigHashtable, config, dpy, vendor);
+    AddScreenPointerMapping(&fbconfigHashtable, config, vendor);
 }
 
 
@@ -983,7 +959,7 @@ void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config)
 
 int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor)
 {
-    return VendorFromPointer(&fbconfigHashtable, config, NULL, retVendor);
+    return VendorFromPointer(&fbconfigHashtable, config, retVendor);
 }
 
 // Internally, we use the screen number to look up a vendor, so we don't need

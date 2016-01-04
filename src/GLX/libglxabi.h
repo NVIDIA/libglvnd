@@ -178,15 +178,13 @@ typedef struct __GLXapiExportsRec {
      *
      * Note that this function does not take a display connection, since
      * there are cases (e.g., glXGetContextIDEXT) that take a GLXContext but
-     * not a display. Instead, it will return the display that the context was
-     * created on.
+     * not a display.
      *
      * \param context The context to look up.
-     * \param[out] retScreen Returns the screen number.
      * \param[out] retVendor Returns the vendor.
      * \return Zero if a match was found, or non-zero if it was not.
      */
-    int (*vendorFromContext)(GLXContext context, Display **retDisplay, __GLXvendorInfo **retVendor);
+    int (*vendorFromContext)(GLXContext context, __GLXvendorInfo **retVendor);
 
     void (*addVendorFBConfigMapping)(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
     void (*removeVendorFBConfigMapping)(Display *dpy, GLXFBConfig config);

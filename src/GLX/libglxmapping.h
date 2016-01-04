@@ -99,7 +99,7 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
  */
 void __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
 void __glXRemoveVendorContextMapping(Display *dpy, GLXContext context);
-int __glXVendorFromContext(GLXContext context, Display **retDisplay, __GLXvendorInfo **retVendor);
+int __glXVendorFromContext(GLXContext context, __GLXvendorInfo **retVendor);
 
 void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
 void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config);
