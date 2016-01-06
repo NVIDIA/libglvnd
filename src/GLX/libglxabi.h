@@ -54,6 +54,37 @@ extern "C" {
  * - core GL dispatch table: this is a structure maintained by the API library
  *   which contains both GL core (static) and GL extension (dynamic) functions.
  *
+ * Note that while the implementations of most GLX functions in a vendor
+ * library is mostly unchanged from a traditional, single-vendor driver, libGLX
+ * has additional requirements for GLXContext and GLXFBConfig handle values.
+ *
+ * First, all GLXContext and GLXFBConfig handles have to be unique between
+ * vendor libraries. That is, every GLXContext or GLXFBConfig handle must map
+ * to exactly one vendor library, so that libGLX knows which library to dispatch
+ * to.
+ *
+ * To do that, all GLXContext and GLXFBConfig handles *must* be a pointer to an
+ * address that the vendor library somehow controls. The address doesn't need
+ * to be readable or writable, but it must be an address that no other vendor
+ * library would use.
+ *
+ * The address could be a pointer to a structure, or an address in a statically
+ * or dynamically allocated array. It could even be a file mapping, or even an
+ * offset into wherever the vendor library itself is mapped.
+ *
+ * A vendor library may not, however, use anything like an index or an XID for
+ * a GLXContext or GLXFBConfig handle.
+ *
+ * GLXContext handles must also be globally unique across all display
+ * connections in the entire process. That is, a vendor library may not return
+ * the same GLXContext handle for two different contexts, even if they're on
+ * different displays or different servers.
+ *
+ * GLXFBConfigs may be duplicated between multiple displays, as long as they
+ * are still unique between vendors. Some applications even depend on this:
+ * They will look up a GLXFBConfig handle with one connection, and then try to
+ * use that config on another connection.
+ *
  * @{
  */
 
@@ -74,12 +105,19 @@ typedef struct __GLXvendorInfoRec __GLXvendorInfo;
  * API library exports                                                      *
  ****************************************************************************/
 
+/*!
+ * Functions exported by libGLX.so.
+ *
+ * These functions are exported by libGLX, and should be used by the
+ * vendor-implemented dispatch functions to lookup and call into the right
+ * vendor.
+ *
+ * These functions should only be called from the GLX dispatch functions, never
+ * from the actual implementation of any function. libGLX.so may be holding a
+ * non-recursive lock when it calls into the vendor library, so trying to call
+ * back into libGLX could deadlock.
+ */
 typedef struct __GLXapiExportsRec {
-    /************************************************************************
-     * The following routines are used by vendor-implemented GLX dispatch
-     * functions to lookup and call into the right vendor.
-     ************************************************************************/
-
     /*!
      * This fetches the appropriate dynamic GLX dispatch table given the display
      * and screen number.
@@ -121,13 +159,13 @@ typedef struct __GLXapiExportsRec {
      * vendor must be the ones returned for the XVisualInfo or GLXFBConfig that
      * the context is created from.
      */
-    void (*addScreenContextMapping)(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
+    void (*addVendorContextMapping)(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
 
     /*!
      * Removes a mapping from context to vendor. The context must have been
-     * added with \p addScreenContextMapping.
+     * added with \p addVendorContextMapping.
      */
-    void (*removeScreenContextMapping)(Display *dpy, GLXContext context);
+    void (*removeVendorContextMapping)(Display *dpy, GLXContext context);
 
     /*!
      * Looks up the screen and vendor for a context.
@@ -140,38 +178,39 @@ typedef struct __GLXapiExportsRec {
      *
      * Note that this function does not take a display connection, since
      * there are cases (e.g., glXGetContextIDEXT) that take a GLXContext but
-     * not a display. Instead, it will return the display that the context was
-     * created on.
+     * not a display.
      *
      * \param context The context to look up.
-     * \param[out] retScreen Returns the screen number.
      * \param[out] retVendor Returns the vendor.
      * \return Zero if a match was found, or non-zero if it was not.
      */
-    int (*vendorFromContext)(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor);
+    int (*vendorFromContext)(GLXContext context, __GLXvendorInfo **retVendor);
 
-    void (*addScreenFBConfigMapping)(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
-    void (*removeScreenFBConfigMapping)(Display *dpy, GLXFBConfig config);
-    int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor);
+    void (*addVendorFBConfigMapping)(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
+    void (*removeVendorFBConfigMapping)(Display *dpy, GLXFBConfig config);
+    int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
 
     void (*addScreenVisualMapping)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor);
     void (*removeScreenVisualMapping)(Display *dpy, const XVisualInfo *visual);
     int (*vendorFromVisual)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
 
-    void (*addScreenDrawableMapping)(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor);
-    void (*removeScreenDrawableMapping)(Display *dpy, GLXDrawable drawable);
+    void (*addVendorDrawableMapping)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
+    void (*removeVendorDrawableMapping)(Display *dpy, GLXDrawable drawable);
 
     /*!
-     * Looks up the screen and vendor for a drawable.
+     * Looks up the vendor for a drawable.
      *
-     * If the server does not support the x11glvnd extension, then this
-     * function may not be able to determine the screen number for a drawable.
-     * In that case, it will return -1 for the screen number.
+     * If the drawable was created from another GLX function, then this will
+     * return the same vendor library that was used to create it.
      *
-     * Even without x11glvnd, this function will still return a vendor
-     * suitable for indirect rendering.
+     * If the drawable was not created from GLX (a regular X window, for
+     * example), then libGLX.so will use the x11glvnd server extension to
+     * figure out a vendor library.
+     *
+     * All of this should be opaque to a dispatch function, since the only
+     * thing that matters is finding out which vendor to dispatch to.
      */
-    int (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor);
+    int (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
 
 } __GLXapiExports;
 

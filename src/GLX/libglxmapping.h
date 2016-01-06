@@ -52,7 +52,7 @@ struct __GLXvendorInfoRec {
     __GLXdispatchTableStatic staticDispatch; //< static GLX dispatch table
 };
 
-typedef struct __GLXscreenXIDMappingHashRec __GLXscreenXIDMappingHash;
+typedef struct __GLXvendorXIDMappingHashRec __GLXvendorXIDMappingHash;
 
 /*!
  * Structure containing per-display information.
@@ -68,7 +68,7 @@ typedef struct __GLXdisplayInfoRec {
     __GLXvendorInfo **vendors;
     glvnd_rwlock_t vendorLock;
 
-    DEFINE_LKDHASH(__GLXscreenXIDMappingHash, xidScreenHash);
+    DEFINE_LKDHASH(__GLXvendorXIDMappingHash, xidVendorHash);
 
     /// True if the server supports the GLX extension.
     Bool glxSupported;
@@ -97,21 +97,21 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
  * Various functions to manage mappings used to determine the screen
  * of a particular GLX call.
  */
-void __glXAddScreenContextMapping(Display *dpy, GLXContext context, int screen, __GLXvendorInfo *vendor);
-void __glXRemoveScreenContextMapping(Display *dpy, GLXContext context);
-int __glXVendorFromContext(GLXContext context, Display **retDisplay, int *retScreen, __GLXvendorInfo **retVendor);
+void __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
+void __glXRemoveVendorContextMapping(Display *dpy, GLXContext context);
+int __glXVendorFromContext(GLXContext context, __GLXvendorInfo **retVendor);
 
-void __glXAddScreenFBConfigMapping(Display *dpy, GLXFBConfig config, int screen, __GLXvendorInfo *vendor);
-void __glXRemoveScreenFBConfigMapping(Display *dpy, GLXFBConfig config);
-int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, int *retScreen, __GLXvendorInfo **retVendor);
+void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
+void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config);
+int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
 
 void __glXAddScreenVisualMapping(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor);
 void __glXRemoveScreenVisualMapping(Display *dpy, const XVisualInfo *visual);
 int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
 
-void __glXAddScreenDrawableMapping(Display *dpy, GLXDrawable drawable, int screen, __GLXvendorInfo *vendor);
-void __glXRemoveScreenDrawableMapping(Display *dpy, GLXDrawable drawable);
-int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, int *retScreen, __GLXvendorInfo **retVendor);
+void __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
+void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable);
+int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
 __GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName);
