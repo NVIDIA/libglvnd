@@ -185,7 +185,7 @@ static void *glvSetup(void *module, void *opts, int *errmaj, int *errmin)
     }
 
 #if XGLV_ABI_HAS_LOAD_EXTENSION_LIST
-    LoadExtensionList(&glvExtensionModule, 1, False);
+    LoadExtensionList(&glvExtensionModule, 1, TRUE);
 #else
     LoadExtension(&glvExtensionModule, False);
 #endif
