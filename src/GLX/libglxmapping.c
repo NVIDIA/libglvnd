@@ -876,7 +876,10 @@ static void AddVendorPointerMapping(__GLXvendorPointerHashtable *table,
         pEntry->vendor = vendor;
         HASH_ADD_PTR(_LH(*table), ptr, pEntry);
     } else {
-        pEntry->vendor = vendor;
+        // Any GLXContext or GLXFBConfig handles must be unique to a single
+        // vendor at a time. If we get two different vendors, then there's
+        // either a bug in libGLX or in at least one of the vendor libraries.
+        assert(pEntry->vendor == vendor);
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, *table);
@@ -1008,7 +1011,9 @@ static void AddVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid
         pEntry->vendor = vendor;
         HASH_ADD(hh, _LH(dpyInfo->xidVendorHash), xid, sizeof(xid), pEntry);
     } else {
-        pEntry->vendor = vendor;
+        // Like GLXContext and GLXFBConfig handles, any GLXDrawables must map
+        // to a single vendor library.
+        assert(pEntry->vendor == vendor);
     }
 
     LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidVendorHash);
