@@ -55,6 +55,7 @@
 /* current version numbers */
 #define GLX_MAJOR_VERSION 1
 #define GLX_MINOR_VERSION 4
+#define GLX_VERSION_STRING "1.4"
 
 GLVNDPthreadFuncs __glXPthreadFuncs;
 
@@ -1279,15 +1280,35 @@ static char *MergeVersionStrings(char *currentString, const char *newString)
     }
 }
 
+static const char *GetClientStringNoVendor(int name)
+{
+    switch (name) {
+    case GLX_VENDOR:
+        return "libglvnd (no display specified)";
+    case GLX_VERSION:
+        return GLX_VERSION_STRING " (no display specified)";
+    case GLX_EXTENSIONS:
+        return "";
+    default:
+        return NULL;
+    }
+}
+
 PUBLIC const char *glXGetClientString(Display *dpy, int name)
 {
     __glXThreadInitialize();
 
     __GLXdisplayInfo *dpyInfo = NULL;
-    int num_screens = XScreenCount(dpy);
+    int num_screens;
     int screen;
     int index = name - 1;
     const char **vendorStrings = NULL;
+
+    if (dpy == NULL) {
+        return GetClientStringNoVendor(name);
+    }
+
+    num_screens = XScreenCount(dpy);
 
     if (num_screens == 1) {
         // There's only one screen, so we don't have to mess around with
