@@ -879,6 +879,13 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
             return True;
         }
     } else {
+        // We might have a non-GLX context current...
+        __GLdispatchAPIState *glas = __glDispatchGetCurrentAPIState();
+        if (glas != NULL && glas->tag != GLDISPATCH_API_GLX) {
+            NotifyXError(dpy, BadAccess, 0, callerOpcode, True, NULL);
+            return False;
+        }
+
         // We don't have a current context already.
         oldVendor = NULL;
         oldDpy = NULL;
