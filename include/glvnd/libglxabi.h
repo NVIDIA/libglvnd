@@ -168,13 +168,9 @@ typedef struct __GLXapiExportsRec {
     void (*removeVendorContextMapping)(Display *dpy, GLXContext context);
 
     /*!
-     * Looks up the screen and vendor for a context.
+     * Looks up the vendor for a context.
      *
-     * If no mapping is found, then \p retScreen will be set to -1, and
-     * \p retVendor and \p retDisplay will be set to NULL.
-     *
-     * \p retScreen, \p retVendor, and \p retDisplay may be NULL if the screen,
-     * vendor, or display are not required.
+     * If no mapping is found, then \p retVendor will be set to NULL.
      *
      * Note that this function does not take a display connection, since
      * there are cases (e.g., glXGetContextIDEXT) that take a GLXContext but
