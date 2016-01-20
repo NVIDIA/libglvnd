@@ -23,6 +23,7 @@ AC_PROG_AWK
 AC_PROG_CXX
 
 AC_PROG_CC
+AC_PROG_CC_C99
 AM_PROG_AS
 AC_PROG_INSTALL
 AC_PROG_LN_S
@@ -30,6 +31,10 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_CHECK_PROGS([PYTHON2], [python2.7 python2 python])
 AC_CHECK_PROGS([PERL], [perl])
+
+if test "x$ac_cv_prog_cc_c99" = xno; then
+        AC_MSG_ERROR([Building libglvnd requires a C99-enabled compiler])
+fi
 
 dnl
 dnl Auxiliary ELF symbol filtering support
@@ -272,7 +277,7 @@ AX_CHECK_LINK_FLAG([-Xlinker --no-undefined],
       [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], [""])])
 
 dnl default CFLAGS
-CFLAGS="$CFLAGS -Wall -Werror -std=gnu99 -include config.h -fvisibility=hidden $DEFINES"
+CFLAGS="$CFLAGS -Wall -Werror -include config.h -fvisibility=hidden $DEFINES"
 
 AC_CONFIG_FILES([Makefile
                  libglvnd.pc
