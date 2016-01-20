@@ -44,6 +44,7 @@ AC_MSG_CHECKING([whether to enable auxiliary ELF symbol filtering])
 
 if test "x$enable_dt_auxiliary" = xyes; then
     (
+        _SAVE_LDFLAGS="$LDFLAGS"
         LDFLAGS='-shared -Wl,--auxiliary=libc.so.6'
         AC_LINK_IFELSE([AC_LANG_SOURCE([])],
                         [dt_auxiliary_supported=yes],
@@ -54,6 +55,7 @@ if test "x$enable_dt_auxiliary" = xyes; then
             AC_MSG_RESULT([no, not supported])
         fi
         test "x$dt_auxiliary_supported" = xyes
+        LDFLAGS ="$_SAVE_LDFLAGS"
     ) && dt_auxiliary_supported=yes
 else
     dt_auxiliary_supported=no
