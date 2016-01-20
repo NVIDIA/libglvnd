@@ -19,7 +19,6 @@ dnl Add an --enable-debug option
 AX_CHECK_ENABLE_DEBUG(no, DEBUG)
 
 dnl Checks for programs.
-AC_PROG_AWK
 AC_PROG_CXX
 
 AC_PROG_CC
