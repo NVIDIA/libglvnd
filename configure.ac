@@ -76,15 +76,6 @@ AC_ARG_ENABLE([asm],
 asm_arch=""
 AC_MSG_CHECKING([whether to enable assembly])
 test "x$enable_asm" = xno && AC_MSG_RESULT([no])
-# disable if cross compiling on x86/x86_64 since we must run gen_matypes
-if test "x$enable_asm" = xyes && test "x$cross_compiling" = xyes; then
-    case "$host_cpu" in
-    i?86 | x86_64)
-        enable_asm=no
-        AC_MSG_RESULT([no, cross compiling])
-        ;;
-    esac
-fi
 # check for supported arches
 if test "x$enable_asm" = xyes; then
     case "$host_cpu" in
