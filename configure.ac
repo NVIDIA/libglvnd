@@ -82,7 +82,7 @@ if test "x$enable_asm" = xyes; then
     i?86)
         case "$host_os" in
         linux* | *freebsd* | dragonfly* | *netbsd*)
-            test "x$enable_64bit" = xyes && asm_arch=x86_64 || asm_arch=x86
+            asm_arch=x86
             ;;
         gnu*)
             asm_arch=x86
@@ -92,7 +92,7 @@ if test "x$enable_asm" = xyes; then
     x86_64)
         case "$host_os" in
         linux* | *freebsd* | dragonfly* | *netbsd*)
-            test "x$enable_32bit" = xyes && asm_arch=x86 || asm_arch=x86_64
+            asm_arch=x86_64
             ;;
         esac
         ;;
