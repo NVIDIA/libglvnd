@@ -120,18 +120,12 @@ if test "x$enable_asm" = xyes; then
     esac
 fi
 
-dnl Various conditionals.
-AM_CONDITIONAL([GCC], [test x$GCC = xyes ])
-
 dnl
 dnl mapi top-relative paths: defined here so mapi can be used elsewhere
 dnl
 
 AC_SUBST([MAPI_PREFIX], [src/GLdispatch/vnd-glapi/mapi])
 AC_SUBST([MAPI_MESA_PREFIX], [src/GLdispatch/mesa])
-
-AM_CONDITIONAL(HAVE_X86_ASM, echo "$DEFINES" | grep 'X86_ASM' >/dev/null 2>&1)
-AM_CONDITIONAL(HAVE_X86_64_ASM, echo "$DEFINES" | grep 'X86_64_ASM' >/dev/null 2>&1)
 
 dnl Checks for libraries.
 AX_PTHREAD()
