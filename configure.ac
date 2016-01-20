@@ -99,13 +99,6 @@ if test "x$enable_asm" = xyes; then
     armv7l)
         asm_arch=armv7l
         ;;
-    sparc*)
-        case "$host_os" in
-        linux*)
-            asm_arch=sparc
-            ;;
-        esac
-        ;;
     esac
 
     case "$asm_arch" in
@@ -120,10 +113,6 @@ if test "x$enable_asm" = xyes; then
     armv7l)
         DEFINES="$DEFINES -DUSE_ARMV7_ASM"
         AC_MSG_RESULT([yes, armv7l])
-        ;;
-    sparc)
-        DEFINES="$DEFINES -DUSE_SPARC_ASM"
-        AC_MSG_RESULT([yes, sparc])
         ;;
     *)
         AC_MSG_RESULT([no, platform not supported])
@@ -143,7 +132,6 @@ AC_SUBST([MAPI_MESA_PREFIX], [src/GLdispatch/mesa])
 
 AM_CONDITIONAL(HAVE_X86_ASM, echo "$DEFINES" | grep 'X86_ASM' >/dev/null 2>&1)
 AM_CONDITIONAL(HAVE_X86_64_ASM, echo "$DEFINES" | grep 'X86_64_ASM' >/dev/null 2>&1)
-AM_CONDITIONAL(HAVE_SPARC_ASM, echo "$DEFINES" | grep 'SPARC_ASM' >/dev/null 2>&1)
 
 dnl Checks for libraries.
 AX_PTHREAD()
