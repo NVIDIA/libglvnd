@@ -158,6 +158,7 @@ AX_PTHREAD()
 PKG_CHECK_MODULES([X11], [x11])
 PKG_CHECK_MODULES([XEXT], [xext])
 PKG_CHECK_MODULES([XORG], [xorg-server >= 1.11.0])
+PKG_CHECK_MODULES([GLPROTO], [glproto])
 
 dnl Checks for header files.
 AC_PATH_X
