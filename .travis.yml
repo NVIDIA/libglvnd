@@ -1,0 +1,23 @@
+# Travis CI script
+
+language: c
+
+os:
+- linux
+
+sudo: false
+
+addons:
+  apt:
+    packages:
+    - libxext-dev
+    - libx11-dev
+    - x11proto-gl-dev
+    - xserver-xorg-dev
+
+before_install:
+- export DISPLAY=:99.0
+- /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1280x1024x24
+
+script:
+- ./autogen.sh && ./configure && make -j4 distcheck
