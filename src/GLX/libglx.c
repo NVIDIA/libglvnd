@@ -473,6 +473,8 @@ PUBLIC Display *glXGetCurrentDisplay(void)
 
 __GLXvendorInfo *__glXGetCurrentDynDispatch(void)
 {
+    __glXThreadInitialize();
+
     __GLXAPIState *apiState = __glXGetCurrentAPIState();
 
     if (apiState != NULL) {

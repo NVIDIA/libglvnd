@@ -911,6 +911,8 @@ static int VendorFromPointer(__GLXvendorPointerHashtable *table, void *ptr,
     __GLXvendorPointerMappingHash *pEntry;
     __GLXvendorInfo *vendor = NULL;
 
+    __glXThreadInitialize();
+
     LKDHASH_RDLOCK(__glXPthreadFuncs, *table);
 
     HASH_FIND_PTR(_LH(*table), &ptr, pEntry);
@@ -975,6 +977,8 @@ void __glXRemoveScreenVisualMapping(Display *dpy, const XVisualInfo *visual)
 }
 int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor)
 {
+    __glXThreadInitialize();
+
     if (retVendor != NULL) {
         *retVendor = __glXLookupVendorByScreen(dpy, visual->screen);
     }
@@ -1094,6 +1098,8 @@ void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable)
 
 int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor)
 {
+    __glXThreadInitialize();
+
     __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
     __GLXvendorInfo *vendor = NULL;
     if (dpyInfo != NULL) {

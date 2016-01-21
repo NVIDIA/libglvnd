@@ -810,6 +810,18 @@ void __glDispatchCheckMultithreaded(void)
 {
     if (!pthreadFuncs.is_singlethreaded)
     {
+        // Check to see if the current thread has a dispatch table assigned to
+        // it, and if it doesn't, then plug in the no-op table.
+        // This is a partial workaround to broken applications that try to call
+        // OpenGL functions without a current context, without adding any
+        // additional overhead to the dispatch stubs themselves. As long as the
+        // thread calls at least one GLX function first, any OpenGL calls will
+        // go to the no-op stubs instead of crashing.
+        if (_glapi_get_current() == NULL) {
+            // Calling _glapi_set_current(NULL) will plug in the no-op table.
+            _glapi_set_current(NULL);
+        }
+
         LockDispatch();
         if (!isMultiThreaded) {
             glvnd_thread_t tid = pthreadFuncs.self();
