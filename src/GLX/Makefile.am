@@ -69,6 +69,8 @@ libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDE
 
 BUILT_SOURCES = g_libglxnoop.c
 
+CLEANFILES = $(BUILT_SOURCES)
+
 EXTRA_DIST = gen_stubs.pl glx_funcs.spec
 
 g_libglxnoop.c : gen_stubs.pl glx_funcs.spec

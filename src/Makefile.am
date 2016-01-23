@@ -8,3 +8,6 @@ SUBDIRS = util \
 	GL
 
 EXTRA_DIST = generate
+
+clean-local:
+	rm -f generate/*.pyc
