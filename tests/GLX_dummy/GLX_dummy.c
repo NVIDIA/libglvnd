@@ -618,7 +618,7 @@ static void patch_armv7_thumb_tsd(char *writeEntry,
 #endif
 }
 
-static GLboolean dummyCheckPatchSupported(int type, int stubSize)
+static GLboolean dummyIsPatchSupported(int type, int stubSize)
 {
     switch (type) {
         case __GLDISPATCH_STUB_X86_64_TLS:
@@ -639,7 +639,7 @@ static GLboolean dummyInitiatePatch(int type,
     void *writeAddr;
     const void *execAddr;
 
-    if (!dummyCheckPatchSupported(type, stubSize))
+    if (!dummyIsPatchSupported(type, stubSize))
     {
         return GL_FALSE;
     }
@@ -671,7 +671,7 @@ static void dummyReleasePatch(void)
 
 static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 {
-    .checkPatchSupported = dummyCheckPatchSupported,
+    .isPatchSupported = dummyIsPatchSupported,
     .initiatePatch = dummyInitiatePatch,
     .releasePatch = dummyReleasePatch,
 };
