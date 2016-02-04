@@ -467,7 +467,7 @@ static struct {
 
 
 // XXX non-entry point ABI functions
-static Bool          dummyCheckSupportsScreen    (Display *dpy, int screen)
+static Bool          dummyIsSupportedScreen    (Display *dpy, int screen)
 {
     return True;
 }
@@ -679,7 +679,7 @@ static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 
 static const __GLXapiImports dummyImports =
 {
-    .checkSupportsScreen = dummyCheckSupportsScreen,
+    .isSupportedScreen = dummyIsSupportedScreen,
     .getProcAddress = dummyGetProcAddress,
     .getDispatchAddress = dummyGetDispatchAddress,
     .setDispatchIndex = dummySetDispatchIndex,

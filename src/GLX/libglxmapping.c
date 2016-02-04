@@ -661,7 +661,7 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
                 // Make sure that the vendor library can support this screen.
                 // If it can't, then we'll fall back to the indirect rendering
                 // library.
-                if (vendor != NULL && !vendor->glxvc->checkSupportsScreen(dpy, screen)) {
+                if (vendor != NULL && !vendor->glxvc->isSupportedScreen(dpy, screen)) {
                     vendor = NULL;
                 }
             }
