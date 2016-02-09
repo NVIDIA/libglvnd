@@ -15,6 +15,11 @@ future this library may support EGL and OpenGL ES as well.
 Building the library
 ----------------------
 
+libglvnd build-depends on xorg-server, libx11, glproto and libxext.
+On Debian and derivatives, run:
+
+    sudo apt-get install xserver-xorg-dev libxext-dev libx11-dev x11proto-gl-dev
+
 Run `./autogen.sh`, then run `./configure` and `make`.
 
 
