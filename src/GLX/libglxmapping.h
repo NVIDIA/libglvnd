@@ -134,11 +134,6 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy);
  */
 void __glXFreeDisplay(Display *dpy);
 
-/*!
- * Notifies libglvnd that a context has been marked for destruction.
- */
-void __glXNotifyContextDestroyed(GLXContext ctx);
-
 /*
  * Close the vendor library and perform any relevant teardown. This should
  * be called when the API library is unloaded.

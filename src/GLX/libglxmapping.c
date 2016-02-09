@@ -844,21 +844,18 @@ void __glXFreeDisplay(Display *dpy)
  */
 
 typedef struct {
-    void *ptr;
+    GLXFBConfig config;
     __GLXvendorInfo *vendor;
     UT_hash_handle hh;
-} __GLXvendorPointerMappingHash;
+} __GLXvendorConfigMappingHash;
 
-typedef DEFINE_LKDHASH(__GLXvendorPointerMappingHash, __GLXvendorPointerHashtable);
-static __GLXvendorPointerHashtable contextHashtable = { NULL, GLVND_RWLOCK_INITIALIZER };
-static __GLXvendorPointerHashtable fbconfigHashtable = { NULL, GLVND_RWLOCK_INITIALIZER };
+static DEFINE_LKDHASH(__GLXvendorConfigMappingHash, fbconfigHashtable);
 
-static void AddVendorPointerMapping(__GLXvendorPointerHashtable *table,
-        void *ptr, __GLXvendorInfo *vendor)
+void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor)
 {
-    __GLXvendorPointerMappingHash *pEntry;
+    __GLXvendorConfigMappingHash *pEntry;
 
-    if (ptr == NULL) {
+    if (config == NULL) {
         return;
     }
 
@@ -866,15 +863,15 @@ static void AddVendorPointerMapping(__GLXvendorPointerHashtable *table,
         return;
     }
 
-    LKDHASH_WRLOCK(*table);
+    LKDHASH_WRLOCK(fbconfigHashtable);
 
-    HASH_FIND_PTR(_LH(*table), &ptr, pEntry);
+    HASH_FIND_PTR(_LH(fbconfigHashtable), &config, pEntry);
 
     if (pEntry == NULL) {
         pEntry = malloc(sizeof(*pEntry));
-        pEntry->ptr = ptr;
+        pEntry->config = config;
         pEntry->vendor = vendor;
-        HASH_ADD_PTR(_LH(*table), ptr, pEntry);
+        HASH_ADD_PTR(_LH(fbconfigHashtable), config, pEntry);
     } else {
         // Any GLXContext or GLXFBConfig handles must be unique to a single
         // vendor at a time. If we get two different vendors, then there's
@@ -882,89 +879,50 @@ static void AddVendorPointerMapping(__GLXvendorPointerHashtable *table,
         assert(pEntry->vendor == vendor);
     }
 
-    LKDHASH_UNLOCK(*table);
+    LKDHASH_UNLOCK(fbconfigHashtable);
 }
 
-static void RemoveVendorPointerMapping(__GLXvendorPointerHashtable *table, void *ptr)
+void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config)
 {
-    __GLXvendorPointerMappingHash *pEntry;
+    __GLXvendorConfigMappingHash *pEntry;
 
-    if (ptr == NULL) {
+    if (config == NULL) {
         return;
     }
 
-    LKDHASH_WRLOCK(*table);
+    LKDHASH_WRLOCK(fbconfigHashtable);
 
-    HASH_FIND_PTR(_LH(*table), &ptr, pEntry);
+    HASH_FIND_PTR(_LH(fbconfigHashtable), &config, pEntry);
 
     if (pEntry != NULL) {
-        HASH_DELETE(hh, _LH(*table), pEntry);
+        HASH_DELETE(hh, _LH(fbconfigHashtable), pEntry);
         free(pEntry);
     }
 
-    LKDHASH_UNLOCK(*table);
+    LKDHASH_UNLOCK(fbconfigHashtable);
 }
 
-static int VendorFromPointer(__GLXvendorPointerHashtable *table, void *ptr,
-        __GLXvendorInfo **retVendor)
+int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor)
 {
-    __GLXvendorPointerMappingHash *pEntry;
+    __GLXvendorConfigMappingHash *pEntry;
     __GLXvendorInfo *vendor = NULL;
 
     __glXThreadInitialize();
 
-    LKDHASH_RDLOCK(*table);
+    LKDHASH_RDLOCK(fbconfigHashtable);
 
-    HASH_FIND_PTR(_LH(*table), &ptr, pEntry);
+    HASH_FIND_PTR(_LH(fbconfigHashtable), &config, pEntry);
 
     if (pEntry != NULL) {
         vendor = pEntry->vendor;
     }
 
-    LKDHASH_UNLOCK(*table);
+    LKDHASH_UNLOCK(fbconfigHashtable);
 
     if (retVendor != NULL) {
         *retVendor = vendor;
     }
     return (vendor != NULL ? 0 : -1);
-}
-
-/**
- * Common function for the various __glXVendorFrom* functions.
- */
-void __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor)
-{
-    AddVendorPointerMapping(&contextHashtable, context, vendor);
-}
-
-
-void __glXRemoveVendorContextMapping(Display *dpy, GLXContext context)
-{
-    RemoveVendorPointerMapping(&contextHashtable, context);
-}
-
-
-int __glXVendorFromContext(GLXContext context, __GLXvendorInfo **retVendor)
-{
-    return VendorFromPointer(&contextHashtable, context, retVendor);
-}
-
-
-void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor)
-{
-    AddVendorPointerMapping(&fbconfigHashtable, config, vendor);
-}
-
-
-void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config)
-{
-    RemoveVendorPointerMapping(&fbconfigHashtable, config);
-}
-
-
-int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor)
-{
-    return VendorFromPointer(&fbconfigHashtable, config, retVendor);
 }
 
 // Internally, we use the screen number to look up a vendor, so we don't need
@@ -1135,7 +1093,6 @@ void __glXMappingTeardown(Bool doReset)
          * reset the corresponding locks.
          */
         __glvndPthreadFuncs.rwlock_init(&__glXDispatchIndexHash.lock, NULL);
-        __glvndPthreadFuncs.rwlock_init(&contextHashtable.lock, NULL);
         __glvndPthreadFuncs.rwlock_init(&fbconfigHashtable.lock, NULL);
         __glvndPthreadFuncs.rwlock_init(&__glXVendorNameHash.lock, NULL);
         __glvndPthreadFuncs.rwlock_init(&__glXDisplayInfoHash.lock, NULL);
@@ -1154,10 +1111,7 @@ void __glXMappingTeardown(Bool doReset)
         __glXNextUnusedHashIndex = 0;
         LKDHASH_UNLOCK(__glXDispatchIndexHash);
 
-        LKDHASH_TEARDOWN(__GLXvendorPointerMappingHash,
-                         contextHashtable, NULL, NULL, False);
-
-        LKDHASH_TEARDOWN(__GLXvendorPointerMappingHash,
+        LKDHASH_TEARDOWN(__GLXvendorConfigMappingHash,
                          fbconfigHashtable, NULL, NULL, False);
 
         LKDHASH_TEARDOWN(__GLXdisplayInfoHash,

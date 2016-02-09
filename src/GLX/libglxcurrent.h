@@ -40,6 +40,8 @@
 #include "lkdhash.h"
 #include "glvnd_list.h"
 
+typedef struct __GLXcontextInfoRec __GLXcontextInfo;
+
 /*
  * Define current API library state here.
  *
@@ -58,12 +60,8 @@ typedef struct __GLXAPIStateRec {
     Display *currentDisplay;
     GLXDrawable currentDraw;
     GLXDrawable currentRead;
-    GLXContext currentContext;
+    __GLXcontextInfo *currentContext;
 
-    // TODO: If we free the API state when we don't have a current context,
-    // then we don't really need the hash for anything. A linked list would
-    // be fine, and would probably be simpler.
-    //UT_hash_handle hh;
     struct glvnd_list entry;
 } __GLXAPIState;
 
@@ -101,19 +99,5 @@ static inline const __GLXdispatchTableStatic *__glXGetCurrentDispatch(void)
  * state.
  */
 __GLXvendorInfo *__glXGetCurrentDynDispatch(void);
-
-/*!
- * This gets the current (vendor-specific) context, which is stored directly
- * in TLS.
- */
-static inline GLXContext __glXGetCurrentContext(void)
-{
-    __GLXAPIState *apiState = __glXGetCurrentAPIState();
-    if (apiState != NULL) {
-        return apiState->currentContext;
-    } else {
-        return NULL;
-    }
-}
 
 #endif // !defined(__LIB_GLX_TLS)
