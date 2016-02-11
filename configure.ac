@@ -67,7 +67,7 @@ dnl Arch/platform-specific settings. Copied from mesa
 dnl
 AC_ARG_ENABLE([asm],
     [AS_HELP_STRING([--disable-asm],
-        [disable assembly usage @<:@default=enabled on supported plaforms@:>@])],
+        [disable assembly usage @<:@default=enabled on supported platforms@:>@])],
     [enable_asm="$enableval"],
     [enable_asm=yes]
 )
@@ -184,7 +184,7 @@ AC_CHECK_FUNCS([getpagesize gettimeofday memmove memset strdup strerror])
 dnl TLS detection
 AC_ARG_ENABLE([tls],
     [AS_HELP_STRING([--disable-tls],
-        [disable TLS usage @<:@default=enabled on supported plaforms@:>@])],
+        [disable TLS usage @<:@default=enabled on supported platforms@:>@])],
     [enable_tls="$enableval"],
     [enable_tls=yes]
 )
