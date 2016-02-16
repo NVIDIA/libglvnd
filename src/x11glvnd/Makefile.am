@@ -53,7 +53,7 @@ x11glvnd_la_CFLAGS = \
 	$(INCLUDES)
 
 x11glvnd_la_LDFLAGS = \
-	-shared -module
+	-module -avoid-version
 
 x11glvnd_la_SOURCES = \
 	x11glvndserver.c
