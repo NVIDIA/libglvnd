@@ -135,7 +135,7 @@ static ExtensionModule glvExtensionModule = {
 static XF86ModuleVersionInfo x11glvndVersionInfo =
 {
     "x11glvnd",
-    "NVIDIA Corporation",
+    MODULEVENDORSTRING,
     MODINFOSTRING1,
     MODINFOSTRING2,
     XORG_VERSION_NUMERIC(4,0,2,0,0),
