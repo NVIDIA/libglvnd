@@ -117,8 +117,7 @@ struct __GLXdispatchTableDynamicRec {
  * __glXVendorNameHash is a hash table mapping a vendor name to vendor info.
  */
 typedef struct __GLXvendorNameHashRec {
-    const char *name;
-    __GLXvendorInfo *vendor;
+    __GLXvendorInfo vendor;
     UT_hash_handle hh;
 } __GLXvendorNameHash;
 
@@ -139,6 +138,33 @@ struct __GLXvendorXIDMappingHashRec {
 };
 
 static glvnd_mutex_t glxGenEntrypointMutex = GLVND_MUTEX_INITIALIZER;
+
+static __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor, int index);
+
+static const __GLXapiExports glxExportsTable = {
+    .getDynDispatch = __glXGetDynDispatch,
+    .getCurrentDynDispatch = __glXGetCurrentDynDispatch,
+    .fetchDispatchEntry = __glXFetchDispatchEntry,
+
+    /* We use the real function since __glXGetCurrentContext is inline */
+    .getCurrentContext = glXGetCurrentContext,
+
+    .addVendorContextMapping = __glXAddVendorContextMapping,
+    .removeVendorContextMapping = __glXRemoveVendorContextMapping,
+    .vendorFromContext = __glXVendorFromContext,
+
+    .addVendorFBConfigMapping = __glXAddVendorFBConfigMapping,
+    .removeVendorFBConfigMapping = __glXRemoveVendorFBConfigMapping,
+    .vendorFromFBConfig = __glXVendorFromFBConfig,
+
+    .addScreenVisualMapping = __glXAddScreenVisualMapping,
+    .removeScreenVisualMapping = __glXRemoveScreenVisualMapping,
+    .vendorFromVisual = __glXVendorFromVisual,
+
+    .addVendorDrawableMapping = __glXAddVendorDrawableMapping,
+    .removeVendorDrawableMapping = __glXRemoveVendorDrawableMapping,
+    .vendorFromDrawable = __glXVendorFromDrawable,
+};
 
 static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
                                     const GLubyte *procName)
@@ -244,7 +270,7 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
     // them support the function.
     LKDHASH_RDLOCK(__glXVendorNameHash);
     HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
-        addr = __glXFindVendorDispatchAddress((const char *)procName, pEntry->vendor);
+        addr = __glXFindVendorDispatchAddress((const char *)procName, &pEntry->vendor);
         if (addr) {
             break;
         }
@@ -346,37 +372,6 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
     return addr;
 }
 
-static __GLXapiExports glxExportsTable;
-static glvnd_once_t glxExportsTableOnceControl = GLVND_ONCE_INIT;
-
-static void InitExportsTable(void)
-{
-    glxExportsTable.getDynDispatch = __glXGetDynDispatch;
-    glxExportsTable.getCurrentDynDispatch = __glXGetCurrentDynDispatch;
-    glxExportsTable.fetchDispatchEntry = __glXFetchDispatchEntry;
-
-    /* We use the real function since __glXGetCurrentContext is inline */
-    glxExportsTable.getCurrentContext = glXGetCurrentContext;
-
-    glxExportsTable.addVendorContextMapping = __glXAddVendorContextMapping;
-    glxExportsTable.removeVendorContextMapping = __glXRemoveVendorContextMapping;
-    glxExportsTable.vendorFromContext = __glXVendorFromContext;
-
-    glxExportsTable.addVendorFBConfigMapping = __glXAddVendorFBConfigMapping;
-    glxExportsTable.removeVendorFBConfigMapping = __glXRemoveVendorFBConfigMapping;
-    glxExportsTable.vendorFromFBConfig = __glXVendorFromFBConfig;
-
-    glxExportsTable.addScreenVisualMapping = __glXAddScreenVisualMapping;
-    glxExportsTable.removeScreenVisualMapping = __glXRemoveScreenVisualMapping;
-    glxExportsTable.vendorFromVisual = __glXVendorFromVisual;
-
-    glxExportsTable.addVendorDrawableMapping = __glXAddVendorDrawableMapping;
-    glxExportsTable.removeVendorDrawableMapping = __glXRemoveVendorDrawableMapping;
-    glxExportsTable.vendorFromDrawable = __glXVendorFromDrawable;
-
-}
-
-
 static char *ConstructVendorLibraryFilename(const char *vendorName)
 {
     char *filename;
@@ -391,24 +386,28 @@ static char *ConstructVendorLibraryFilename(const char *vendorName)
     return filename;
 }
 
-void TeardownVendor(__GLXvendorInfo *vendor, Bool doLibraryUnload)
+static void CleanupVendorNameEntry(void *unused,
+                                   __GLXvendorNameHash *pEntry)
 {
-    free(vendor->name);
-    if (vendor->glDispatch) {
+    __GLXvendorInfo *vendor = &pEntry->vendor;
+    if (vendor->glDispatch != NULL) {
         __glDispatchDestroyTable(vendor->glDispatch);
+        vendor->glDispatch = NULL;
     }
 
-    /* Clean up the dynamic dispatch table */
-    LKDHASH_TEARDOWN(__GLXdispatchFuncHash,
-                     vendor->dynDispatch->hash, NULL, NULL, True);
+    if (vendor->dynDispatch != NULL) {
+        /* Clean up the dynamic dispatch table */
+        LKDHASH_TEARDOWN(__GLXdispatchFuncHash,
+                         vendor->dynDispatch->hash, NULL, NULL, True);
 
-    free(vendor->dynDispatch);
+        free(vendor->dynDispatch);
+        vendor->dynDispatch = NULL;
+    }
 
-    if (doLibraryUnload) {
+    if (vendor->dlhandle != NULL) {
         dlclose(vendor->dlhandle);
+        vendor->dlhandle = NULL;
     }
-
-    free(vendor);
 }
 
 static GLboolean LookupVendorEntrypoints(__GLXvendorInfo *vendor)
@@ -472,13 +471,8 @@ static void *VendorGetProcAddressCallback(const char *procName, void *param)
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 {
     __GLXvendorNameHash *pEntry = NULL;
-    void *dlhandle = NULL;
-    __PFNGLXMAINPROC glxMainProc;
-    const __GLXapiImports *glxvc;
-    __GLXdispatchTableDynamic *dynDispatch;
-    __GLXvendorInfo *vendor = NULL;
     Bool locked = False;
-    int vendorID = -1;
+    size_t vendorNameLen;
 
     // We'll use the vendor name to construct a DSO name, so make sure it
     // doesn't contain any '/' characters.
@@ -486,72 +480,58 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
         return NULL;
     }
 
-    LKDHASH_RDLOCK(__glXVendorNameHash);
-    HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
+    vendorNameLen = strlen(vendorName);
 
-    if (pEntry) {
-        vendor = pEntry->vendor;
-    }
+    LKDHASH_RDLOCK(__glXVendorNameHash);
+    HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, vendorNameLen, pEntry);
+
     LKDHASH_UNLOCK(__glXVendorNameHash);
 
     if (!pEntry) {
         LKDHASH_WRLOCK(__glXVendorNameHash);
         locked = True;
         // Do another lookup to check uniqueness
-        HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
+        HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, vendorNameLen, pEntry);
         if (!pEntry) {
+            __GLXvendorInfo *vendor;
+            __PFNGLXMAINPROC glxMainProc;
             char *filename;
 
             // Previously unseen vendor. dlopen() the new vendor and add it to the
             // hash table.
-            pEntry = calloc(1, sizeof(*pEntry));
+            pEntry = calloc(1, sizeof(*pEntry) + vendorNameLen + 1);
             if (!pEntry) {
                 goto fail;
             }
+            vendor = &pEntry->vendor;
+
+            vendor->name = (char *) (pEntry + 1);
+            memcpy(vendor->name, vendorName, vendorNameLen + 1);
 
             filename = ConstructVendorLibraryFilename(vendorName);
             if (filename) {
-                dlhandle = dlopen(filename, RTLD_LAZY);
+                vendor->dlhandle = dlopen(filename, RTLD_LAZY);
             }
             free(filename);
-            if (!dlhandle) {
+            if (vendor->dlhandle == NULL) {
                 goto fail;
             }
 
-            glxMainProc = dlsym(dlhandle, __GLX_MAIN_PROTO_NAME);
+            glxMainProc = dlsym(vendor->dlhandle, __GLX_MAIN_PROTO_NAME);
             if (!glxMainProc) {
                 goto fail;
             }
 
-            /* Initialize the glxExportsTable if we haven't already */
-            __glvndPthreadFuncs.once(&glxExportsTableOnceControl,
-                                   InitExportsTable);
+            vendor->vendorID = __glDispatchNewVendorID();
+            assert(vendor->vendorID >= 0);
 
-            vendorID = __glDispatchNewVendorID();
-            assert(vendorID >= 0);
-
-            glxvc = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
+            vendor->glxvc = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
                                       &glxExportsTable,
-                                      vendorName,
-                                      vendorID);
-            if (!glxvc) {
+                                      vendor->name,
+                                      vendor->vendorID);
+            if (!vendor->glxvc) {
                 goto fail;
             }
-
-            vendor = pEntry->vendor
-                = calloc(1, sizeof(__GLXvendorInfo));
-            if (!vendor) {
-                goto fail;
-            }
-
-            pEntry->name = vendor->name = strdup(vendorName);
-            vendor->vendorID = vendorID;
-
-            if (!vendor->name) {
-                goto fail;
-            }
-            vendor->dlhandle = dlhandle;
-            vendor->glxvc = glxvc;
 
             if (!LookupVendorEntrypoints(vendor)) {
                 goto fail;
@@ -566,15 +546,15 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
 
-            dynDispatch = vendor->dynDispatch
+            vendor->dynDispatch
                 = malloc(sizeof(__GLXdispatchTableDynamic));
-            if (!dynDispatch) {
+            if (!vendor->dynDispatch) {
                 goto fail;
             }
 
             /* Initialize the dynamic dispatch table */
-            LKDHASH_INIT(dynDispatch->hash);
-            dynDispatch->vendor = vendor;
+            LKDHASH_INIT(vendor->dynDispatch->hash);
+            vendor->dynDispatch->vendor = vendor;
 
             HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendor->name,
                             strlen(vendor->name), pEntry);
@@ -589,31 +569,21 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             __glvndPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
         } else {
             /* Some other thread added a vendor */
-            vendor = pEntry->vendor;
             LKDHASH_UNLOCK(__glXVendorNameHash);
         }
     }
 
-    return vendor;
+    return &pEntry->vendor;
 
 fail:
     if (locked) {
         LKDHASH_UNLOCK(__glXVendorNameHash);
     }
-    if (dlhandle) {
-        dlclose(dlhandle);
+    if (pEntry != NULL) {
+        CleanupVendorNameEntry(NULL, pEntry);
+        free(pEntry);
     }
-    if (vendor) {
-        TeardownVendor(vendor, False/* doLibraryUnload */);
-    }
-    free(pEntry);
     return NULL;
-}
-
-static void CleanupVendorNameEntry(void *unused,
-                                   __GLXvendorNameHash *pEntry)
-{
-    TeardownVendor(pEntry->vendor, True/* doLibraryUnload */);
 }
 
 __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
