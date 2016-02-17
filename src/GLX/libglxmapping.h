@@ -36,8 +36,6 @@
 
 #define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
 
-typedef struct __GLXdispatchTableDynamicRec __GLXdispatchTableDynamic;
-
 /*!
  * Structure containing relevant per-vendor information.
  */
@@ -45,7 +43,10 @@ struct __GLXvendorInfoRec {
     int vendorID; //< unique GLdispatch ID
     char *name; //< name of the vendor
     void *dlhandle; //< shared library handle
-    __GLXdispatchTableDynamic *dynDispatch; //< dynamic GLX dispatch table
+
+    /// dynamic GLX dispatch table
+    DEFINE_LKDHASH(struct __GLXdispatchFuncHashRec, dynDispatchHash);
+
     __GLdispatchTable *glDispatch; //< GL dispatch table
 
     const __GLXapiImports *glxvc;

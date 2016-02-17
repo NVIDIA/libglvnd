@@ -97,20 +97,6 @@ typedef struct __GLXdispatchFuncHashRec {
     UT_hash_handle hh;
 } __GLXdispatchFuncHash;
 
-struct __GLXdispatchTableDynamicRec {
-    /*
-     * Hash table containing the dynamic dispatch funcs. This is used instead of
-     * a flat array to avoid sparse array usage. XXX might be more performant to
-     * use an array, though?
-     */
-    DEFINE_LKDHASH(__GLXdispatchFuncHash, hash);
-
-    /*
-     * Pointer to the vendor library info, used by __glXFetchDispatchEntry()
-     */
-     __GLXvendorInfo *vendor;
-};
-
 /****************************************************************************/
 
 /*
@@ -314,11 +300,10 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
     __GLXextFuncPtr addr = NULL;
     __GLXdispatchFuncHash *pEntry;
     GLubyte *procName = NULL;
-    __GLXdispatchTableDynamic *dynDispatch = vendor->dynDispatch;
 
-    LKDHASH_RDLOCK(dynDispatch->hash);
+    LKDHASH_RDLOCK(vendor->dynDispatchHash);
 
-    HASH_FIND_INT(_LH(dynDispatch->hash), &index, pEntry);
+    HASH_FIND_INT(_LH(vendor->dynDispatchHash), &index, pEntry);
 
     if (pEntry) {
         // This can be NULL, which indicates the vendor does not implement this
@@ -327,7 +312,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
         addr = pEntry->addr;
     }
 
-    LKDHASH_UNLOCK(dynDispatch->hash);
+    LKDHASH_UNLOCK(vendor->dynDispatchHash);
 
     if (!pEntry) {
         // Not seen before by this vendor: query the vendor for the right
@@ -346,27 +331,27 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
 
         if (procName) {
             // Get the real address
-            addr = dynDispatch->vendor->glxvc->getProcAddress(procName);
+            addr = vendor->glxvc->getProcAddress(procName);
         }
 
-        LKDHASH_WRLOCK(dynDispatch->hash);
-        HASH_FIND_INT(_LH(dynDispatch->hash), &index, pEntry);
+        LKDHASH_WRLOCK(vendor->dynDispatchHash);
+        HASH_FIND_INT(_LH(vendor->dynDispatchHash), &index, pEntry);
         if (!pEntry) {
             pEntry = malloc(sizeof(*pEntry));
             if (!pEntry) {
                 // Uh-oh!
                 assert(pEntry);
-                LKDHASH_UNLOCK(dynDispatch->hash);
+                LKDHASH_UNLOCK(vendor->dynDispatchHash);
                 return NULL;
             }
             pEntry->index = index;
             pEntry->addr = addr;
 
-            HASH_ADD_INT(_LH(dynDispatch->hash), index, pEntry);
+            HASH_ADD_INT(_LH(vendor->dynDispatchHash), index, pEntry);
         } else {
             addr = pEntry->addr;
         }
-        LKDHASH_UNLOCK(dynDispatch->hash);
+        LKDHASH_UNLOCK(vendor->dynDispatchHash);
     }
 
     return addr;
@@ -395,14 +380,9 @@ static void CleanupVendorNameEntry(void *unused,
         vendor->glDispatch = NULL;
     }
 
-    if (vendor->dynDispatch != NULL) {
-        /* Clean up the dynamic dispatch table */
-        LKDHASH_TEARDOWN(__GLXdispatchFuncHash,
-                         vendor->dynDispatch->hash, NULL, NULL, True);
-
-        free(vendor->dynDispatch);
-        vendor->dynDispatch = NULL;
-    }
+    /* Clean up the dynamic dispatch table */
+    LKDHASH_TEARDOWN(__GLXdispatchFuncHash,
+                     vendor->dynDispatchHash, NULL, NULL, True);
 
     if (vendor->dlhandle != NULL) {
         dlclose(vendor->dlhandle);
@@ -546,15 +526,8 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
 
-            vendor->dynDispatch
-                = malloc(sizeof(__GLXdispatchTableDynamic));
-            if (!vendor->dynDispatch) {
-                goto fail;
-            }
-
             /* Initialize the dynamic dispatch table */
-            LKDHASH_INIT(vendor->dynDispatch->hash);
-            vendor->dynDispatch->vendor = vendor;
+            LKDHASH_INIT(vendor->dynDispatchHash);
 
             HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendor->name,
                             strlen(vendor->name), pEntry);
