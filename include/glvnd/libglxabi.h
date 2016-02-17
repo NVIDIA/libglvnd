@@ -91,7 +91,7 @@ extern "C" {
 /*!
  * Current version of the ABI.
  */
-#define GLX_VENDOR_ABI_VERSION 0
+#define GLX_VENDOR_ABI_VERSION 1
 
 
 /*!

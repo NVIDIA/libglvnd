@@ -826,6 +826,10 @@ void __glDispatchCheckMultithreaded(void)
             }
         }
         UnlockDispatch();
+
+        if (stubCurrentPatchCb != NULL && stubCurrentPatchCb->threadAttach != NULL) {
+            stubCurrentPatchCb->threadAttach();
+        }
     }
 }
 

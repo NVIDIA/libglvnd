@@ -138,6 +138,27 @@ typedef struct __GLdispatchPatchCallbacksRec {
      * original state. The vendor library must not try to modify them.
      */
     void (*releasePatch)(void);
+
+    /*!
+     * Called at the start of window-system functions (GLX and EGL). This
+     * callback allows vendor libraries to perform any per-thread
+     * initialization.
+     *
+     * This is basically a workaround for broken applications. A lot of apps
+     * will make one or more invalid GLX/EGL calls on a thread (often including
+     * a MakeCurrent with invalid parameters), and then will try to call an
+     * OpenGL function.
+     *
+     * A non-libglvnd-based driver would be able to initialize any thread state
+     * even on a bogus GLX call, but with libglvnd, those calls wouldn't get
+     * past libGLX.
+     *
+     * This function is optional. If it's \c NULL, then libGLdispatch will
+     * simply ignore it.
+     *
+     * \note This function may be called concurrently from multiple threads.
+     */
+    void (*threadAttach)(void);
 } __GLdispatchPatchCallbacks;
 
 #if defined(__cplusplus)
