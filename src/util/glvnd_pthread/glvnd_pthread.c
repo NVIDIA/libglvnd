@@ -27,6 +27,9 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
+/* For RTLD_DEFAULT on x86 systems */
+#define _GNU_SOURCE 1
+
 #include <dlfcn.h>
 #include <assert.h>
 #include <string.h>
@@ -34,6 +37,8 @@
 
 #include "trace.h"
 #include "glvnd_pthread.h"
+
+GLVNDPthreadFuncs __glvndPthreadFuncs = {};
 
 const glvnd_thread_t GLVND_THREAD_NULL = GLVND_THREAD_NULL_INIT;
 
@@ -384,9 +389,11 @@ static void *mt_getspecific(glvnd_key_t key)
     return pthreadRealFuncs.getspecific(key.key);
 }
 
-void glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs)
+void glvndSetupPthreads(void)
 {
     char *force_st = getenv("__GL_SINGLETHREADED");
+    void *dlhandle = RTLD_DEFAULT;
+    GLVNDPthreadFuncs *funcs = &__glvndPthreadFuncs;
 
     if (force_st && atoi(force_st)) {
         goto fail;

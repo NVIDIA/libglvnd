@@ -140,17 +140,20 @@ typedef struct GLVNDPthreadFuncsRec {
  */
 extern const glvnd_thread_t GLVND_THREAD_NULL;
 
+/**
+ * The function table with all of the pthreads function pointers. This table
+ * is initialized by \c glvndSetupPthreads.
+ */
+extern GLVNDPthreadFuncs __glvndPthreadFuncs;
+
 /*!
  * \brief Sets up pthreads wrappers.
  *
  * This fills the given function pointer table with the appropriate wrapper
  * functions, using the passed-in handle to look for pthreads functions. This
  * should only be called once on initialization.
- *
- * \param [in] dlhandle A handle compatible with dlsym(3).
- * \param [in] funcs A table of pthreads funcs to initialize.
  */
-void glvndSetupPthreads(void *dlhandle, GLVNDPthreadFuncs *funcs);
+void glvndSetupPthreads(void);
 
 
 

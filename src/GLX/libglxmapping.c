@@ -154,7 +154,7 @@ static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
         return GL_FALSE;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXDispatchIndexHash);
     pEntry->index = __glXNextUnusedHashIndex++;
 
     // Notify the vendor this is the index which should be used
@@ -162,7 +162,7 @@ static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
 
     HASH_ADD_INT(_LH(__glXDispatchIndexHash),
                  index, pEntry);
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXDispatchIndexHash);
 
     return GL_TRUE;
 }
@@ -242,14 +242,14 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
 
     // Look through the vendors that we've already loaded, and see if any of
     // them support the function.
-    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+    LKDHASH_RDLOCK(__glvndPthreadFuncs, __glXVendorNameHash);
     HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
         addr = __glXFindVendorDispatchAddress((const char *)procName, pEntry->vendor);
         if (addr) {
             break;
         }
     }
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXVendorNameHash);
 
     return addr;
 }
@@ -272,9 +272,9 @@ __GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName)
      * that supports it.
      */
     if (procName[0] == 'g' && procName[1] == 'l' && procName[2] == 'X') {
-        __glXPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
+        __glvndPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
         addr = (__GLXextFuncPtr) glvndGenerateEntrypoint((const char *) procName);
-        __glXPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
+        __glvndPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
     } else {
         /* For GL functions, request a dispatch stub from libGLdispatch. */
         addr = __glDispatchGetProcAddress((const char *)procName);
@@ -290,7 +290,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
     GLubyte *procName = NULL;
     __GLXdispatchTableDynamic *dynDispatch = vendor->dynDispatch;
 
-    LKDHASH_RDLOCK(__glXPthreadFuncs, dynDispatch->hash);
+    LKDHASH_RDLOCK(__glvndPthreadFuncs, dynDispatch->hash);
 
     HASH_FIND_INT(_LH(dynDispatch->hash), &index, pEntry);
 
@@ -301,7 +301,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
         addr = pEntry->addr;
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, dynDispatch->hash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, dynDispatch->hash);
 
     if (!pEntry) {
         // Not seen before by this vendor: query the vendor for the right
@@ -310,10 +310,10 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
         __GLXdispatchIndexHash *pdiEntry;
 
         // First retrieve the procname of this index
-        LKDHASH_RDLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+        LKDHASH_RDLOCK(__glvndPthreadFuncs, __glXDispatchIndexHash);
         HASH_FIND_INT(_LH(__glXDispatchIndexHash), &index, pdiEntry);
         procName = pdiEntry->procName;
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+        LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXDispatchIndexHash);
 
         // This should have a valid entry point associated with it.
         assert(procName);
@@ -323,14 +323,14 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
             addr = dynDispatch->vendor->glxvc->getProcAddress(procName);
         }
 
-        LKDHASH_WRLOCK(__glXPthreadFuncs, dynDispatch->hash);
+        LKDHASH_WRLOCK(__glvndPthreadFuncs, dynDispatch->hash);
         HASH_FIND_INT(_LH(dynDispatch->hash), &index, pEntry);
         if (!pEntry) {
             pEntry = malloc(sizeof(*pEntry));
             if (!pEntry) {
                 // Uh-oh!
                 assert(pEntry);
-                LKDHASH_UNLOCK(__glXPthreadFuncs, dynDispatch->hash);
+                LKDHASH_UNLOCK(__glvndPthreadFuncs, dynDispatch->hash);
                 return NULL;
             }
             pEntry->index = index;
@@ -340,7 +340,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
         } else {
             addr = pEntry->addr;
         }
-        LKDHASH_UNLOCK(__glXPthreadFuncs, dynDispatch->hash);
+        LKDHASH_UNLOCK(__glvndPthreadFuncs, dynDispatch->hash);
     }
 
     return addr;
@@ -399,7 +399,7 @@ void TeardownVendor(__GLXvendorInfo *vendor, Bool doLibraryUnload)
     }
 
     /* Clean up the dynamic dispatch table */
-    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdispatchFuncHash,
+    LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXdispatchFuncHash,
                      vendor->dynDispatch->hash, NULL, NULL, True);
 
     free(vendor->dynDispatch);
@@ -486,16 +486,16 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
         return NULL;
     }
 
-    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+    LKDHASH_RDLOCK(__glvndPthreadFuncs, __glXVendorNameHash);
     HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
 
     if (pEntry) {
         vendor = pEntry->vendor;
     }
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXVendorNameHash);
 
     if (!pEntry) {
-        LKDHASH_WRLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+        LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXVendorNameHash);
         locked = True;
         // Do another lookup to check uniqueness
         HASH_FIND(hh, _LH(__glXVendorNameHash), vendorName, strlen(vendorName), pEntry);
@@ -524,7 +524,7 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             }
 
             /* Initialize the glxExportsTable if we haven't already */
-            __glXPthreadFuncs.once(&glxExportsTableOnceControl,
+            __glvndPthreadFuncs.once(&glxExportsTableOnceControl,
                                    InitExportsTable);
 
             vendorID = __glDispatchNewVendorID();
@@ -573,24 +573,24 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             }
 
             /* Initialize the dynamic dispatch table */
-            LKDHASH_INIT(__glXPthreadFuncs, dynDispatch->hash);
+            LKDHASH_INIT(__glvndPthreadFuncs, dynDispatch->hash);
             dynDispatch->vendor = vendor;
 
             HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendor->name,
                             strlen(vendor->name), pEntry);
-            LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+            LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXVendorNameHash);
 
             // Look up the dispatch functions for any GLX extensions that we
             // generated entrypoints for.
-            __glXPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
+            __glvndPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
             glvndUpdateEntrypoints(
                     (GLVNDentrypointUpdateCallback) __glXFindVendorDispatchAddress,
                     vendor);
-            __glXPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
+            __glvndPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
         } else {
             /* Some other thread added a vendor */
             vendor = pEntry->vendor;
-            LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+            LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXVendorNameHash);
         }
     }
 
@@ -598,7 +598,7 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 
 fail:
     if (locked) {
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXVendorNameHash);
+        LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXVendorNameHash);
     }
     if (dlhandle) {
         dlclose(dlhandle);
@@ -630,15 +630,15 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
         return NULL;
     }
 
-    __glXPthreadFuncs.rwlock_rdlock(&dpyInfo->vendorLock);
+    __glvndPthreadFuncs.rwlock_rdlock(&dpyInfo->vendorLock);
     vendor = dpyInfo->vendors[screen];
-    __glXPthreadFuncs.rwlock_unlock(&dpyInfo->vendorLock);
+    __glvndPthreadFuncs.rwlock_unlock(&dpyInfo->vendorLock);
 
     if (vendor != NULL) {
         return vendor;
     }
 
-    __glXPthreadFuncs.rwlock_wrlock(&dpyInfo->vendorLock);
+    __glvndPthreadFuncs.rwlock_wrlock(&dpyInfo->vendorLock);
     vendor = dpyInfo->vendors[screen];
 
     if (!vendor) {
@@ -673,7 +673,7 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
 
         dpyInfo->vendors[screen] = vendor;
     }
-    __glXPthreadFuncs.rwlock_unlock(&dpyInfo->vendorLock);
+    __glvndPthreadFuncs.rwlock_unlock(&dpyInfo->vendorLock);
 
     DBG_PRINTF(10, "Found vendor \"%s\" for screen %d\n",
                (vendor != NULL ? vendor->name : "NULL"), screen);
@@ -736,8 +736,8 @@ static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
     pEntry->dpy = dpy;
     pEntry->info.vendors = (__GLXvendorInfo **) (pEntry + 1);
 
-    LKDHASH_INIT(__glXPthreadFuncs, pEntry->info.xidVendorHash);
-    __glXPthreadFuncs.rwlock_init(&pEntry->info.vendorLock, NULL);
+    LKDHASH_INIT(__glvndPthreadFuncs, pEntry->info.xidVendorHash);
+    __glvndPthreadFuncs.rwlock_init(&pEntry->info.vendorLock, NULL);
 
     // Check whether the server supports the GLX extension, and record the
     // major opcode if it does.
@@ -775,7 +775,7 @@ static void CleanupDisplayInfoEntry(void *unused, __GLXdisplayInfoHash *pEntry)
         free(pEntry->info.clientStrings[i]);
     }
 
-    LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorXIDMappingHash,
+    LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXvendorXIDMappingHash,
                      pEntry->info.xidVendorHash, NULL, NULL, False);
 }
 
@@ -788,9 +788,9 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
         return NULL;
     }
 
-    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    LKDHASH_RDLOCK(__glvndPthreadFuncs, __glXDisplayInfoHash);
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXDisplayInfoHash);
 
     if (pEntry != NULL) {
         return &pEntry->info;
@@ -804,7 +804,7 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
         return NULL;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXDisplayInfoHash);
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, foundEntry);
     if (foundEntry == NULL) {
         HASH_ADD_PTR(_LH(__glXDisplayInfoHash), dpy, pEntry);
@@ -813,7 +813,7 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
         free(pEntry);
         pEntry = foundEntry;
     }
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXDisplayInfoHash);
 
     return &pEntry->info;
 }
@@ -822,12 +822,12 @@ void __glXFreeDisplay(Display *dpy)
 {
     __GLXdisplayInfoHash *pEntry = NULL;
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXDisplayInfoHash);
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
     if (pEntry != NULL) {
         HASH_DEL(_LH(__glXDisplayInfoHash), pEntry);
     }
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDisplayInfoHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXDisplayInfoHash);
 
     if (pEntry != NULL) {
         CleanupDisplayInfoEntry(NULL, pEntry);
@@ -866,7 +866,7 @@ static void AddVendorPointerMapping(__GLXvendorPointerHashtable *table,
         return;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, *table);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, *table);
 
     HASH_FIND_PTR(_LH(*table), &ptr, pEntry);
 
@@ -882,7 +882,7 @@ static void AddVendorPointerMapping(__GLXvendorPointerHashtable *table,
         assert(pEntry->vendor == vendor);
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, *table);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, *table);
 }
 
 static void RemoveVendorPointerMapping(__GLXvendorPointerHashtable *table, void *ptr)
@@ -893,7 +893,7 @@ static void RemoveVendorPointerMapping(__GLXvendorPointerHashtable *table, void 
         return;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, *table);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, *table);
 
     HASH_FIND_PTR(_LH(*table), &ptr, pEntry);
 
@@ -902,7 +902,7 @@ static void RemoveVendorPointerMapping(__GLXvendorPointerHashtable *table, void 
         free(pEntry);
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, *table);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, *table);
 }
 
 static int VendorFromPointer(__GLXvendorPointerHashtable *table, void *ptr,
@@ -913,7 +913,7 @@ static int VendorFromPointer(__GLXvendorPointerHashtable *table, void *ptr,
 
     __glXThreadInitialize();
 
-    LKDHASH_RDLOCK(__glXPthreadFuncs, *table);
+    LKDHASH_RDLOCK(__glvndPthreadFuncs, *table);
 
     HASH_FIND_PTR(_LH(*table), &ptr, pEntry);
 
@@ -921,7 +921,7 @@ static int VendorFromPointer(__GLXvendorPointerHashtable *table, void *ptr,
         vendor = pEntry->vendor;
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, *table);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, *table);
 
     if (retVendor != NULL) {
         *retVendor = vendor;
@@ -1005,7 +1005,7 @@ static void AddVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid
         return;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, dpyInfo->xidVendorHash);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, dpyInfo->xidVendorHash);
 
     HASH_FIND(hh, _LH(dpyInfo->xidVendorHash), &xid, sizeof(xid), pEntry);
 
@@ -1020,7 +1020,7 @@ static void AddVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid
         assert(pEntry->vendor == vendor);
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidVendorHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, dpyInfo->xidVendorHash);
 }
 
 
@@ -1032,7 +1032,7 @@ static void RemoveVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID 
         return;
     }
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, dpyInfo->xidVendorHash);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, dpyInfo->xidVendorHash);
 
     HASH_FIND(hh, _LH(dpyInfo->xidVendorHash), &xid, sizeof(xid), pEntry);
 
@@ -1041,7 +1041,7 @@ static void RemoveVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID 
         free(pEntry);
     }
 
-    LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidVendorHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, dpyInfo->xidVendorHash);
 }
 
 
@@ -1051,15 +1051,15 @@ static void VendorFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid,
     __GLXvendorXIDMappingHash *pEntry;
     __GLXvendorInfo *vendor = NULL;
 
-    LKDHASH_RDLOCK(__glXPthreadFuncs, dpyInfo->xidVendorHash);
+    LKDHASH_RDLOCK(__glvndPthreadFuncs, dpyInfo->xidVendorHash);
 
     HASH_FIND(hh, _LH(dpyInfo->xidVendorHash), &xid, sizeof(xid), pEntry);
 
     if (pEntry) {
         vendor = pEntry->vendor;
-        LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidVendorHash);
+        LKDHASH_UNLOCK(__glvndPthreadFuncs, dpyInfo->xidVendorHash);
     } else {
-        LKDHASH_UNLOCK(__glXPthreadFuncs, dpyInfo->xidVendorHash);
+        LKDHASH_UNLOCK(__glvndPthreadFuncs, dpyInfo->xidVendorHash);
 
         if (dpyInfo->x11glvndSupported) {
             int screen = XGLVQueryXIDScreenMapping(dpy, xid);
@@ -1134,40 +1134,40 @@ void __glXMappingTeardown(Bool doReset)
          * tries using pointers/XIDs that were created in the parent).  Just
          * reset the corresponding locks.
          */
-        __glXPthreadFuncs.rwlock_init(&__glXDispatchIndexHash.lock, NULL);
-        __glXPthreadFuncs.rwlock_init(&contextHashtable.lock, NULL);
-        __glXPthreadFuncs.rwlock_init(&fbconfigHashtable.lock, NULL);
-        __glXPthreadFuncs.rwlock_init(&__glXVendorNameHash.lock, NULL);
-        __glXPthreadFuncs.rwlock_init(&__glXDisplayInfoHash.lock, NULL);
+        __glvndPthreadFuncs.rwlock_init(&__glXDispatchIndexHash.lock, NULL);
+        __glvndPthreadFuncs.rwlock_init(&contextHashtable.lock, NULL);
+        __glvndPthreadFuncs.rwlock_init(&fbconfigHashtable.lock, NULL);
+        __glvndPthreadFuncs.rwlock_init(&__glXVendorNameHash.lock, NULL);
+        __glvndPthreadFuncs.rwlock_init(&__glXDisplayInfoHash.lock, NULL);
 
         HASH_ITER(hh, _LH(__glXDisplayInfoHash), dpyInfoEntry, dpyInfoTmp) {
-            __glXPthreadFuncs.rwlock_init(&dpyInfoEntry->info.xidVendorHash.lock, NULL);
-            __glXPthreadFuncs.rwlock_init(&dpyInfoEntry->info.vendorLock, NULL);
+            __glvndPthreadFuncs.rwlock_init(&dpyInfoEntry->info.xidVendorHash.lock, NULL);
+            __glvndPthreadFuncs.rwlock_init(&dpyInfoEntry->info.vendorLock, NULL);
         }
     } else {
         /* Tear down all hashtables used in this file */
-        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdispatchIndexHash,
+        LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXdispatchIndexHash,
                          __glXDispatchIndexHash, CleanupDispatchIndexEntry,
                          NULL, False);
 
-        LKDHASH_WRLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+        LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXDispatchIndexHash);
         __glXNextUnusedHashIndex = 0;
-        LKDHASH_UNLOCK(__glXPthreadFuncs, __glXDispatchIndexHash);
+        LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXDispatchIndexHash);
 
-        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorPointerMappingHash,
+        LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXvendorPointerMappingHash,
                          contextHashtable, NULL, NULL, False);
 
-        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorPointerMappingHash,
+        LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXvendorPointerMappingHash,
                          fbconfigHashtable, NULL, NULL, False);
 
-        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXdisplayInfoHash,
+        LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXdisplayInfoHash,
                          __glXDisplayInfoHash, CleanupDisplayInfoEntry,
                          NULL, False);
         /*
          * This implicitly unloads vendor libraries that were loaded when
          * they were added to this hashtable.
          */
-        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXvendorNameHash,
+        LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXvendorNameHash,
                          __glXVendorNameHash, CleanupVendorNameEntry,
                          NULL, False);
 

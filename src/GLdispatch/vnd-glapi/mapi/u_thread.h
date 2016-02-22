@@ -53,17 +53,15 @@
 extern "C" {
 #endif
 
-extern GLVNDPthreadFuncs pthreadFuncs;
-
 typedef glvnd_mutex_t u_mutex;
 
 #define u_mutex_declare_static(name) \
    static u_mutex name = GLVND_MUTEX_INITIALIZER
 
-#define u_mutex_init(name)    pthreadFuncs.mutex_init(&(name), NULL)
-#define u_mutex_destroy(name) pthreadFuncs.mutex_destroy(&(name))
-#define u_mutex_lock(name)    (void) pthreadFuncs.mutex_lock(&(name))
-#define u_mutex_unlock(name)  (void) pthreadFuncs.mutex_unlock(&(name))
+#define u_mutex_init(name)    __glvndPthreadFuncs.mutex_init(&(name), NULL)
+#define u_mutex_destroy(name) __glvndPthreadFuncs.mutex_destroy(&(name))
+#define u_mutex_lock(name)    (void) __glvndPthreadFuncs.mutex_lock(&(name))
+#define u_mutex_unlock(name)  (void) __glvndPthreadFuncs.mutex_unlock(&(name))
 
 #ifdef __cplusplus
 }

@@ -27,9 +27,6 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
-/* For RTLD_DEFAULT on x86 systems */
-#define _GNU_SOURCE 1
-
 #include <X11/Xlib.h>
 #include <X11/Xlibint.h>
 #include <X11/Xproto.h>
@@ -56,8 +53,6 @@
 #define GLX_MAJOR_VERSION 1
 #define GLX_MINOR_VERSION 4
 #define GLX_VERSION_STRING "1.4"
-
-GLVNDPthreadFuncs __glXPthreadFuncs;
 
 static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
 
@@ -504,13 +499,13 @@ void DisplayClosed(Display *dpy)
         // Clear out the current context, but don't call into the vendor
         // library or do anything that might require a valid display.
         __glDispatchLoseCurrent();
-        __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
+        __glvndPthreadFuncs.mutex_lock(&currentContextHashLock);
         UpdateCurrentContext(NULL, apiState->currentContext);
-        __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+        __glvndPthreadFuncs.mutex_unlock(&currentContextHashLock);
         DestroyAPIState(apiState);
     }
 
-    __glXPthreadFuncs.mutex_lock(&currentAPIStateListMutex);
+    __glvndPthreadFuncs.mutex_lock(&currentAPIStateListMutex);
     glvnd_list_for_each_entry(apiState, &currentAPIStateList, entry) {
         /*
          * Stub out any references to this display in any other API states.
@@ -519,7 +514,7 @@ void DisplayClosed(Display *dpy)
             apiState->currentDisplay = NULL;
         }
     }
-    __glXPthreadFuncs.mutex_unlock(&currentAPIStateListMutex);
+    __glvndPthreadFuncs.mutex_unlock(&currentAPIStateListMutex);
 }
 
 static void ThreadDestroyed(__GLdispatchAPIState *apiState)
@@ -530,9 +525,9 @@ static void ThreadDestroyed(__GLdispatchAPIState *apiState)
      * If a GLX context is current in this thread, remove it from the
      * current context hash before destroying the thread.
      */
-    __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
+    __glvndPthreadFuncs.mutex_lock(&currentContextHashLock);
     UpdateCurrentContext(NULL, glxState->currentContext);
-    __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+    __glvndPthreadFuncs.mutex_unlock(&currentContextHashLock);
 
     // Free the API state struct.
     DestroyAPIState(glxState);
@@ -548,9 +543,9 @@ static __GLXAPIState *CreateAPIState(__GLXvendorInfo *vendor)
     apiState->glas.threadDestroyedCallback = ThreadDestroyed;
     apiState->currentVendor = vendor;
 
-    __glXPthreadFuncs.mutex_lock(&currentAPIStateListMutex);
+    __glvndPthreadFuncs.mutex_lock(&currentAPIStateListMutex);
     glvnd_list_add(&apiState->entry, &currentAPIStateList);
-    __glXPthreadFuncs.mutex_unlock(&currentAPIStateListMutex);
+    __glvndPthreadFuncs.mutex_unlock(&currentAPIStateListMutex);
 
     return apiState;
 }
@@ -558,9 +553,9 @@ static __GLXAPIState *CreateAPIState(__GLXvendorInfo *vendor)
 static void DestroyAPIState(__GLXAPIState *apiState)
 {
     // Free the API state struct.
-    __glXPthreadFuncs.mutex_lock(&currentAPIStateListMutex);
+    __glvndPthreadFuncs.mutex_lock(&currentAPIStateListMutex);
     glvnd_list_del(&apiState->entry);
-    __glXPthreadFuncs.mutex_unlock(&currentAPIStateListMutex);
+    __glvndPthreadFuncs.mutex_unlock(&currentAPIStateListMutex);
 
     free(apiState);
 }
@@ -574,7 +569,7 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
 {
     Bool canUnmap = True;
     __GLXcurrentContextHash *pEntry = NULL;
-    __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
+    __glvndPthreadFuncs.mutex_lock(&currentContextHashLock);
 
     HASH_FIND(hh, currentContextHash, &ctx, sizeof(ctx), pEntry);
 
@@ -591,7 +586,7 @@ void __glXNotifyContextDestroyed(GLXContext ctx)
         __glXRemoveVendorContextMapping(NULL, ctx);
     }
 
-    __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+    __glvndPthreadFuncs.mutex_unlock(&currentContextHashLock);
 
 }
 
@@ -920,11 +915,11 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
     }
 
 
-    __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
+    __glvndPthreadFuncs.mutex_lock(&currentContextHashLock);
 
     if (context != NULL) {
         if (IsContextCurrentToAnyOtherThread(context)) {
-            __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+            __glvndPthreadFuncs.mutex_unlock(&currentContextHashLock);
             NotifyXError(dpy, BadAccess, 0, callerOpcode, True, oldVendor);
             return False;
         }
@@ -937,7 +932,7 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
              * context again.  This is incorrect application behavior, but we should
              * attempt to handle this failure gracefully.
              */
-            __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+            __glvndPthreadFuncs.mutex_unlock(&currentContextHashLock);
             NotifyXError(dpy, GLXBadContext, 0, callerOpcode, False, oldVendor);
             return False;
         }
@@ -1004,7 +999,7 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
         }
     }
 
-    __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+    __glvndPthreadFuncs.mutex_unlock(&currentContextHashLock);
     return ret;
 }
 
@@ -1336,7 +1331,7 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
         return NULL;
     }
 
-    __glXPthreadFuncs.mutex_lock(&clientStringLock);
+    __glvndPthreadFuncs.mutex_lock(&clientStringLock);
 
     if (dpyInfo->clientStrings[index] != NULL) {
         goto done;
@@ -1374,7 +1369,7 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
     }
 
 done:
-    __glXPthreadFuncs.mutex_unlock(&clientStringLock);
+    __glvndPthreadFuncs.mutex_unlock(&clientStringLock);
     if (vendorStrings != NULL) {
         free(vendorStrings);
     }
@@ -1653,7 +1648,7 @@ void cacheInitializeOnce(void)
         LOCAL_FUNC_TABLE_ENTRY(glXFreeContextEXT)
     };
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
 
     // Initialize the hash table with our locally-exported functions
 
@@ -1669,7 +1664,7 @@ void cacheInitializeOnce(void)
         HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
                         strlen((const char *)pEntry->procName), pEntry);
     }
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
 
 }
 
@@ -1691,12 +1686,12 @@ static __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
     static glvnd_once_t cacheInitializeOnceControl = GLVND_ONCE_INIT;
     __GLXprocAddressHash *pEntry = NULL;
 
-    __glXPthreadFuncs.once(&cacheInitializeOnceControl, cacheInitializeOnce);
+    __glvndPthreadFuncs.once(&cacheInitializeOnceControl, cacheInitializeOnce);
 
-    LKDHASH_RDLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_RDLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
     HASH_FIND(hh, _LH(__glXProcAddressHash), procName,
               strlen((const char *)procName), pEntry);
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
 
     if (pEntry) {
         return pEntry->addr;
@@ -1711,7 +1706,7 @@ PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
     __GLXextFuncPtr func;
 
     if (mutex != NULL) {
-        __glXPthreadFuncs.mutex_lock(mutex);
+        __glvndPthreadFuncs.mutex_lock(mutex);
     }
 
     func = *ptr;
@@ -1721,7 +1716,7 @@ PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
     }
 
     if (mutex != NULL) {
-        __glXPthreadFuncs.mutex_unlock(mutex);
+        __glvndPthreadFuncs.mutex_unlock(mutex);
     }
     return func;
 }
@@ -1746,11 +1741,11 @@ static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
 
     pEntry->addr = addr;
 
-    LKDHASH_WRLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
     HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
                     strlen((const char*)pEntry->procName),
                     pEntry);
-    LKDHASH_UNLOCK(__glXPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
 }
 
 PUBLIC __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
@@ -1927,13 +1922,13 @@ static void __glXAPITeardown(Bool doReset)
      * XXX: This will leave dangling screen-context mappings, but they will be
      * cleared separately in __glXMappingTeardown().
      */
-    __glXPthreadFuncs.mutex_lock(&currentContextHashLock);
+    __glvndPthreadFuncs.mutex_lock(&currentContextHashLock);
     HASH_ITER(hh, currentContextHash, currContext, currContextTemp) {
         HASH_DEL(currentContextHash, currContext);
         free(currContext);
     }
     assert(currentContextHash == NULL);
-    __glXPthreadFuncs.mutex_unlock(&currentContextHashLock);
+    __glvndPthreadFuncs.mutex_unlock(&currentContextHashLock);
 
     glvnd_list_for_each_entry_safe(apiState, apiStateTemp, &currentAPIStateList, entry) {
         glvnd_list_del(&apiState->entry);
@@ -1945,10 +1940,10 @@ static void __glXAPITeardown(Bool doReset)
          * XXX: We should be able to get away with just resetting the proc address
          * hash lock, and not throwing away cached addresses.
          */
-        __glXPthreadFuncs.rwlock_init(&__glXProcAddressHash.lock, NULL);
-        __glXPthreadFuncs.mutex_init(&currentAPIStateListMutex, NULL);
+        __glvndPthreadFuncs.rwlock_init(&__glXProcAddressHash.lock, NULL);
+        __glvndPthreadFuncs.mutex_init(&currentAPIStateListMutex, NULL);
     } else {
-        LKDHASH_TEARDOWN(__glXPthreadFuncs, __GLXprocAddressHash,
+        LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXprocAddressHash,
                          __glXProcAddressHash, CleanupProcAddressEntry,
                          NULL, False);
     }
@@ -1981,7 +1976,7 @@ void _init(void)
 
     /* Initialize GLdispatch; this will also initialize our pthreads imports */
     __glDispatchInit();
-    glvndSetupPthreads(RTLD_DEFAULT, &__glXPthreadFuncs);
+    glvndSetupPthreads();
 
     glvnd_list_init(&currentAPIStateList);
 
@@ -1993,10 +1988,10 @@ void _init(void)
      * will try to lock the mutex again so that it can clean up the current
      * context list.
      */
-    __glXPthreadFuncs.mutexattr_init(&mutexAttribs);
-    __glXPthreadFuncs.mutexattr_settype(&mutexAttribs, PTHREAD_MUTEX_RECURSIVE);
-    __glXPthreadFuncs.mutex_init(&currentContextHashLock, &mutexAttribs);
-    __glXPthreadFuncs.mutexattr_destroy(&mutexAttribs);
+    __glvndPthreadFuncs.mutexattr_init(&mutexAttribs);
+    __glvndPthreadFuncs.mutexattr_settype(&mutexAttribs, PTHREAD_MUTEX_RECURSIVE);
+    __glvndPthreadFuncs.mutex_init(&currentContextHashLock, &mutexAttribs);
+    __glvndPthreadFuncs.mutexattr_destroy(&mutexAttribs);
 
     {
         /*

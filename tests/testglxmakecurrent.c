@@ -278,8 +278,6 @@ fail:
     return (void *)ret;
 }
 
-GLVNDPthreadFuncs pImp;
-
 int main(int argc, char **argv)
 {
     /*
@@ -301,14 +299,14 @@ int main(int argc, char **argv)
 
         XInitThreads();
 
-        glvndSetupPthreads(RTLD_DEFAULT, &pImp);
+        glvndSetupPthreads();
 
-        if (pImp.is_singlethreaded) {
+        if (__glvndPthreadFuncs.is_singlethreaded) {
             exit(1);
         }
 
         for (i = 0; i < t.threads; i++) {
-            if (pImp.create(&threads[i], NULL, MakeCurrentThread, (void *)&t)
+            if (__glvndPthreadFuncs.create(&threads[i], NULL, MakeCurrentThread, (void *)&t)
                 != 0) {
                 printError("Error in pthread_create(): %s\n", strerror(errno));
                 exit(1);
@@ -316,7 +314,7 @@ int main(int argc, char **argv)
         }
 
         for (i = 0; i < t.threads; i++) {
-            if (pImp.join(threads[i], &ret) != 0) {
+            if (__glvndPthreadFuncs.join(threads[i], &ret) != 0) {
                 printError("Error in pthread_join(): %s\n", strerror(errno));
                 exit(1);
             }

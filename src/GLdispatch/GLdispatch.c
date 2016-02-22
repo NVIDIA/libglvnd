@@ -27,8 +27,6 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
-#define _GNU_SOURCE 1
-
 #include <string.h>
 #include <pthread.h>
 #include <dlfcn.h>
@@ -51,11 +49,6 @@ static struct glvnd_list currentDispatchList;
  * Number of clients using GLdispatch.
  */
 static int clientRefcount;
-
-/*
- * Threading imports used for locking.
- */
-GLVNDPthreadFuncs pthreadFuncs;
 
 /*
  * The number of current contexts that GLdispatch is aware of
@@ -174,14 +167,14 @@ struct {
 
 static inline void LockDispatch(void)
 {
-    pthreadFuncs.mutex_lock(&dispatchLock.lock);
+    __glvndPthreadFuncs.mutex_lock(&dispatchLock.lock);
     dispatchLock.isLocked = 1;
 }
 
 static inline void UnlockDispatch(void)
 {
     dispatchLock.isLocked = 0;
-    pthreadFuncs.mutex_unlock(&dispatchLock.lock);
+    __glvndPthreadFuncs.mutex_unlock(&dispatchLock.lock);
 }
 
 #define CheckDispatchLocked() assert(dispatchLock.isLocked)
@@ -199,7 +192,7 @@ void _init(void)
 {
     // Here, we only initialize the pthreads imports. Everything else we'll
     // deal with in __glDispatchInit.
-    glvndSetupPthreads(RTLD_DEFAULT, &pthreadFuncs);
+    glvndSetupPthreads();
 }
 
 void __glDispatchInit(void)
@@ -209,7 +202,7 @@ void __glDispatchInit(void)
     if (clientRefcount == 0) {
         // Initialize the GLAPI layer.
         _glapi_init();
-        pthreadFuncs.key_create(&threadContextKey, ThreadDestroyed);
+        __glvndPthreadFuncs.key_create(&threadContextKey, ThreadDestroyed);
 
         glvnd_list_init(&extProcList);
         glvnd_list_init(&currentDispatchList);
@@ -726,12 +719,12 @@ PUBLIC void __glDispatchLoseCurrent(void)
 
 __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void)
 {
-    return (__GLdispatchAPIState *) pthreadFuncs.getspecific(threadContextKey);
+    return (__GLdispatchAPIState *) __glvndPthreadFuncs.getspecific(threadContextKey);
 }
 
 void SetCurrentAPIState(__GLdispatchAPIState *apiState)
 {
-    pthreadFuncs.setspecific(threadContextKey, apiState);
+    __glvndPthreadFuncs.setspecific(threadContextKey, apiState);
 }
 
 /*
@@ -742,7 +735,7 @@ void __glDispatchReset(void)
     __GLdispatchTable *cur, *tmp;
 
     /* Reset the dispatch lock */
-    pthreadFuncs.mutex_init(&dispatchLock.lock, NULL);
+    __glvndPthreadFuncs.mutex_init(&dispatchLock.lock, NULL);
     dispatchLock.isLocked = 0;
 
     LockDispatch();
@@ -797,7 +790,7 @@ void __glDispatchFini(void)
             free(curProc);
         }
 
-        pthreadFuncs.key_delete(threadContextKey);
+        __glvndPthreadFuncs.key_delete(threadContextKey);
 
         // Clean up GLAPI thread state
         _glapi_destroy();
@@ -808,7 +801,7 @@ void __glDispatchFini(void)
 
 void __glDispatchCheckMultithreaded(void)
 {
-    if (!pthreadFuncs.is_singlethreaded)
+    if (!__glvndPthreadFuncs.is_singlethreaded)
     {
         // Check to see if the current thread has a dispatch table assigned to
         // it, and if it doesn't, then plug in the no-op table.
@@ -824,10 +817,10 @@ void __glDispatchCheckMultithreaded(void)
 
         LockDispatch();
         if (!isMultiThreaded) {
-            glvnd_thread_t tid = pthreadFuncs.self();
-            if (pthreadFuncs.equal(firstThreadId, GLVND_THREAD_NULL)) {
+            glvnd_thread_t tid = __glvndPthreadFuncs.self();
+            if (__glvndPthreadFuncs.equal(firstThreadId, GLVND_THREAD_NULL)) {
                 firstThreadId = tid;
-            } else if (!pthreadFuncs.equal(firstThreadId, tid)) {
+            } else if (!__glvndPthreadFuncs.equal(firstThreadId, tid)) {
                 isMultiThreaded = 1;
                 _glapi_set_multithread();
             }

@@ -205,8 +205,6 @@ cleanup:
     return (void *)((uintptr_t)ret);
 }
 
-GLVNDPthreadFuncs pImp;
-
 int main(int argc, char **argv)
 {
     Display *dpy;
@@ -268,19 +266,19 @@ int main(int argc, char **argv)
         void *one_ret;
 
         XInitThreads();
-        glvndSetupPthreads(RTLD_DEFAULT, &pImp);
+        glvndSetupPthreads();
 
-        if (pImp.is_singlethreaded) {
+        if (__glvndPthreadFuncs.is_singlethreaded) {
             exit(1);
         }
         for (i = 0; i < t.threads; i++) {
-            FAILIF(pImp.create(&threads[i], NULL, MakeCurrentScreenThread,
+            FAILIF(__glvndPthreadFuncs.create(&threads[i], NULL, MakeCurrentScreenThread,
                    (void *)&tArgs[i]) != 0, "Error in pthread_create(): %s\n",
                    strerror(errno));
         }
 
         for (i = 0; i < t.threads; i++) {
-            FAILIF(pImp.join(threads[i], &one_ret) != 0,
+            FAILIF(__glvndPthreadFuncs.join(threads[i], &one_ret) != 0,
                    "Error in pthread_join(): %s\n", strerror(errno));
 
             if (one_ret) {

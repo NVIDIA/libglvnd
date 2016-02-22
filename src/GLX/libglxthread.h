@@ -32,8 +32,6 @@
 
 #include "glvnd_pthread.h"
 
-extern GLVNDPthreadFuncs __glXPthreadFuncs;
-
-void __glXThreadInitialize();
+void __glXThreadInitialize(void);
 
 #endif
