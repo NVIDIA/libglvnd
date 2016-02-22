@@ -24,7 +24,6 @@
  */
 
 #include "u_current.h"
-#include "u_thread.h"
 #include <assert.h>
 
 #include "table.h"

@@ -35,9 +35,9 @@
 #include <stdint.h>
 
 #include "u_compiler.h"
-#include "u_thread.h"
 #include "u_execmem.h"
 #include "utils_misc.h"
+#include "glvnd_pthread.h"
 
 
 /*
@@ -60,7 +60,7 @@
  */
 #define EXEC_MAP_SIZE (64*4096) // DISPATCH_FUNCTION_SIZE * MAPI_TABLE_NUM_DYNAMIC
 
-u_mutex_declare_static(exec_mutex);
+static glvnd_mutex_t exec_mutex = GLVND_MUTEX_INITIALIZER;
 
 static unsigned int head = 0;
 
@@ -147,7 +147,7 @@ u_execmem_alloc(unsigned int size)
 {
    void *addr = NULL;
 
-   u_mutex_lock(exec_mutex);
+   __glvndPthreadFuncs.mutex_lock(&exec_mutex);
 
    if (!init_map())
       goto bail;
@@ -161,7 +161,7 @@ u_execmem_alloc(unsigned int size)
    head += size;
 
 bail:
-   u_mutex_unlock(exec_mutex);
+   __glvndPthreadFuncs.mutex_unlock(&exec_mutex);
 
    return addr;
 }

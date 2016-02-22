@@ -24,11 +24,11 @@
  */
 
 #include "u_current.h"
-#include "u_thread.h"
 #include <assert.h>
 
 #include "table.h"
 #include "stub.h"
+#include "glvnd_pthread.h"
 
 const void *_glapi_Current[GLAPI_NUM_CURRENT_ENTRIES]
     = {

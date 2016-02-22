@@ -50,6 +50,7 @@ AM_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/util \
+	-I$(top_srcdir)/src/util/glvnd_pthread \
 	-I$(top_srcdir)/$(MAPI_PREFIX) \
 	-I$(top_builddir)/$(MAPI_PREFIX) \
 	-I$(top_srcdir)/$(MAPI_PREFIX)/glapi \
