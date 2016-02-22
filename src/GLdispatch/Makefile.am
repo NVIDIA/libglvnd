@@ -36,7 +36,6 @@ SUBDIRS = vnd-glapi
 libGLdispatch_la_CFLAGS =  -I$(srcdir)/vnd-glapi/mapi/glapi
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util/trace
-libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util/glvnd_pthread
 libGLdispatch_la_CFLAGS += -I$(srcdir)/vnd-glapi/mapi
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/include
 
@@ -50,10 +49,11 @@ libGLdispatch_la_LDFLAGS += \
 endif
 
 libGLdispatch_la_SOURCES = \
+	$(top_srcdir)/src/util/glvnd_pthread.c \
 	GLdispatch.c
 
 libGLdispatch_la_LIBADD = vnd-glapi/libglapi.la
 libGLdispatch_la_LIBADD += ../util/trace/libtrace.la
-libGLdispatch_la_LIBADD += ../util/glvnd_pthread/libglvnd_pthread.la
+libGLdispatch_la_LIBADD += -ldl
 
 EXTRA_DIST = export_list.sym

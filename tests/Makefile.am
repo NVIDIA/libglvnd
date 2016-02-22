@@ -63,6 +63,7 @@ check_PROGRAMS = \
 	testglxnscreens
 
 testglxnscreens_SOURCES = \
+	$(top_srcdir)/src/util/glvnd_pthread.c \
 	testglxnscreens.c \
 	test_utils.c
 
@@ -73,13 +74,13 @@ testglxnscreens_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR) $(AM_CFLAGS)
 testglxnscreens_LDADD = -lX11
 testglxnscreens_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxnscreens_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testglxnscreens_LDADD += $(top_builddir)/src/util/glvnd_pthread/libglvnd_pthread.la
 testglxnscreens_LDADD += $(top_builddir)/src/util/trace/libtrace.la
-testglxnscreens_LDADD += -lX11 $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
+testglxnscreens_LDADD += -lX11 -ldl $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
 
 TESTGLXMAKECURRENT_SOURCES_COMMON = \
+	$(top_srcdir)/src/util/glvnd_pthread.c \
 	testglxmakecurrent.c \
 	test_utils.c
 
@@ -89,9 +90,8 @@ testglxmakecurrent_SOURCES = \
 testglxmakecurrent_oldlink_SOURCES = \
 	$(TESTGLXMAKECURRENT_SOURCES_COMMON)
 
-testglxmakecurrent_oldlink_LDADD = -lX11
+testglxmakecurrent_oldlink_LDADD = -lX11 -ldl
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
-testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/glvnd_pthread/libglvnd_pthread.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 
 testx11glvndproto_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR)
@@ -110,10 +110,9 @@ AM_CFLAGS =                                  \
 testglxgetprocaddress_LDADD = -lX11
 testglxgetprocaddress_LDADD += $(top_builddir)/src/GLX/libGLX.la
 
-testglxmakecurrent_LDADD = -lX11
+testglxmakecurrent_LDADD = -lX11 -ldl
 testglxmakecurrent_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testglxmakecurrent_LDADD += $(top_builddir)/src/util/glvnd_pthread/libglvnd_pthread.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 
 testglxgetclientstr_LDADD = -lX11
