@@ -1648,7 +1648,7 @@ void cacheInitializeOnce(void)
         LOCAL_FUNC_TABLE_ENTRY(glXFreeContextEXT)
     };
 
-    LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_WRLOCK(__glXProcAddressHash);
 
     // Initialize the hash table with our locally-exported functions
 
@@ -1664,7 +1664,7 @@ void cacheInitializeOnce(void)
         HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
                         strlen((const char *)pEntry->procName), pEntry);
     }
-    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_UNLOCK(__glXProcAddressHash);
 
 }
 
@@ -1688,10 +1688,10 @@ static __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
 
     __glvndPthreadFuncs.once(&cacheInitializeOnceControl, cacheInitializeOnce);
 
-    LKDHASH_RDLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_RDLOCK(__glXProcAddressHash);
     HASH_FIND(hh, _LH(__glXProcAddressHash), procName,
               strlen((const char *)procName), pEntry);
-    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_UNLOCK(__glXProcAddressHash);
 
     if (pEntry) {
         return pEntry->addr;
@@ -1741,11 +1741,11 @@ static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
 
     pEntry->addr = addr;
 
-    LKDHASH_WRLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_WRLOCK(__glXProcAddressHash);
     HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
                     strlen((const char*)pEntry->procName),
                     pEntry);
-    LKDHASH_UNLOCK(__glvndPthreadFuncs, __glXProcAddressHash);
+    LKDHASH_UNLOCK(__glXProcAddressHash);
 }
 
 PUBLIC __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
@@ -1943,7 +1943,7 @@ static void __glXAPITeardown(Bool doReset)
         __glvndPthreadFuncs.rwlock_init(&__glXProcAddressHash.lock, NULL);
         __glvndPthreadFuncs.mutex_init(&currentAPIStateListMutex, NULL);
     } else {
-        LKDHASH_TEARDOWN(__glvndPthreadFuncs, __GLXprocAddressHash,
+        LKDHASH_TEARDOWN(__GLXprocAddressHash,
                          __glXProcAddressHash, CleanupProcAddressEntry,
                          NULL, False);
     }
