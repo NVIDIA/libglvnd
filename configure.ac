@@ -145,14 +145,9 @@ AC_PATH_X
 AC_CHECK_HEADERS([fcntl.h inttypes.h stddef.h stdlib.h string.h sys/param.h sys/time.h unistd.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
-AC_C_INLINE
 AC_C_TYPEOF
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
-AC_TYPE_SIZE_T
-AC_TYPE_UINT16_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT8_T
 AC_CHECK_TYPES([ptrdiff_t])
 
 dnl Checks for library functions.
