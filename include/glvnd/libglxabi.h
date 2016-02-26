@@ -151,13 +151,12 @@ typedef struct __GLXapiExportsRec {
 
     /************************************************************************
      * These routines are used by vendor dispatch functions to look up
-     * and add mappings between various objects and screens.
+     * and add mappings between various objects and vendors.
      ************************************************************************/
 
     /*!
-     * Records the screen number and vendor for a context. The screen and
-     * vendor must be the ones returned for the XVisualInfo or GLXFBConfig that
-     * the context is created from.
+     * Records the vendor for a context. The vendor must be the one returned
+     * for the XVisualInfo or GLXFBConfig that the context is created from.
      *
      * \param dpy The display pointer.
      * \param context The context handle.
@@ -173,27 +172,25 @@ typedef struct __GLXapiExportsRec {
     void (*removeVendorContextMapping)(Display *dpy, GLXContext context);
 
     /*!
-     * Looks up the screen and vendor for a context.
+     * Looks up the vendor for a context.
      *
-     * If no mapping is found, then \p retScreen will be set to -1, and
-     * \p retVendor and \p retDisplay will be set to NULL.
-     *
-     * \p retScreen, \p retVendor, and \p retDisplay may be NULL if the screen,
-     * vendor, or display are not required.
+     * If no mapping is found, then this function will return \c NULL. No
+     * errors are raised, so the dispatch function must raise any appropriate X
+     * errors.
      *
      * Note that this function does not take a display connection, since
      * there are cases (e.g., glXGetContextIDEXT) that take a GLXContext but
      * not a display.
      *
      * \param context The context to look up.
-     * \param[out] retVendor Returns the vendor.
-     * \return Zero if a match was found, or non-zero if it was not.
+     * \return The vendor for the context, or NULL if no matching context was
+     * found.
      */
-    int (*vendorFromContext)(GLXContext context, __GLXvendorInfo **retVendor);
+    __GLXvendorInfo * (*vendorFromContext)(GLXContext context);
 
     int (*addVendorFBConfigMapping)(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
     void (*removeVendorFBConfigMapping)(Display *dpy, GLXFBConfig config);
-    int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
+    __GLXvendorInfo * (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config);
 
     int (*addVendorDrawableMapping)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
     void (*removeVendorDrawableMapping)(Display *dpy, GLXDrawable drawable);
@@ -211,7 +208,7 @@ typedef struct __GLXapiExportsRec {
      * All of this should be opaque to a dispatch function, since the only
      * thing that matters is finding out which vendor to dispatch to.
      */
-    int (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
+    __GLXvendorInfo * (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable);
 
 } __GLXapiExports;
 

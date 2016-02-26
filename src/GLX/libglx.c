@@ -163,7 +163,7 @@ static __GLXvendorInfo *CommonDispatchDrawable(Display *dpy, GLXDrawable draw,
 
     if (draw != None) {
         __glXThreadInitialize();
-        __glXVendorFromDrawable(dpy, draw, &vendor);
+        vendor = __glXVendorFromDrawable(dpy, draw);
     }
     if (vendor == NULL) {
         __glXSendError(dpy, errorCode, draw, minorCode, coreX11error);
@@ -178,7 +178,7 @@ static __GLXvendorInfo *CommonDispatchContext(Display *dpy, GLXContext context,
 
     if (context != NULL) {
         __glXThreadInitialize();
-        __glXVendorFromContext(context, &vendor);
+        vendor = __glXVendorFromContext(context);
     }
     if (vendor == NULL) {
         __glXSendError(dpy, GLXBadContext, 0, minorCode, False);
@@ -193,7 +193,7 @@ static __GLXvendorInfo *CommonDispatchFBConfig(Display *dpy, GLXFBConfig config,
 
     if (config != NULL) {
         __glXThreadInitialize();
-        __glXVendorFromFBConfig(dpy, config, &vendor);
+        vendor = __glXVendorFromFBConfig(dpy, config);
     }
     if (vendor == NULL) {
         __glXSendError(dpy, GLXBadFBConfig, 0, minorCode, False);
@@ -432,7 +432,7 @@ static void glXFreeContextEXT(Display *dpy, GLXContext context)
 
     __glXThreadInitialize();
 
-    __glXVendorFromContext(context, &vendor);
+    vendor = __glXVendorFromContext(context);
     if (vendor != NULL && vendor->staticDispatch.freeContextEXT != NULL) {
         __glXRemoveVendorContextMapping(dpy, context);
         vendor->staticDispatch.freeContextEXT(dpy, context);
@@ -677,7 +677,7 @@ int __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorIn
     return 0;
 }
 
-int __glXVendorFromContext(GLXContext context, __GLXvendorInfo **retVendor)
+__GLXvendorInfo *__glXVendorFromContext(GLXContext context)
 {
     __GLXcontextInfo *ctxInfo;
     __GLXvendorInfo *vendor = NULL;
@@ -689,10 +689,7 @@ int __glXVendorFromContext(GLXContext context, __GLXvendorInfo **retVendor)
     }
     __glvndPthreadFuncs.mutex_unlock(&glxContextHashLock);
 
-    if (retVendor != NULL) {
-        *retVendor = vendor;
-    }
-    return (vendor != NULL ? 0 : -1);
+    return vendor;
 }
 
 static void FreeContextInfo(__GLXcontextInfo *ctx)

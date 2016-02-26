@@ -849,7 +849,7 @@ void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config)
     LKDHASH_UNLOCK(fbconfigHashtable);
 }
 
-int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor)
+__GLXvendorInfo *__glXVendorFromFBConfig(Display *dpy, GLXFBConfig config)
 {
     __GLXvendorConfigMappingHash *pEntry;
     __GLXvendorInfo *vendor = NULL;
@@ -866,10 +866,7 @@ int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **
 
     LKDHASH_UNLOCK(fbconfigHashtable);
 
-    if (retVendor != NULL) {
-        *retVendor = vendor;
-    }
-    return (vendor != NULL ? 0 : -1);
+    return vendor;
 }
 
 
@@ -995,7 +992,7 @@ void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable)
 }
 
 
-int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor)
+__GLXvendorInfo *__glXVendorFromDrawable(Display *dpy, GLXDrawable drawable)
 {
     __glXThreadInitialize();
 
@@ -1010,10 +1007,7 @@ int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo 
         }
     }
 
-    if (retVendor != NULL) {
-        *retVendor = vendor;
-    }
-    return (vendor != NULL ? 0 : -1);
+    return vendor;
 }
 
 /*!

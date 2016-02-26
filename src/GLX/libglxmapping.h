@@ -100,15 +100,15 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
  */
 int __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
 void __glXRemoveVendorContextMapping(Display *dpy, GLXContext context);
-int __glXVendorFromContext(GLXContext context, __GLXvendorInfo **retVendor);
+__GLXvendorInfo *__glXVendorFromContext(GLXContext context);
 
 int __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
 void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config);
-int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
+__GLXvendorInfo *__glXVendorFromFBConfig(Display *dpy, GLXFBConfig config);
 
 int __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
 void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable);
-int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
+__GLXvendorInfo *__glXVendorFromDrawable(Display *dpy, GLXDrawable drawable);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
 __GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName);
