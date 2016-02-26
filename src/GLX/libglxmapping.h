@@ -98,11 +98,11 @@ __GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
  * Various functions to manage mappings used to determine the screen
  * of a particular GLX call.
  */
-void __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
+int __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
 void __glXRemoveVendorContextMapping(Display *dpy, GLXContext context);
 int __glXVendorFromContext(GLXContext context, __GLXvendorInfo **retVendor);
 
-void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
+int __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
 void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config);
 int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
 
@@ -110,7 +110,7 @@ void __glXAddScreenVisualMapping(Display *dpy, const XVisualInfo *visual, __GLXv
 void __glXRemoveScreenVisualMapping(Display *dpy, const XVisualInfo *visual);
 int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
 
-void __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
+int __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
 void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable);
 int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
 

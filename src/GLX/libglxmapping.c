@@ -794,16 +794,16 @@ typedef struct {
 
 static DEFINE_LKDHASH(__GLXvendorConfigMappingHash, fbconfigHashtable);
 
-void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor)
+int __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor)
 {
     __GLXvendorConfigMappingHash *pEntry;
 
     if (config == NULL) {
-        return;
+        return 0;
     }
 
     if (vendor == NULL) {
-        return;
+        return -1;
     }
 
     LKDHASH_WRLOCK(fbconfigHashtable);
@@ -812,6 +812,10 @@ void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendor
 
     if (pEntry == NULL) {
         pEntry = malloc(sizeof(*pEntry));
+        if (pEntry == NULL) {
+            LKDHASH_UNLOCK(fbconfigHashtable);
+            return -1;
+        }
         pEntry->config = config;
         pEntry->vendor = vendor;
         HASH_ADD_PTR(_LH(fbconfigHashtable), config, pEntry);
@@ -819,10 +823,14 @@ void __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendor
         // Any GLXContext or GLXFBConfig handles must be unique to a single
         // vendor at a time. If we get two different vendors, then there's
         // either a bug in libGLX or in at least one of the vendor libraries.
-        assert(pEntry->vendor == vendor);
+        if (pEntry->vendor != vendor) {
+            LKDHASH_UNLOCK(fbconfigHashtable);
+            return -1;
+        }
     }
 
     LKDHASH_UNLOCK(fbconfigHashtable);
+    return 0;
 }
 
 void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config)
@@ -894,16 +902,16 @@ int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorIn
  */
 
 
-static void AddVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid, __GLXvendorInfo *vendor)
+static int AddVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid, __GLXvendorInfo *vendor)
 {
     __GLXvendorXIDMappingHash *pEntry = NULL;
 
     if (xid == None) {
-        return;
+        return 0;
     }
 
     if (vendor == NULL) {
-        return;
+        return -1;
     }
 
     LKDHASH_WRLOCK(dpyInfo->xidVendorHash);
@@ -912,16 +920,24 @@ static void AddVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid
 
     if (pEntry == NULL) {
         pEntry = malloc(sizeof(*pEntry));
+        if (pEntry == NULL) {
+            LKDHASH_UNLOCK(dpyInfo->xidVendorHash);
+            return -1;
+        }
         pEntry->xid = xid;
         pEntry->vendor = vendor;
         HASH_ADD(hh, _LH(dpyInfo->xidVendorHash), xid, sizeof(xid), pEntry);
     } else {
         // Like GLXContext and GLXFBConfig handles, any GLXDrawables must map
         // to a single vendor library.
-        assert(pEntry->vendor == vendor);
+        if (pEntry->vendor != vendor) {
+            LKDHASH_UNLOCK(dpyInfo->xidVendorHash);
+            return -1;
+        }
     }
 
     LKDHASH_UNLOCK(dpyInfo->xidVendorHash);
+    return 0;
 }
 
 
@@ -967,6 +983,8 @@ static void VendorFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid,
             if (screen >= 0 && screen < ScreenCount(dpy)) {
                 vendor = __glXLookupVendorByScreen(dpy, screen);
                 if (vendor != NULL) {
+                    // Note that if this fails, it's not necessarily a problem.
+                    // We can just query it again next time.
                     AddVendorXIDMapping(dpy, dpyInfo, xid, vendor);
                 }
             }
@@ -979,11 +997,13 @@ static void VendorFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid,
 }
 
 
-void __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor)
+int __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor)
 {
     __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
     if (dpyInfo != NULL) {
-        AddVendorXIDMapping(dpy, dpyInfo, drawable, vendor);
+        return AddVendorXIDMapping(dpy, dpyInfo, drawable, vendor);
+    } else {
+        return -1;
     }
 }
 

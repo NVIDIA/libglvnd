@@ -158,8 +158,13 @@ typedef struct __GLXapiExportsRec {
      * Records the screen number and vendor for a context. The screen and
      * vendor must be the ones returned for the XVisualInfo or GLXFBConfig that
      * the context is created from.
+     *
+     * \param dpy The display pointer.
+     * \param context The context handle.
+     * \param vendor The vendor that created the context.
+     * \return Zero on success, non-zero on error.
      */
-    void (*addVendorContextMapping)(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
+    int (*addVendorContextMapping)(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
 
     /*!
      * Removes a mapping from context to vendor. The context must have been
@@ -186,7 +191,7 @@ typedef struct __GLXapiExportsRec {
      */
     int (*vendorFromContext)(GLXContext context, __GLXvendorInfo **retVendor);
 
-    void (*addVendorFBConfigMapping)(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
+    int (*addVendorFBConfigMapping)(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
     void (*removeVendorFBConfigMapping)(Display *dpy, GLXFBConfig config);
     int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
 
@@ -194,7 +199,7 @@ typedef struct __GLXapiExportsRec {
     void (*removeScreenVisualMapping)(Display *dpy, const XVisualInfo *visual);
     int (*vendorFromVisual)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
 
-    void (*addVendorDrawableMapping)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
+    int (*addVendorDrawableMapping)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
     void (*removeVendorDrawableMapping)(Display *dpy, GLXDrawable drawable);
 
     /*!
