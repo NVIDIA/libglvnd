@@ -106,10 +106,6 @@ int __glXAddVendorFBConfigMapping(Display *dpy, GLXFBConfig config, __GLXvendorI
 void __glXRemoveVendorFBConfigMapping(Display *dpy, GLXFBConfig config);
 int __glXVendorFromFBConfig(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
 
-void __glXAddScreenVisualMapping(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor);
-void __glXRemoveScreenVisualMapping(Display *dpy, const XVisualInfo *visual);
-int __glXVendorFromVisual(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
-
 int __glXAddVendorDrawableMapping(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
 void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable);
 int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
