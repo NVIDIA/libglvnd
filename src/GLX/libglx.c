@@ -62,13 +62,13 @@ static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
  * It's used both to keep track of which vendor owns each context and for
  * whether a context is current to any thread.
  */
-typedef struct __GLXcontextInfoRec {
+struct __GLXcontextInfoRec {
     GLXContext context;
     __GLXvendorInfo *vendor;
     int currentCount;
     Bool deleted;
     UT_hash_handle hh;
-} __GLXcontextInfo;
+};
 
 static __GLXcontextInfo *glxContextHash = NULL;
 
