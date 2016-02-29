@@ -74,7 +74,6 @@ __asm__("x86_64_current_tls:\n\t"
 extern unsigned long
 x86_64_current_tls();
 
-const int entry_type = ENTRY_X86_64_TLS;
 const int entry_stub_size = ENTRY_STUB_SIZE;
 
 void entry_generate_default_code(char *entry, int slot)

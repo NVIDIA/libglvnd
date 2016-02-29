@@ -218,12 +218,6 @@ typedef struct __GLdispatchStubPatchCallbacksRec {
     GLboolean (* getPatchOffset) (const char *name, void **writePtr, const void **execPtr);
 
     /**
-     * Returns the type of the stub functions. This is one of the
-     * __GLDISPATCH_STUB_* values.
-     */
-    int (* getStubType) (void);
-
-    /**
      * Returns the size of each stub.
      */
     int (* getStubSize) (void);
