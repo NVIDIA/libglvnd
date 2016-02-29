@@ -142,7 +142,6 @@ PKG_CHECK_MODULES([GLPROTO], [glproto])
 
 dnl Checks for header files.
 AC_PATH_X
-AC_CHECK_HEADERS([fcntl.h inttypes.h stddef.h stdlib.h string.h sys/param.h sys/time.h unistd.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_TYPEOF
