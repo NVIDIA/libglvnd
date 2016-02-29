@@ -140,9 +140,6 @@ PKG_CHECK_MODULES([XEXT], [xext])
 PKG_CHECK_MODULES([XORG], [xorg-server >= 1.11.0])
 PKG_CHECK_MODULES([GLPROTO], [glproto])
 
-dnl Checks for header files.
-AC_PATH_X
-
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_TYPEOF
 
