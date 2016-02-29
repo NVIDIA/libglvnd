@@ -149,7 +149,6 @@ AC_C_TYPEOF
 
 dnl Checks for library functions.
 AC_FUNC_STRNLEN
-AC_CHECK_FUNCS([getpagesize gettimeofday memmove memset strdup strerror])
 
 dnl TLS detection
 AC_ARG_ENABLE([tls],
