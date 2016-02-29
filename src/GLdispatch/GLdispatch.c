@@ -570,7 +570,7 @@ static int PatchEntrypoints(
         GLboolean anySuccess = GL_FALSE;
 
         glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-            if (patchCb->checkPatchSupported(stub->callbacks.getStubType(),
+            if (patchCb->isPatchSupported(stub->callbacks.getStubType(),
                         stub->callbacks.getStubSize()))
             {
                 if (stub->callbacks.startPatch()) {

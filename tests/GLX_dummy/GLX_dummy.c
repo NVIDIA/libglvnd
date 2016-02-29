@@ -671,7 +671,7 @@ static void dummyReleasePatch(void)
 
 static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 {
-    .checkPatchSupported = dummyCheckPatchSupported,
+    .isPatchSupported = dummyCheckPatchSupported,
     .initiatePatch = dummyInitiatePatch,
     .releasePatch = dummyReleasePatch,
 };
@@ -679,7 +679,7 @@ static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 
 static const __GLXapiImports dummyImports =
 {
-    .checkSupportsScreen = dummyCheckSupportsScreen,
+    .isScreenSupported = dummyCheckSupportsScreen,
     .getProcAddress = dummyGetProcAddress,
     .getDispatchAddress = dummyGetDispatchAddress,
     .setDispatchIndex = dummySetDispatchIndex,

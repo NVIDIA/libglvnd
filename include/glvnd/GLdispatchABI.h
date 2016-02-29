@@ -98,7 +98,7 @@ typedef struct __GLdispatchPatchCallbacksRec {
      * \param lookupStubOffset A callback into libglvnd to look up the address
      * of each entrypoint.
      */
-    GLboolean (* checkPatchSupported)(int type, int stubSize);
+    GLboolean (* isPatchSupported)(int type, int stubSize);
 
     /*!
      * Called by libglvnd to request that a vendor library patch its top-level

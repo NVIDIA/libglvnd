@@ -229,7 +229,7 @@ typedef struct __GLXapiImportsRec {
      * \param screen The screen number.
      * \return True if the vendor library can support this screen.
      */
-    Bool (* checkSupportsScreen) (Display *dpy, int screen);
+    Bool (* isScreenSupported) (Display *dpy, int screen);
 
     /*!
      * This retrieves the pointer to the real GLX or core GL function.
