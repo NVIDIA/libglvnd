@@ -143,9 +143,6 @@ PKG_CHECK_MODULES([GLPROTO], [glproto])
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_TYPEOF
 
-dnl Checks for library functions.
-AC_FUNC_STRNLEN
-
 dnl TLS detection
 AC_ARG_ENABLE([tls],
     [AS_HELP_STRING([--disable-tls],
