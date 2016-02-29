@@ -503,7 +503,7 @@ static void         dummySetDispatchIndex      (const GLubyte *procName, int ind
 #if defined(PATCH_ENTRYPOINTS)
 PUBLIC int __glXSawVertex3fv;
 
-static void patch_x86_64_tls(char *writeEntry,
+static void patch_x86_64(char *writeEntry,
                              const char *execEntry,
                              int stubSize)
 {
@@ -535,7 +535,7 @@ static void patch_x86_64_tls(char *writeEntry,
 #endif
 }
 
-static void patch_x86_tls(char *writeEntry,
+static void patch_x86(char *writeEntry,
                           const char *execEntry,
                           int stubSize)
 {
@@ -575,7 +575,7 @@ static void patch_x86_tls(char *writeEntry,
 #endif
 }
 
-static void patch_armv7_thumb_tsd(char *writeEntry,
+static void patch_armv7_thumb(char *writeEntry,
                                   const char *execEntry,
                                   int stubSize)
 {
@@ -621,11 +621,9 @@ static void patch_armv7_thumb_tsd(char *writeEntry,
 static GLboolean dummyCheckPatchSupported(int type, int stubSize)
 {
     switch (type) {
-        case __GLDISPATCH_STUB_X86_64_TLS:
-        case __GLDISPATCH_STUB_X86_TLS:
-        case __GLDISPATCH_STUB_X86_TSD:
-        case __GLDISPATCH_STUB_X86_64_TSD:
-        case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
+        case __GLDISPATCH_STUB_X86_64:
+        case __GLDISPATCH_STUB_X86:
+        case __GLDISPATCH_STUB_ARMV7_THUMB:
             return GL_TRUE;
         default:
             return GL_FALSE;
@@ -646,16 +644,14 @@ static GLboolean dummyInitiatePatch(int type,
 
     if (lookupStubOffset("Vertex3fv", &writeAddr, &execAddr)) {
         switch (type) {
-            case __GLDISPATCH_STUB_X86_64_TLS:
-            case __GLDISPATCH_STUB_X86_64_TSD:
-                patch_x86_64_tls(writeAddr, execAddr, stubSize);
+            case __GLDISPATCH_STUB_X86_64:
+                patch_x86_64(writeAddr, execAddr, stubSize);
                 break;
-            case __GLDISPATCH_STUB_X86_TLS:
-            case __GLDISPATCH_STUB_X86_TSD:
-                patch_x86_tls(writeAddr, execAddr, stubSize);
+            case __GLDISPATCH_STUB_X86:
+                patch_x86(writeAddr, execAddr, stubSize);
                 break;
-            case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
-                patch_armv7_thumb_tsd(writeAddr, execAddr, stubSize);
+            case __GLDISPATCH_STUB_ARMV7_THUMB:
+                patch_armv7_thumb(writeAddr, execAddr, stubSize);
                 break;
             default:
                 assert(0);

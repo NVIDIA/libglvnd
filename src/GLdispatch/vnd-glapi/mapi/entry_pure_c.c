@@ -30,6 +30,7 @@
 #include <stdlib.h>
 
 #include "glapi/glapi.h"
+#include "glvnd/GLdispatchABI.h"
 
 static INLINE const struct _glapi_table *
 entry_current_get(void)
@@ -48,7 +49,7 @@ entry_current_get(void)
 #define MAPI_TMP_PUBLIC_ENTRIES
 #include "mapi_tmp.h"
 
-const int entry_type = ENTRY_PURE_C;
+const int entry_type = __GLDISPATCH_STUB_UNKNOWN;
 const int entry_stub_size = 0;
 
 void

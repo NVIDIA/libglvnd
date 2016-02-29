@@ -44,18 +44,45 @@ extern "C" {
  * these client ABIs.
  */
 
-/*
- * Thread-local implementation used by libglvnd.  This is passed into
- * the patch function callback via the type parameter.
+/*!
+ * Thread-local implementation used by libglvnd. This is passed into the patch
+ * function callback via the type parameter.
+ *
+ * For most architectures, the vendor library can ignore this parameter, since
+ * it will always be the same value. It's used for systems like ARM, where the
+ * stubs might be use the ARM or Thumb instruction sets.
+ *
+ * The stub type does not make any distinction between TLS and TSD stubs. The
+ * entire purpose of entrypoint rewriting is to skip the dispatch table in
+ * libGLdispatch.so, so it doesn't matter how that dispatch table is stored.
  */
 enum {
-    __GLDISPATCH_STUB_X86_TLS,
-    __GLDISPATCH_STUB_X86_64_TLS,
-    __GLDISPATCH_STUB_X86_TSD,
-    __GLDISPATCH_STUB_PURE_C,
-    __GLDISPATCH_STUB_X86_64_TSD,
-    __GLDISPATCH_STUB_ARMV7_THUMB_TSD,
-    __GLDISPATCH_STUB_NUM_TYPES
+    /*!
+     * Indicates that the stubs aren't defined in assembly. For example, if the
+     * dispatch stubs are written in C. Vendor libraries generally won't see
+     * this value.
+     */
+    __GLDISPATCH_STUB_UNKNOWN,
+
+    /*!
+     * Used for stubs on x86 systems.
+     */
+    __GLDISPATCH_STUB_X86,
+
+    /*!
+     * Used for stubs on x86-64 systems.
+     */
+    __GLDISPATCH_STUB_X86_64,
+
+    /*!
+     * Used for stubs on ARMv7, using the Thumb instruction set.
+     */
+    __GLDISPATCH_STUB_ARMV7_THUMB,
+
+    /*!
+     * Used for stubs on ARMv7, using the normal ARM instruction set.
+     */
+    __GLDISPATCH_STUB_ARMV7_ARM
 };
 
 /*!
