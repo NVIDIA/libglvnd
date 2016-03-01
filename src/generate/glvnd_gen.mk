@@ -29,7 +29,7 @@ glapi_gen_mapi_deps := \
 # "glesv1" for libGLESv1_CM.so
 # "glesv2" for libGLESv2.so
 define glapi_gen_mapi
-@mkdir -p $(dir $@)
+$(AM_V_at)$(MKDIR_P) $(@D)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_mapi_script) \
 	$(1) $(glapi_gen_gl_xml) > $@
 endef
@@ -40,7 +40,7 @@ glapi_gen_glapitable_deps := \
 	$(glapi_gen_gl_deps)
 
 define glapi_gen_glapitable_header
-@mkdir -p $(dir $@)
+$(AM_V_at)$(MKDIR_P) $(@D)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_glapitable_script) \
 	$(glapi_gen_gl_xml) > $@
 endef
@@ -51,7 +51,7 @@ glapi_gen_initdispatch_deps := \
 	$(glapi_gen_gl_deps)
 
 define glapi_gen_initdispatch
-@mkdir -p $(dir $@)
+$(AM_V_at)$(MKDIR_P) $(@D)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_initdispatch_script) \
 	$(glapi_gen_gl_xml) > $@
 endef
@@ -66,7 +66,7 @@ glapi_gen_libopengl_exports_deps := \
 	$(glapi_gen_gl_deps)
 
 define glapi_gen_libopengl_exports
-@mkdir -p $(dir $@)
+$(AM_V_at)$(MKDIR_P) $(@D)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_libopengl_exports_script) \
 	$(1) $(top_srcdir)/src/generate/xml/gl.xml > $@
 endef
@@ -77,7 +77,7 @@ glapi_gen_libglglxstubs_deps := \
 	$(glapi_gen_glx_deps)
 
 define glapi_gen_libglglxstubs
-@mkdir -p $(dir $@)
+$(AM_V_at)$(MKDIR_P) $(@D)
 $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_libglglxstubs_script) \
 	$(glapi_gen_glx_xml) > $@
 endef

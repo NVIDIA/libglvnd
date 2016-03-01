@@ -3,13 +3,24 @@ uthash ChangeLog
 
 Click to return to the link:index.html[uthash home page].
 
-Version 1.9.8.p2 
-----------------
+NOTE: uthash is no longer maintained as of 2015.
+
+Version 1.9.9.1 (2014-11-18)
+--------------------------
+* inclusion of experimental libut bundle with utvector in opt/
+* use shift in Bernstein hash instead of multiply (thanks, Jimmy Zhuo!)
+* switch ssize_t types in utarray/utstring to size_t (thanks, Hong Xu!)
+* fix utstring pointer math on >4GB strings (thanks, Thomas Bottesch!)
+* change FNV hash to FNV-1a varation (thanks, dwest1975!)
+* fix bug in HASH_REPLACE_STR (thanks, Ilya Kaliman!)
+
+Version 1.9.9 (2014-02-25)
+--------------------------
+* made HASH_ADD_STR compatible with char* or char[] (thanks, Samuel Thibault!)
+* fixed header inclusion of sys/types.h for ssize_t (thanks, Fernando Campos!)
+* added LL_COUNT/DL_COUNT/CDL_COUNT (thansk, Paul Praet!)
 * added LRU cache example in `tests/lru_cache` (thanks, Oliver Lorenz!)
 * fix LL_DELETE2 for VS2008 (thanks, Greg Davydouski!)
-
-Version 1.9.8.p1 
-----------------
 * fix missing argument in `HASH_REPLACE_STR` (thanks, Alex!)
 * bump version number in source files to match docs (thanks, John Crow!)
 * add `HASH_OVERHEAD` macro to get overhead size for hash table
