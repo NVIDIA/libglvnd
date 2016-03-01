@@ -48,7 +48,6 @@ entry_current_get(void)
 #define MAPI_TMP_PUBLIC_ENTRIES
 #include "mapi_tmp.h"
 
-const int entry_type = ENTRY_PURE_C;
 const int entry_stub_size = 0;
 
 void

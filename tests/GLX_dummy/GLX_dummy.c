@@ -467,7 +467,7 @@ static struct {
 
 
 // XXX non-entry point ABI functions
-static Bool          dummyCheckSupportsScreen    (Display *dpy, int screen)
+static Bool          dummyIsSupportedScreen    (Display *dpy, int screen)
 {
     return True;
 }
@@ -503,11 +503,11 @@ static void         dummySetDispatchIndex      (const GLubyte *procName, int ind
 #if defined(PATCH_ENTRYPOINTS)
 PUBLIC int __glXSawVertex3fv;
 
+#if defined(__x86_64__)
 static void patch_x86_64_tls(char *writeEntry,
                              const char *execEntry,
                              int stubSize)
 {
-#if defined(__x86_64__)
     char *pSawVertex3fv = (char *)&__glXSawVertex3fv;
     int *p;
     char tmpl[] = {
@@ -530,16 +530,14 @@ static void patch_x86_64_tls(char *writeEntry,
     *p = (int)(pSawVertex3fv - (execEntry + 15));
 
     memcpy(writeEntry, tmpl, sizeof(tmpl));
-#else
-    assert(0); // Should not be calling this
-#endif
 }
+#endif
 
+#if defined(__i386__)
 static void patch_x86_tls(char *writeEntry,
                           const char *execEntry,
                           int stubSize)
 {
-#if defined(__i386__)
     uintptr_t *p;
     char tmpl[] = {
         0xa1, 0x0, 0x0, 0x0, 0x0,   // mov 0x0, %eax
@@ -570,16 +568,14 @@ static void patch_x86_tls(char *writeEntry,
         "\tjmp 0f\n"
         "\t0:\n"
     );
-#else
-    assert(0); // Should not be calling this
-#endif
 }
+#endif
 
+#if defined(__arm__)
 static void patch_armv7_thumb_tsd(char *writeEntry,
                                   const char *execEntry,
                                   int stubSize)
 {
-#if defined(__arm__)
     char *pSawVertex3fv = (char *)&__glXSawVertex3fv;
 
     // Thumb bytecode
@@ -613,23 +609,12 @@ static void patch_armv7_thumb_tsd(char *writeEntry,
     memcpy(writeEntry, tmpl, sizeof(tmpl));
 
     __builtin___clear_cache((char *) execEntry, (char *) (execEntry + sizeof(tmpl)));
-#else
-    assert(0); // Should not be calling this
-#endif
 }
+#endif
 
-static GLboolean dummyCheckPatchSupported(int type, int stubSize)
+static GLboolean dummyIsPatchSupported(int stubSize)
 {
-    switch (type) {
-        case __GLDISPATCH_STUB_X86_64_TLS:
-        case __GLDISPATCH_STUB_X86_TLS:
-        case __GLDISPATCH_STUB_X86_TSD:
-        case __GLDISPATCH_STUB_X86_64_TSD:
-        case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
-            return GL_TRUE;
-        default:
-            return GL_FALSE;
-    }
+    return GL_TRUE;
 }
 
 static GLboolean dummyInitiatePatch(int type,
@@ -639,27 +624,23 @@ static GLboolean dummyInitiatePatch(int type,
     void *writeAddr;
     const void *execAddr;
 
-    if (!dummyCheckPatchSupported(type, stubSize))
+    if (!dummyIsPatchSupported(stubSize))
     {
         return GL_FALSE;
     }
 
     if (lookupStubOffset("Vertex3fv", &writeAddr, &execAddr)) {
-        switch (type) {
-            case __GLDISPATCH_STUB_X86_64_TLS:
-            case __GLDISPATCH_STUB_X86_64_TSD:
-                patch_x86_64_tls(writeAddr, execAddr, stubSize);
-                break;
-            case __GLDISPATCH_STUB_X86_TLS:
-            case __GLDISPATCH_STUB_X86_TSD:
-                patch_x86_tls(writeAddr, execAddr, stubSize);
-                break;
-            case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
-                patch_armv7_thumb_tsd(writeAddr, execAddr, stubSize);
-                break;
-            default:
-                assert(0);
-        }
+#if defined(__x86_64__)
+        patch_x86_64_tls(writeAddr, execAddr, stubSize);
+        break;
+#elif defined(__i386__)
+        patch_x86_tls(writeAddr, execAddr, stubSize);
+        break;
+#elif defined(__arm__)
+        patch_armv7_thumb_tsd(writeAddr, execAddr, stubSize);
+        break;
+#endif
+        assert(0);
     }
 
     return GL_TRUE;
@@ -671,7 +652,7 @@ static void dummyReleasePatch(void)
 
 static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 {
-    .checkPatchSupported = dummyCheckPatchSupported,
+    .isPatchSupported = dummyIsPatchSupported,
     .initiatePatch = dummyInitiatePatch,
     .releasePatch = dummyReleasePatch,
 };
@@ -679,7 +660,7 @@ static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
 
 static const __GLXapiImports dummyImports =
 {
-    .checkSupportsScreen = dummyCheckSupportsScreen,
+    .isSupportedScreen = dummyIsSupportedScreen,
     .getProcAddress = dummyGetProcAddress,
     .getDispatchAddress = dummyGetDispatchAddress,
     .setDispatchIndex = dummySetDispatchIndex,

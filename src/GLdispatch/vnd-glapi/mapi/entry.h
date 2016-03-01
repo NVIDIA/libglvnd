@@ -32,17 +32,6 @@
 
 typedef void (*mapi_func)(void);
 
-enum {
-    ENTRY_X86_TLS,
-    ENTRY_X86_64_TLS,
-    ENTRY_X86_TSD,
-    ENTRY_PURE_C,
-    ENTRY_X86_64_TSD,
-    ENTRY_ARMV7_THUMB_TSD,
-    ENTRY_NUM_TYPES
-};
-
-extern const int entry_type;
 extern const int entry_stub_size;
 
 void

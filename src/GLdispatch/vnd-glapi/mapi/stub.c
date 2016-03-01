@@ -339,11 +339,6 @@ static GLboolean stubGetPatchOffset(const char *name, void **writePtr, const voi
     return ((writeAddr != NULL && execAddr != NULL) ? GL_TRUE : GL_FALSE);
 }
 
-static int stubGetStubType(void)
-{
-    return entry_type;
-}
-
 static int stubGetStubSize(void)
 {
     return entry_stub_size;
@@ -356,7 +351,6 @@ static const __GLdispatchStubPatchCallbacks stubPatchCallbacks =
     stubAbortPatch,     // abortPatch
     stubRestoreFuncs,   // restoreFuncs
     stubGetPatchOffset, // getPatchOffset
-    stubGetStubType,    // getStubType
     stubGetStubSize,    // getStubSize
 };
 

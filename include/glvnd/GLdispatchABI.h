@@ -44,20 +44,6 @@ extern "C" {
  * these client ABIs.
  */
 
-/*
- * Thread-local implementation used by libglvnd.  This is passed into
- * the patch function callback via the type parameter.
- */
-enum {
-    __GLDISPATCH_STUB_X86_TLS,
-    __GLDISPATCH_STUB_X86_64_TLS,
-    __GLDISPATCH_STUB_X86_TSD,
-    __GLDISPATCH_STUB_PURE_C,
-    __GLDISPATCH_STUB_X86_64_TSD,
-    __GLDISPATCH_STUB_ARMV7_THUMB_TSD,
-    __GLDISPATCH_STUB_NUM_TYPES
-};
-
 /*!
  * A callback function called by the vendor library to fetch the address of an
  * entrypoint.
@@ -89,16 +75,14 @@ typedef GLboolean (*DispatchPatchLookupStubOffset)(const char *funcName,
 typedef struct __GLdispatchPatchCallbacksRec {
     /*!
      * Checks to see if the vendor library supports patching the given stub
-     * type and size.
+     * size.
      *
-     * \param type The type of entrypoints. This will be a one of the
-     * __GLDISPATCH_STUB_* values.
      * \param stubSize The maximum size of the stub that the vendor library can
      * write, in bytes.
      * \param lookupStubOffset A callback into libglvnd to look up the address
      * of each entrypoint.
      */
-    GLboolean (* checkPatchSupported)(int type, int stubSize);
+    GLboolean (*isPatchSupported)(int stubSize);
 
     /*!
      * Called by libglvnd to request that a vendor library patch its top-level
@@ -116,8 +100,6 @@ typedef struct __GLdispatchPatchCallbacksRec {
      * modified. After the call to \c initiatePatch returns, the vendor library
      * should treat the entrypoints as read-only.
      *
-     * \param type The type of entrypoints. This will be a one of the
-     * __GLDISPATCH_STUB_* values.
      * \param stubSize The maximum size of the stub that the vendor library can
      * write, in bytes.
      * \param lookupStubOffset A callback into libglvnd to look up the address
@@ -126,9 +108,9 @@ typedef struct __GLdispatchPatchCallbacksRec {
      * \return GL_TRUE if the vendor library supports patching with this type
      * and size.
      */
-    GLboolean (*initiatePatch)(int type,
-                               int stubSize,
+    GLboolean (*initiatePatch)(int stubSize,
                                DispatchPatchLookupStubOffset lookupStubOffset);
+    // if not perhaps there should be a comment explaining why ?
 
     /*!
      * Called by libglvnd to notify the current vendor that it no longer owns

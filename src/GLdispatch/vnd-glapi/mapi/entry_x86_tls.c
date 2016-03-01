@@ -73,7 +73,6 @@ x86_current_tls();
 
 static char x86_entry_start[];
 
-const int entry_type = ENTRY_X86_TLS;
 const int entry_stub_size = ENTRY_STUB_SIZE;
 
 void entry_generate_default_code(char *entry, int slot)
