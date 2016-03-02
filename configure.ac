@@ -19,17 +19,22 @@ dnl Add an --enable-debug option
 AX_CHECK_ENABLE_DEBUG(no, DEBUG)
 
 dnl Checks for programs.
-AC_PROG_AWK
 AC_PROG_CXX
 
 AC_PROG_CC
+AC_PROG_CC_C99
 AM_PROG_AS
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
-AC_CHECK_PROGS([PYTHON2], [python2 python])
+AC_PROG_MKDIR_P
+AC_CHECK_PROGS([PYTHON2], [python2.7 python2 python])
 AC_CHECK_PROGS([PERL], [perl])
+
+if test "x$ac_cv_prog_cc_c99" = xno; then
+        AC_MSG_ERROR([Building libglvnd requires a C99-enabled compiler])
+fi
 
 dnl
 dnl Auxiliary ELF symbol filtering support
@@ -44,6 +49,7 @@ AC_MSG_CHECKING([whether to enable auxiliary ELF symbol filtering])
 
 if test "x$enable_dt_auxiliary" = xyes; then
     (
+        _SAVE_LDFLAGS="$LDFLAGS"
         LDFLAGS='-shared -Wl,--auxiliary=libc.so.6'
         AC_LINK_IFELSE([AC_LANG_SOURCE([])],
                         [dt_auxiliary_supported=yes],
@@ -54,6 +60,7 @@ if test "x$enable_dt_auxiliary" = xyes; then
             AC_MSG_RESULT([no, not supported])
         fi
         test "x$dt_auxiliary_supported" = xyes
+        LDFLAGS ="$_SAVE_LDFLAGS"
     ) && dt_auxiliary_supported=yes
 else
     dt_auxiliary_supported=no
@@ -74,22 +81,13 @@ AC_ARG_ENABLE([asm],
 asm_arch=""
 AC_MSG_CHECKING([whether to enable assembly])
 test "x$enable_asm" = xno && AC_MSG_RESULT([no])
-# disable if cross compiling on x86/x86_64 since we must run gen_matypes
-if test "x$enable_asm" = xyes && test "x$cross_compiling" = xyes; then
-    case "$host_cpu" in
-    i?86 | x86_64)
-        enable_asm=no
-        AC_MSG_RESULT([no, cross compiling])
-        ;;
-    esac
-fi
 # check for supported arches
 if test "x$enable_asm" = xyes; then
     case "$host_cpu" in
     i?86)
         case "$host_os" in
         linux* | *freebsd* | dragonfly* | *netbsd*)
-            test "x$enable_64bit" = xyes && asm_arch=x86_64 || asm_arch=x86
+            asm_arch=x86
             ;;
         gnu*)
             asm_arch=x86
@@ -99,19 +97,12 @@ if test "x$enable_asm" = xyes; then
     x86_64)
         case "$host_os" in
         linux* | *freebsd* | dragonfly* | *netbsd*)
-            test "x$enable_32bit" = xyes && asm_arch=x86 || asm_arch=x86_64
+            asm_arch=x86_64
             ;;
         esac
         ;;
     armv7l)
         asm_arch=armv7l
-        ;;
-    sparc*)
-        case "$host_os" in
-        linux*)
-            asm_arch=sparc
-            ;;
-        esac
         ;;
     esac
 
@@ -128,18 +119,11 @@ if test "x$enable_asm" = xyes; then
         DEFINES="$DEFINES -DUSE_ARMV7_ASM"
         AC_MSG_RESULT([yes, armv7l])
         ;;
-    sparc)
-        DEFINES="$DEFINES -DUSE_SPARC_ASM"
-        AC_MSG_RESULT([yes, sparc])
-        ;;
     *)
         AC_MSG_RESULT([no, platform not supported])
         ;;
     esac
 fi
-
-dnl Various conditionals.
-AM_CONDITIONAL([GCC], [test x$GCC = xyes ])
 
 dnl
 dnl mapi top-relative paths: defined here so mapi can be used elsewhere
@@ -147,10 +131,6 @@ dnl
 
 AC_SUBST([MAPI_PREFIX], [src/GLdispatch/vnd-glapi/mapi])
 AC_SUBST([MAPI_MESA_PREFIX], [src/GLdispatch/mesa])
-
-AM_CONDITIONAL(HAVE_X86_ASM, echo "$DEFINES" | grep 'X86_ASM' >/dev/null 2>&1)
-AM_CONDITIONAL(HAVE_X86_64_ASM, echo "$DEFINES" | grep 'X86_64_ASM' >/dev/null 2>&1)
-AM_CONDITIONAL(HAVE_SPARC_ASM, echo "$DEFINES" | grep 'SPARC_ASM' >/dev/null 2>&1)
 
 dnl Checks for libraries.
 AX_PTHREAD()
@@ -291,13 +271,13 @@ AS_IF([test "x$HAVE_SYNC_INTRINSICS" = "xyes"],
       [AC_DEFINE([HAVE_SYNC_INTRINSICS], 1,
       [Define to 1 if the compiler supports __sync intrinsic functions.])])
 
-# See if the linker supports the --no-undefiend flag.
+# See if the linker supports the --no-undefined flag.
 AX_CHECK_LINK_FLAG([-Xlinker --no-undefined],
       [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], ["-Xlinker --no-undefined"])],
       [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], [""])])
 
 dnl default CFLAGS
-CFLAGS="$CFLAGS -Wall -Werror -std=gnu99 -include config.h -fvisibility=hidden $DEFINES"
+CFLAGS="$CFLAGS -Wall -Werror -include config.h -fvisibility=hidden $DEFINES"
 
 AC_CONFIG_FILES([Makefile
                  libglvnd.pc
