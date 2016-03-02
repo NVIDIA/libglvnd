@@ -90,8 +90,18 @@ extern "C" {
 
 /*!
  * Current version of the ABI.
+ *
+ * This version number contains a major number in the high-order 16 bits, and
+ * a minor version number in the low-order 16 bits.
+ *
+ * The major version number is incremented when an interface change will break
+ * backwards compatibility with existing vendor libraries. The minor version
+ * number is incremented when there's a change but existing vendor libraries
+ * will still work.
  */
-#define GLX_VENDOR_ABI_VERSION 1
+#define GLX_VENDOR_ABI_VERSION ((1 << 16) | 0)
+#define GLX_VENDOR_ABI_GET_MAJOR_VERSION(version) ((version) & 0xFFFF)
+#define GLX_VENDOR_ABI_GET_MINOR_VERSION(version) ((version) >> 16)
 
 
 /*!
