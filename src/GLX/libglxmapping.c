@@ -49,6 +49,7 @@
 #include "lkdhash.h"
 #include "x11glvnd.h"
 
+#include "GL/glxproto.h"
 #define _GNU_SOURCE 1
 
 #if !defined(FALLBACK_VENDOR_NAME)
@@ -559,6 +560,61 @@ fail:
     return NULL;
 }
 
+static char *
+__glXQueryServerVendorDriver(Display *dpy, const int screen)
+{
+    xGLXQueryServerStringReq *req;
+    xGLXSingleReply rep;
+    char *ret = NULL;
+    int length;
+    __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
+
+    LockDisplay(dpy);
+
+    GetReq(GLXQueryServerString, req);
+    req->reqType = dpyInfo->glxMajorOpcode;
+    req->glxCode = X_GLXQueryServerString;
+    req->screen = screen;
+    req->name = GLX_VERSION;
+
+    if (!_XReply(dpy, (xReply *)&rep, 0, False)) {
+        goto out;
+    }
+
+    length = rep.length * 4;
+    ret = malloc(rep.size);
+    if (ret) {
+        _XRead(dpy, ret, rep.size);
+        length -= rep.size;
+    }
+    _XEatData(dpy, length);
+
+out:
+    UnlockDisplay(dpy);
+    SyncHandle();
+
+    return ret;
+}
+
+static char *
+__glXMatchVendorFromScreen(Display *dpy, const int screen)
+{
+    char *reply, *g;
+
+    /* ask the server for the driver string */
+    reply = __glXQueryServerVendorDriver(dpy, screen);
+    if (!reply)
+        return NULL;
+
+    g = strstr(reply, "glvnd:");
+    if (g) {
+        g += strlen("glvnd:");
+        memmove(reply, g, strlen(g) + 1);
+    }
+
+    return reply;
+}
+
 __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
 {
     __GLXvendorInfo *vendor = NULL;
@@ -593,6 +649,26 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
 
         if (preloadedVendorName) {
             vendor = __glXLookupVendorByName(preloadedVendorName);
+        }
+
+        if (!vendor) {
+            int l;
+            char *v;
+            char *reply = __glXMatchVendorFromScreen(dpy, screen);
+
+            v = reply;
+            while ((l = strcspn(v, " ,")) != 0) {
+                    v[l] = '\0';
+                    vendor = __glXLookupVendorByName(v);
+                    if (vendor)
+                        break;
+                    v += l + 1;
+            }
+            free(reply);
+
+            if (vendor != NULL && !vendor->glxvc->checkSupportsScreen(dpy, screen)) {
+                vendor = NULL;
+            }
         }
 
         if (!vendor) {
