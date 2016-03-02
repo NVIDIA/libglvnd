@@ -167,8 +167,8 @@ typedef struct __GLdispatchPatchCallbacksRec {
     void (*releasePatch)(void);
 
     /*!
-     * Called at the start of window-system functions (GLX and EGL). This
-     * callback allows vendor libraries to perform any per-thread
+     * (OPTIONAL) Called at the start of window-system functions (GLX and EGL).
+     * This callback allows vendor libraries to perform any per-thread
      * initialization.
      *
      * This is basically a workaround for broken applications. A lot of apps
