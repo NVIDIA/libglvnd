@@ -104,6 +104,15 @@ typedef struct __GLXdispatchFuncHashRec {
  */
 typedef struct __GLXvendorNameHashRec {
     __GLXvendorInfo vendor;
+
+    /**
+     * The imports table for this vendor. This is allocated and zeroed by
+     * libGLX.so, so that we can add functions to the end without breaking
+     * backward compatibility.
+     */
+    __GLXapiImports imports;
+    __GLdispatchPatchCallbacks patchCallbacks;
+
     UT_hash_handle hh;
 } __GLXvendorNameHash;
 
@@ -472,6 +481,7 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             __GLXvendorInfo *vendor;
             __PFNGLXMAINPROC glxMainProc;
             char *filename;
+            const __GLXapiImports *imports;
 
             // Previously unseen vendor. dlopen() the new vendor and add it to the
             // hash table.
@@ -510,14 +520,31 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
 
+            // Plug in the vendor imports table.
+            pEntry->imports.patchCallbacks = &pEntry->patchCallbacks;
+            vendor->glxvc = &pEntry->imports;
+
             /* Initialize the dynamic dispatch table */
             LKDHASH_INIT(vendor->dynDispatchHash);
 
-            vendor->glxvc = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
+            imports = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
                                       &glxExportsTable,
                                       vendor);
-            if (!vendor->glxvc) {
+            if (!imports) {
                 goto fail;
+            }
+
+            // Copy the imports table from the vendor library.
+            memcpy(&pEntry->imports, imports, sizeof(__GLXapiImports));
+            if (imports->patchCallbacks != NULL) {
+                memcpy(&pEntry->patchCallbacks, imports->patchCallbacks, sizeof(__GLdispatchPatchCallbacks));
+            }
+            // Set the patchCallbacks table.
+            if (pEntry->patchCallbacks.isPatchSupported != NULL
+                    && pEntry->patchCallbacks.initiatePatch != NULL) {
+                pEntry->imports.patchCallbacks = &pEntry->patchCallbacks;
+            } else {
+                pEntry->imports.patchCallbacks = NULL;
             }
 
             if (!LookupVendorEntrypoints(vendor)) {
