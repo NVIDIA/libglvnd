@@ -42,7 +42,6 @@
 #include "compiler.h"
 
 
-static char *thisVendorName;
 static __GLXapiExports apiExports;
 
 /*
@@ -372,7 +371,11 @@ static void dummy_glMakeCurrentTestResults(GLint req,
         break;
     case GL_MC_VENDOR_STRING:
         {
-            *ret = thisVendorName ? strdup(thisVendorName) : NULL;
+            // FIXME: This is used from testglxnscreens to check that the
+            // correct vendor library is loaded from each display. Originally,
+            // it used the vendor name passed to __glx_Main, but libGLX doesn't
+            // provide the vendor name anymore.
+            *ret = NULL;
         }
         break;
     case GL_MC_LAST_REQ:
@@ -686,9 +689,8 @@ static const __GLXapiImports dummyImports =
 #endif
 };
 
-PUBLIC __GLX_MAIN_PROTO(version, exports, vendorName)
+PUBLIC __GLX_MAIN_PROTO(version, exports, vendor)
 {
-    thisVendorName = strdup(vendorName);
     if (version <= GLX_VENDOR_ABI_VERSION) {
         memcpy(&apiExports, exports, sizeof(*exports));
         return &dummyImports;

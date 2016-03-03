@@ -311,25 +311,40 @@ typedef struct __GLXapiImportsRec {
 
 /*****************************************************************************/
 
-/*!
- * Vendor libraries must export a function called __glx_Main() with the
- * following prototype. This function also performs a handshake based on the ABI
- * version number. This function receives a pointer to an exports table whose
- * lifetime is only guaranteed to be at a minimum that of the call to
- * __glx_Main(), in addition to the version number and a string identifying the
- * vendor. If there is an ABI version mismatch or some other error occurs, this
- * function returns NULL; otherwise this returns a pointer to a filled-in
- * dispatch table.
- */
 #define __GLX_MAIN_PROTO_NAME "__glx_Main"
 #define __GLX_MAIN_PROTO(version, exports, vendorName)                \
     const __GLXapiImports *__glx_Main(uint32_t version,               \
                                       const __GLXapiExports *exports, \
-                                      const char *vendorName,         \
-                                      int vendorID)
+                                      __GLXvendorInfo *vendor)
 
 typedef const __GLXapiImports *(*__PFNGLXMAINPROC)
-    (uint32_t, const __GLXapiExports *, const char *, int);
+    (uint32_t version, const __GLXapiExports *exports, __GLXvendorInfo *vendor);
+
+/*!
+ * Vendor libraries must export a function called __glx_Main() with the
+ * following prototype.
+ *
+ * This function also performs a handshake based on the ABI version number.
+ * Vendor libraries can optionally use the version number to support older
+ * versions of the ABI.
+ *
+ * \param version The ABI version. The upper 16 bits contains the major version
+ * number, and the lower 16 bits contains the minor version number.
+ *
+ * \param exports The table of functions provided by libGLX. This pointer will
+ * remain valid for as long as the vendor is loaded.
+ *
+ * \param vendor The opaque pointer used to identify this vendor library. This
+ * may be used in future versions to provide additional per-vendor information.
+ *
+ * \return A pointer to a __GLXapiImports struct, which must remain valid for
+ * as long as the vendor is loaded. If the vendor library does not support the
+ * requested ABI version, or if some other error occurrs, then it should return
+ * \c NULL.
+ */
+const __GLXapiImports *__glx_Main(uint32_t version,
+                                  const __GLXapiExports *exports,
+                                  __GLXvendorInfo *vendor);
 
 /*!
  * @}

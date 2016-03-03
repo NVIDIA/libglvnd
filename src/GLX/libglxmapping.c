@@ -501,18 +501,6 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             vendor->vendorID = __glDispatchNewVendorID();
             assert(vendor->vendorID >= 0);
 
-            vendor->glxvc = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
-                                      &glxExportsTable,
-                                      vendor->name,
-                                      vendor->vendorID);
-            if (!vendor->glxvc) {
-                goto fail;
-            }
-
-            if (!LookupVendorEntrypoints(vendor)) {
-                goto fail;
-            }
-
             vendor->glDispatch = (__GLdispatchTable *)
                 __glDispatchCreateTable(
                     VendorGetProcAddressCallback,
@@ -524,6 +512,17 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 
             /* Initialize the dynamic dispatch table */
             LKDHASH_INIT(vendor->dynDispatchHash);
+
+            vendor->glxvc = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
+                                      &glxExportsTable,
+                                      vendor);
+            if (!vendor->glxvc) {
+                goto fail;
+            }
+
+            if (!LookupVendorEntrypoints(vendor)) {
+                goto fail;
+            }
 
             HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendor->name,
                             strlen(vendor->name), pEntry);
