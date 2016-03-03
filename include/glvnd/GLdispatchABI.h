@@ -158,8 +158,8 @@ typedef struct __GLdispatchPatchCallbacksRec {
                                DispatchPatchLookupStubOffset lookupStubOffset);
 
     /*!
-     * Called by libglvnd to notify the current vendor that it no longer owns
-     * the top-level entrypoints.
+     * (OPTIONAL) Called by libglvnd to notify the current vendor that it no
+     * longer owns the top-level entrypoints.
      *
      * Libglvnd will take care of the restoring the entrypoints back to their
      * original state. The vendor library must not try to modify them.

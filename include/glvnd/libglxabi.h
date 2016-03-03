@@ -300,25 +300,30 @@ typedef struct __GLXapiImportsRec {
     /*!
      * (OPTIONAL) Callbacks by which the vendor library may re-write libglvnd's
      * entrypoints at make current time, provided no other contexts are current
-     * and the TLS model supports this functionality.  This is a performance
+     * and the TLS model supports this functionality. This is a performance
      * optimization that may not be available at runtime; the vendor library
-     * must not depend on this functionality for correctness.  This should
-     * point to a statically-allocated structure, or NULL if unimplemented.
+     * must not depend on this functionality for correctness.
+     *
+     * Like the __GLXapiImports struct itself, this struct is allocated and
+     * zeroed by libGLX. The vendor library should assign function pointers
+     * to the members of this struct, but should not change the
+     * \c patchCallbacks pointer itself.
      */
-    const __GLdispatchPatchCallbacks *patchCallbacks;
+    __GLdispatchPatchCallbacks *patchCallbacks;
 
 } __GLXapiImports;
 
 /*****************************************************************************/
 
 #define __GLX_MAIN_PROTO_NAME "__glx_Main"
-#define __GLX_MAIN_PROTO(version, exports, vendorName)                \
-    const __GLXapiImports *__glx_Main(uint32_t version,               \
+#define __GLX_MAIN_PROTO(version, exports, vendor, imports)                \
+    __GLXapiImports *__glx_Main(uint32_t version,               \
                                       const __GLXapiExports *exports, \
-                                      __GLXvendorInfo *vendor)
+                                      __GLXvendorInfo *vendor, \
+                                      __GLXapiImports *imports)
 
-typedef const __GLXapiImports *(*__PFNGLXMAINPROC)
-    (uint32_t version, const __GLXapiExports *exports, __GLXvendorInfo *vendor);
+typedef Bool (*__PFNGLXMAINPROC)
+    (uint32_t version, const __GLXapiExports *exports, __GLXvendorInfo *vendor, __GLXapiImports *imports);
 
 /*!
  * Vendor libraries must export a function called __glx_Main() with the
@@ -328,23 +333,27 @@ typedef const __GLXapiImports *(*__PFNGLXMAINPROC)
  * Vendor libraries can optionally use the version number to support older
  * versions of the ABI.
  *
- * \param version The ABI version. The upper 16 bits contains the major version
+ * \param[in] version The ABI version. The upper 16 bits contains the major version
  * number, and the lower 16 bits contains the minor version number.
  *
- * \param exports The table of functions provided by libGLX. This pointer will
+ * \param[in] exports The table of functions provided by libGLX. This pointer will
  * remain valid for as long as the vendor is loaded.
  *
- * \param vendor The opaque pointer used to identify this vendor library. This
+ * \param[in] vendor The opaque pointer used to identify this vendor library. This
  * may be used in future versions to provide additional per-vendor information.
  *
- * \return A pointer to a __GLXapiImports struct, which must remain valid for
- * as long as the vendor is loaded. If the vendor library does not support the
- * requested ABI version, or if some other error occurrs, then it should return
- * \c NULL.
+ * \param[out] imports The function table that the vendor library should fill
+ * in. The vendor library must assign every non-optional function in the
+ * struct.
+ *
+ * \return True on success. If the vendor library does not support the
+ * requested ABI version or if some other error occurs, then it should return
+ * False.
  */
-const __GLXapiImports *__glx_Main(uint32_t version,
+Bool __glx_Main(uint32_t version,
                                   const __GLXapiExports *exports,
-                                  __GLXvendorInfo *vendor);
+                                  __GLXvendorInfo *vendor,
+                                  __GLXapiImports *imports);
 
 /*!
  * @}

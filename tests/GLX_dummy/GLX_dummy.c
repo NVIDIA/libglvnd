@@ -664,37 +664,27 @@ static GLboolean dummyInitiatePatch(int type,
     return GL_TRUE;
 }
 
-static void dummyReleasePatch(void)
-{
-}
-
-static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
-{
-    .isPatchSupported = dummyCheckPatchSupported,
-    .initiatePatch = dummyInitiatePatch,
-    .releasePatch = dummyReleasePatch,
-};
 #endif // defined(PATCH_ENTRYPOINTS)
 
-static const __GLXapiImports dummyImports =
-{
-    .isScreenSupported = dummyCheckSupportsScreen,
-    .getProcAddress = dummyGetProcAddress,
-    .getDispatchAddress = dummyGetDispatchAddress,
-    .setDispatchIndex = dummySetDispatchIndex,
-#if defined(PATCH_ENTRYPOINTS)
-    .patchCallbacks = &dummyPatchCallbacks,
-#else
-    .patchCallbacks = NULL,
-#endif
-};
-
-PUBLIC __GLX_MAIN_PROTO(version, exports, vendor)
+PUBLIC Bool __glx_Main(uint32_t version,
+                                  const __GLXapiExports *exports,
+                                  __GLXvendorInfo *vendor,
+                                  __GLXapiImports *imports)
 {
     if (version <= GLX_VENDOR_ABI_VERSION) {
         memcpy(&apiExports, exports, sizeof(*exports));
-        return &dummyImports;
+
+        imports->isScreenSupported = dummyCheckSupportsScreen;
+        imports->getProcAddress = dummyGetProcAddress;
+        imports->getDispatchAddress = dummyGetDispatchAddress;
+        imports->setDispatchIndex = dummySetDispatchIndex;
+#if defined(PATCH_ENTRYPOINTS)
+        imports->patchCallbacks->isPatchSupported = dummyCheckPatchSupported;
+        imports->patchCallbacks->initiatePatch = dummyInitiatePatch;
+#endif
+
+        return True;
     } else {
-        return NULL;
+        return False;
     }
 }
