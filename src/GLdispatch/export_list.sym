@@ -6,7 +6,7 @@ __glDispatchCreateTable
 __glDispatchDestroyTable
 __glDispatchFini
 __glDispatchGetABIVersion
-__glDispatchGetCurrentAPIState
+__glDispatchGetCurrentThreadState
 __glDispatchGetProcAddress
 __glDispatchInit
 __glDispatchLoseCurrent

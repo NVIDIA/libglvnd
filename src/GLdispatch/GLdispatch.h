@@ -35,24 +35,32 @@
 #include "glvnd/GLdispatchABI.h"
 
 /*!
+ * \defgroup gldispatch core GL/GLES dispatch and TLS module
+ *
+ * libGLdispatch manages the dispatch table used to dispatch OpenGL and GLES
+ * functions to the appropriate vendor library for the current context.
+ *
+ * Window system libraries (libGLX.so and eventually libEGL.so) use
+ * libGLdispatch.so to set and keep track of the current rendering context.
+ * Their respective MakeCurrent calls (glXMakeCurrent and eglMakeCurrent) pass
+ * in a dispatch table for whatever vendor owns the current context.
+ *
+ * The entrypoint libraries (libOpenGL.so, libGL.so, libGLESv1_CM.so, and
+ * libGLESv2.so) all use the dispatch table stored in libGLdispatch.so.
+ *
+ * The dispatch table and dispatch stubs are based on Mesa's mapi/glapi
+ * library.
+ */
+
+/*!
  * The current version of the ABI between libGLdispatch and the window system
  * libraries.
  *
  * \see __glDispatchGetABIVersion
  */
-#define GLDISPATCH_ABI_VERSION 0
+#define GLDISPATCH_ABI_VERSION 1
 
-/*!
- * \defgroup gldispatch core GL/GLES dispatch and TLS module
- *
- * GLdispatch is a thin wrapper around Mesa's mapi/glapi dispatch table
- * implementation which does some bookkeeping to simplify dispatch table
- * management. API libraries use this library to retrieve dispatch stubs and fix
- * up the dispatch table at make current time to point to the appropriate vendor
- * library entrypoints.
- */
-
-/* Namespaces for API state */
+/* Namespaces for thread state */
 enum {
     GLDISPATCH_API_GLX,
     GLDISPATCH_API_EGL
@@ -68,51 +76,57 @@ typedef void (*__GLdispatchProc)(void);
 typedef void *(*__GLgetProcAddressCallback)(const char *procName, void *param);
 
 /**
- * An opaque structure used for internal API state data.
+ * An opaque structure used for internal thread state data.
  */
-struct __GLdispatchAPIStatePrivateRec;
+struct __GLdispatchThreadStatePrivateRec;
 
 /*!
- * Generic API state structure. The window system binding API libraries subclass
- * from this structure to track API-library specific current state (e.g.
- * current drawables). There is one API state for each combination of (winsys
- * library, thread that has had a context current). The winsys library is
- * responsible for tracking, allocating, and freeing its API states. Though
- * each thread owns an API state within the winsys library, only one API state
- * may be "current" at a time (the API state of the winsys binding which has
- * a context current). This is done to conserve TLS space.
+ * Generic thread state structure. The window system binding API libraries
+ * subclass from this structure to track API-library specific current state
+ * (e.g. current context and drawables).
+ *
+ * A thread has a thread state structure if and only if it has a current
+ * context. A thread can only have one thread state at a time, so there can't
+ * be both a current GLX context and a current EGL context at the same time.
+ *
+ * The winsys library is responsible for tracking, allocating, and freeing the
+ * thread state structures.
  */
-typedef struct __GLdispatchAPIStateRec {
+typedef struct __GLdispatchThreadStateRec {
     /*************************************************************************
      * Winsys-managed variables: fixed for lifetime of state
      *************************************************************************/
 
     /*!
-     * Namespace of the state: either API_GLX or API_EGL
+     * Specifies which window system library owns this state. It should be set
+     * to either \c GLDISPATCH_API_GLX or \c GLDISPATCH_API_EGL.
+     *
+     * This is used to make sure that a GLX context doesn't clobber a current
+     * EGL context or vice-versa.
      */
     int tag;
 
-    /**
+    /*!
      * A callback that is called when a thread that has a current context
      * terminates.
      *
      * This is called after libGLdispatch handles its cleanup, so
-     * __glDispatchGetCurrentAPIState will return NULL. The API state is passed
-     * as a parameter instead.
+     * __glDispatchGetCurrentThreadState will return NULL. The thread state is
+     * passed as a parameter instead.
      *
      * The callback should not call __glDispatchMakeCurrent or
      * __glDispatchLoseCurrent.
      *
-     * \param apiState The API state passed to __glDispatchMakeCurrent.
+     * \param threadState The thread state passed to __glDispatchMakeCurrent.
      */
-    void (*threadDestroyedCallback)(struct __GLdispatchAPIStateRec *apiState);
+    void (*threadDestroyedCallback)(struct __GLdispatchThreadStateRec *threadState);
 
     /*************************************************************************
      * GLdispatch-managed variables: Modified by MakeCurrent()
      *************************************************************************/
 
     /*!
-     * Private data for this API state.
+     * Private data for this thread state.
      *
      * This structure is assigned in \c __glDispatchMakeCurrent, and freed in
      * \c __glDispatchLoseCurrent.
@@ -120,8 +134,8 @@ typedef struct __GLdispatchAPIStateRec {
      * The value of this pointer, if any, is an internal detail of
      * libGLdispatch. The window system library should just ignore it.
      */
-    struct __GLdispatchAPIStatePrivateRec *priv;
-} __GLdispatchAPIState;
+    struct __GLdispatchThreadStatePrivateRec *priv;
+} __GLdispatchThreadState;
 
 /*!
  * Gets the version number for the ABI between libGLdispatch and the
@@ -187,12 +201,12 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(
 PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
 
 /*!
- * This makes the given API state current, and assigns this API state
- * the passed-in current dispatch table and vendor ID.
+ * This makes the given thread state current, and assigns this thread state the
+ * passed-in current dispatch table and vendor ID.
  *
- * When this function is called, the current thread must not already have an
- * API state. To switch between two API states, first release the old API state
- * by calling \c __glDispatchLoseCurrent.
+ * When this function is called, the current thread must not already have a
+ * thread state. To switch between two thread states, first release the old
+ * thread state by calling \c __glDispatchLoseCurrent.
  *
  * If patchCb is not NULL, GLdispatch will attempt to overwrite its
  * entrypoints (and the entrypoints of any loaded interface libraries)
@@ -203,14 +217,14 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
  * This returns GL_FALSE if the make current operation failed, and GL_TRUE
  * if it succeeded.
  */
-PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
+PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchThreadState *threadState,
                                          __GLdispatchTable *dispatch,
                                          int vendorID,
                                          const __GLdispatchPatchCallbacks *patchCb);
 
 /*!
- * This makes the NOP dispatch table current and sets the current API state to
- * NULL.
+ * This makes the NOP dispatch table current and sets the current thread state
+ * to NULL.
  *
  * A window system library should only call this if it created the current API
  * state. That is, if libGLX should not attempt to release an EGL context or
@@ -219,11 +233,11 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchAPIState *apiState,
 PUBLIC void __glDispatchLoseCurrent(void);
 
 /*!
- * This gets the current (opaque) API state pointer. If the pointer is
- * NULL, no context is current, otherwise the contents of the pointer depends on
- * which client API owns the context (EGL or GLX).
+ * This gets the current thread state pointer. If the pointer is \c NULL, no
+ * context is current, otherwise the contents of the pointer depends on which
+ * client API owns the context (EGL or GLX).
  */
-PUBLIC __GLdispatchAPIState *__glDispatchGetCurrentAPIState(void);
+PUBLIC __GLdispatchThreadState *__glDispatchGetCurrentThreadState(void);
 
 /**
  * Checks to see if multiple threads are being used. This should be called

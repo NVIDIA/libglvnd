@@ -42,18 +42,18 @@
 
 typedef struct __GLXcontextInfoRec __GLXcontextInfo;
 
-/*
+/*!
  * Define current API library state here.
  *
- * A thread will have a __GLXAPIState struct if and only if it has a current
+ * A thread will have a __GLXThreadState struct if and only if it has a current
  * GLX context. If we don't have a current context, then there's nothing useful
  * to store in it.
  *
- * The pointer to the current __GLXAPIState is stored in libGLdispatch, since
- * it's also the current __GLdispatchAPIState struct.
+ * The pointer to the current __GLXThreadState is stored in libGLdispatch, since
+ * it's also the current __GLdispatchThreadState struct.
  */
-typedef struct __GLXAPIStateRec {
-    __GLdispatchAPIState glas; /* Must be the first entry! */
+typedef struct __GLXThreadStateRec {
+    __GLdispatchThreadState glas; /* Must be the first entry! */
 
     __GLXvendorInfo *currentVendor;
 
@@ -63,40 +63,42 @@ typedef struct __GLXAPIStateRec {
     __GLXcontextInfo *currentContext;
 
     struct glvnd_list entry;
-} __GLXAPIState;
+} __GLXThreadState;
 
 /*!
- * This attempts to pull the current API state from TLS, and falls back to
- * __glXGetAPIState() if that fails.
+ * Looks up the current thread state.
+ *
+ * If there isn't a current context, or if the current context was set by
+ * another library like EGL, then this will return \c NULL.
  */
-static inline __GLXAPIState *__glXGetCurrentAPIState(void)
+static inline __GLXThreadState *__glXGetCurrentThreadState(void)
 {
-    __GLdispatchAPIState *glas = __glDispatchGetCurrentAPIState();
+    __GLdispatchThreadState *glas = __glDispatchGetCurrentThreadState();
     if (unlikely(!glas ||
                  (glas->tag != GLDISPATCH_API_GLX))) {
         return NULL;
     } else {
-        return (__GLXAPIState *)(glas);
+        return (__GLXThreadState *)(glas);
     }
 }
 
 /*!
- * This gets the current GLX static dispatch table, which is stored in the API
- * state.
+ * This gets the current GLX static dispatch table, which is stored in the
+ * thread state.
  */
 static inline const __GLXdispatchTableStatic *__glXGetCurrentDispatch(void)
 {
-    __GLXAPIState *apiState = __glXGetCurrentAPIState();
-    if (likely(apiState)) {
-        return &apiState->currentVendor->staticDispatch;
+    __GLXThreadState *threadState = __glXGetCurrentThreadState();
+    if (likely(threadState)) {
+        return &threadState->currentVendor->staticDispatch;
     } else {
         return __glXDispatchNoopPtr;
     }
 }
 
 /*!
- * This gets the current GLX dynamic dispatch table, which is stored in the API
- * state.
+ * This gets the current GLX dynamic dispatch table, which is stored in the
+ * thread state.
  */
 __GLXvendorInfo *__glXGetCurrentDynDispatch(void);
 
