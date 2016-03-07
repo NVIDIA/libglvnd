@@ -549,10 +549,9 @@ PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
     }
 }
 
-void DisplayClosed(Display *dpy)
+void __glXDisplayClosed(Display *dpy, __GLXdisplayInfo *dpyInfo)
 {
     __GLXAPIState *apiState;
-    __glXFreeDisplay(dpy);
 
     apiState = __glXGetCurrentAPIState();
     if (apiState != NULL && apiState->currentDisplay == dpy) {
@@ -2026,9 +2025,6 @@ void _init(void)
 
     /* TODO install fork handlers using __register_atfork */
 
-    /* Register our XCloseDisplay() callback */
-    XGLVRegisterCloseDisplayCallback(DisplayClosed);
-
     DBG_PRINTF(0, "Loading GLX...\n");
 
 }
@@ -2052,10 +2048,6 @@ void _fini(void)
     if (glas && glas->tag == GLDISPATCH_API_GLX) {
         __glDispatchLoseCurrent();
     }
-
-
-    /* Unregister all XCloseDisplay() callbacks */
-    XGLVUnregisterCloseDisplayCallbacks();
 
     /* Tear down all GLX API state */
     __glXAPITeardown(False);

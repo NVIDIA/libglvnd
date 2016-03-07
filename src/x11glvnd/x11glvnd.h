@@ -78,18 +78,4 @@ char *XGLVQueryScreenVendorMapping(
     int screen
 );
 
-/*
- * Registers a callback with x11glvnd which is fired whenever XCloseDisplay()
- * is called.  This gives x11glvnd clients a lightweight alternative to
- * declaring themselves an X11 extension and using XESetCloseDisplay().
- *
- * This is NOT a thread-safe operation.
- */
-void XGLVRegisterCloseDisplayCallback(void (*callback)(Display *));
-
-/*
- * Unregisters all registered callbacks.
- */
-void XGLVUnregisterCloseDisplayCallbacks(void);
-
 #endif // __X11GLVND_H__

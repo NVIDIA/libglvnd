@@ -722,6 +722,25 @@ static void CleanupDisplayInfoEntry(void *unused, __GLXdisplayInfoHash *pEntry)
                      pEntry->info.xidVendorHash, NULL, NULL, False);
 }
 
+static int OnDisplayClosed(Display *dpy, XExtCodes *codes)
+{
+    __GLXdisplayInfoHash *pEntry = NULL;
+
+    LKDHASH_WRLOCK(__glXDisplayInfoHash);
+
+    HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
+    if (pEntry != NULL) {
+        __glXDisplayClosed(dpy, &pEntry->info);
+        HASH_DEL(_LH(__glXDisplayInfoHash), pEntry);
+    }
+    LKDHASH_UNLOCK(__glXDisplayInfoHash);
+
+    CleanupDisplayInfoEntry(NULL, pEntry);
+    free(pEntry);
+
+    return 0;
+}
+
 __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
 {
     __GLXdisplayInfoHash *pEntry = NULL;
@@ -750,9 +769,19 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
     LKDHASH_WRLOCK(__glXDisplayInfoHash);
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, foundEntry);
     if (foundEntry == NULL) {
+        XExtCodes *extCodes = XAddExtension(dpy);
+        if (extCodes == NULL) {
+            CleanupDisplayInfoEntry(NULL, pEntry);
+            free(pEntry);
+            LKDHASH_UNLOCK(__glXDisplayInfoHash);
+            return NULL;
+        }
+
+        XESetCloseDisplay(dpy, extCodes->extension, OnDisplayClosed);
         HASH_ADD_PTR(_LH(__glXDisplayInfoHash), dpy, pEntry);
     } else {
         // Another thread already created the hashtable entry.
+        CleanupDisplayInfoEntry(NULL, pEntry);
         free(pEntry);
         pEntry = foundEntry;
     }

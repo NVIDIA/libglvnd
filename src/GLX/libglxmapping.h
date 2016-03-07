@@ -135,6 +135,12 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy);
  */
 void __glXFreeDisplay(Display *dpy);
 
+/*!
+ * This is called to perform any context-related cleanup when a display is
+ * closed.
+ */
+void __glXDisplayClosed(Display *dpy, __GLXdisplayInfo *dpyInfo);
+
 /*
  * Close the vendor library and perform any relevant teardown. This should
  * be called when the API library is unloaded.
