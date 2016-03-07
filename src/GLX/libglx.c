@@ -549,12 +549,12 @@ PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
     }
 }
 
-void __glXDisplayClosed(Display *dpy, __GLXdisplayInfo *dpyInfo)
+void __glXDisplayClosed(__GLXdisplayInfo *dpyInfo)
 {
     __GLXAPIState *apiState;
 
     apiState = __glXGetCurrentAPIState();
-    if (apiState != NULL && apiState->currentDisplay == dpy) {
+    if (apiState != NULL && apiState->currentDisplay == dpyInfo->dpy) {
         // Clear out the current context, but don't call into the vendor
         // library or do anything that might require a valid display.
         __glDispatchLoseCurrent();
@@ -569,7 +569,7 @@ void __glXDisplayClosed(Display *dpy, __GLXdisplayInfo *dpyInfo)
         /*
          * Stub out any references to this display in any other API states.
          */
-        if (apiState->currentDisplay == dpy) {
+        if (apiState->currentDisplay == dpyInfo->dpy) {
             apiState->currentDisplay = NULL;
         }
     }
