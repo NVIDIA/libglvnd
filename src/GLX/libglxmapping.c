@@ -790,23 +790,6 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
     return &pEntry->info;
 }
 
-void __glXFreeDisplay(Display *dpy)
-{
-    __GLXdisplayInfoHash *pEntry = NULL;
-
-    LKDHASH_WRLOCK(__glXDisplayInfoHash);
-    HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
-    if (pEntry != NULL) {
-        HASH_DEL(_LH(__glXDisplayInfoHash), pEntry);
-    }
-    LKDHASH_UNLOCK(__glXDisplayInfoHash);
-
-    if (pEntry != NULL) {
-        CleanupDisplayInfoEntry(NULL, pEntry);
-        free(pEntry);
-    }
-}
-
 /****************************************************************************/
 /*
  * Define two hashtables to store the mappings for GLXFBConfig and GLXContext

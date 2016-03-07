@@ -131,11 +131,6 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen);
 __GLXdisplayInfo *__glXLookupDisplay(Display *dpy);
 
 /*!
- * Frees the __GLXdisplayInfo structure for a display, if one exists.
- */
-void __glXFreeDisplay(Display *dpy);
-
-/*!
  * This is called to perform any context-related cleanup when a display is
  * closed.
  */
