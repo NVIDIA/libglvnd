@@ -110,7 +110,6 @@ typedef struct __GLXvendorNameHashRec {
 static DEFINE_INITIALIZED_LKDHASH(__GLXvendorNameHash, __glXVendorNameHash);
 
 typedef struct __GLXdisplayInfoHashRec {
-    Display *dpy;
     __GLXdisplayInfo info;
     UT_hash_handle hh;
 } __GLXdisplayInfoHash;
@@ -676,7 +675,7 @@ static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
     }
 
     memset(pEntry, 0, size);
-    pEntry->dpy = dpy;
+    pEntry->info.dpy = dpy;
     pEntry->info.vendors = (__GLXvendorInfo **) (pEntry + 1);
 
     LKDHASH_INIT(pEntry->info.xidVendorHash);
@@ -730,7 +729,7 @@ static int OnDisplayClosed(Display *dpy, XExtCodes *codes)
 
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
     if (pEntry != NULL) {
-        __glXDisplayClosed(dpy, &pEntry->info);
+        __glXDisplayClosed(&pEntry->info);
         HASH_DEL(_LH(__glXDisplayInfoHash), pEntry);
     }
     LKDHASH_UNLOCK(__glXDisplayInfoHash);
@@ -778,7 +777,7 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
         }
 
         XESetCloseDisplay(dpy, extCodes->extension, OnDisplayClosed);
-        HASH_ADD_PTR(_LH(__glXDisplayInfoHash), dpy, pEntry);
+        HASH_ADD_PTR(_LH(__glXDisplayInfoHash), info.dpy, pEntry);
     } else {
         // Another thread already created the hashtable entry.
         CleanupDisplayInfoEntry(NULL, pEntry);
