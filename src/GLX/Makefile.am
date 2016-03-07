@@ -32,7 +32,8 @@ noinst_HEADERS = \
 	libglxnoop.h \
 	libglxgl.h \
 	libglxstring.h \
-	libglxthread.h
+	libglxthread.h \
+	libglxproto.h
 
 lib_LTLIBRARIES = libGLX.la
 
@@ -79,6 +80,7 @@ libGLX_la_SOURCES = \
 	libglx.c \
 	libglxmapping.c \
 	libglxstring.c \
+	libglxproto.c \
 	$(UTIL_DIR)/glvnd_genentry.c \
 	$(UTIL_DIR)/utils_misc.c \
 	g_libglxnoop.c
