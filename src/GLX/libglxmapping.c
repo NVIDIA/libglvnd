@@ -1023,6 +1023,9 @@ static void RemoveVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID 
 
 static int ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
 {
+    if (ScreenCount(dpy) == 1)
+        return DefaultScreen(dpy);
+
     if (dpyInfo->x11glvndSupported)
         return XGLVQueryXIDScreenMapping(dpy, xid);
 
