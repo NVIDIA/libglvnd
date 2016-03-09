@@ -42,6 +42,7 @@
 __asm__(".section wtext,\"ax\",@progbits\n");
 __asm__(".balign 4096\n"
        ".globl public_entry_start\n"
+       ".hidden public_entry_start\n"
         "public_entry_start:");
 
 #define STUB_ASM_ENTRY(func)        \
@@ -65,6 +66,7 @@ __asm__(".balign 4096\n"
 
 __asm__(".balign 4096\n"
        ".globl public_entry_end\n"
+       ".hidden public_entry_end\n"
         "public_entry_end:");
 __asm__(".text\n");
 
