@@ -1021,10 +1021,58 @@ static void RemoveVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID 
     LKDHASH_UNLOCK(dpyInfo->xidVendorHash);
 }
 
+static int ScreenFromGLX(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
+{
+    xGLXGetDrawableAttributesReq *req;
+    xGLXGetDrawableAttributesReply rep;
+    int major, minor;
+    int attrib[2], length;
+    int screen = -1;
+
+    if (!glXQueryVersion(dpy, &major, &minor))
+        return -1;
+    if (major != 1 || minor < 3)
+        return -1;
+
+    LockDisplay(dpy);
+
+    GetReq(GLXGetDrawableAttributes, req);
+    req->reqType = dpyInfo->glxMajorOpcode;
+    req->glxCode = X_GLXGetDrawableAttributes;
+    req->drawable = xid;
+
+    if (!_XReply(dpy, (xReply *)&rep, 0, False))
+        goto out;
+
+    length = rep.length;
+    while (length) {
+        _XRead(dpy, (void *)attrib, sizeof(attrib));
+        length -= 2;
+
+        if (attrib[0] == GLX_SCREEN) {
+            screen = attrib[1];
+            _XEatData(dpy, length);
+            break;
+        }
+    }
+
+out:
+    UnlockDisplay(dpy);
+    SyncHandle();
+
+    return screen;
+}
+
 static int ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
 {
+    int screen;
+
     if (ScreenCount(dpy) == 1)
         return DefaultScreen(dpy);
+
+    screen = ScreenFromGLX(dpy, dpyInfo, xid);
+    if (screen != -1)
+        return screen;
 
     if (dpyInfo->x11glvndSupported)
         return XGLVQueryXIDScreenMapping(dpy, xid);
