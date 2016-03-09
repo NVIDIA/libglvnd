@@ -1021,6 +1021,13 @@ static void RemoveVendorXIDMapping(Display *dpy, __GLXdisplayInfo *dpyInfo, XID 
     LKDHASH_UNLOCK(dpyInfo->xidVendorHash);
 }
 
+static int ScreenFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid)
+{
+    if (dpyInfo->x11glvndSupported)
+        return XGLVQueryXIDScreenMapping(dpy, xid);
+
+    return -1;
+}
 
 static void VendorFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid,
         __GLXvendorInfo **retVendor)
@@ -1036,15 +1043,14 @@ static void VendorFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid,
         vendor = pEntry->vendor;
         LKDHASH_UNLOCK(dpyInfo->xidVendorHash);
     } else {
+        int screen;
         LKDHASH_UNLOCK(dpyInfo->xidVendorHash);
 
-        if (dpyInfo->x11glvndSupported) {
-            int screen = XGLVQueryXIDScreenMapping(dpy, xid);
-            if (screen >= 0 && screen < ScreenCount(dpy)) {
-                vendor = __glXLookupVendorByScreen(dpy, screen);
-                if (vendor != NULL) {
-                    AddVendorXIDMapping(dpy, dpyInfo, xid, vendor);
-                }
+        screen = ScreenFromXID(dpy, dpyInfo, xid);
+        if (screen >= 0 && screen < ScreenCount(dpy)) {
+            vendor = __glXLookupVendorByScreen(dpy, screen);
+            if (vendor != NULL) {
+                AddVendorXIDMapping(dpy, dpyInfo, xid, vendor);
             }
         }
     }
