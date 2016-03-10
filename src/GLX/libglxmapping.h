@@ -50,6 +50,7 @@ struct __GLXvendorInfoRec {
     __GLdispatchTable *glDispatch; //< GL dispatch table
 
     const __GLXapiImports *glxvc;
+    const __GLdispatchPatchCallbacks *patchCallbacks;
     __GLXdispatchTableStatic staticDispatch; //< static GLX dispatch table
 };
 

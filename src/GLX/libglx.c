@@ -866,7 +866,7 @@ static Bool InternalMakeCurrentDispatch(
         &apiState->glas,
         vendor->glDispatch,
         vendor->vendorID,
-        vendor->glxvc->patchCallbacks
+        vendor->patchCallbacks
     );
 
     if (ret) {

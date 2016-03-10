@@ -447,37 +447,6 @@ static GLboolean LookupVendorEntrypoints(__GLXvendorInfo *vendor)
     return GL_TRUE;
 }
 
-static Bool CheckVendorImportsTable(__GLXvendorNameHash *pEntry)
-{
-    // Make sure all the required functions are there.
-    if (pEntry->imports.isScreenSupported == NULL
-            || pEntry->imports.getProcAddress == NULL
-            || pEntry->imports.getDispatchAddress == NULL
-            || pEntry->imports.setDispatchIndex == NULL)
-    {
-        return False;
-    }
-
-    // Check to see whether this vendor library can support entrypoint
-    // patching.
-    if (pEntry->imports.patchCallbacks != NULL) {
-        if (pEntry->imports.patchCallbacks != &pEntry->patchCallbacks) {
-            // The vendor library shouldn't replace the patchCallbacks
-            // pointer. If it does, then just ignore it.
-            pEntry->imports.patchCallbacks = NULL;
-        } else {
-            if (pEntry->patchCallbacks.isPatchSupported == NULL
-                    || pEntry->patchCallbacks.initiatePatch == NULL) {
-                // If we don't have at least the isPatchSupported and
-                // initiatePatch callbacks, then patching isn't
-                // supported.
-                pEntry->imports.patchCallbacks = NULL;
-            }
-        }
-    }
-    return True;
-}
-
 static void *VendorGetProcAddressCallback(const char *procName, void *param)
 {
     __GLXvendorInfo *vendor = (__GLXvendorInfo *) param;
@@ -522,6 +491,7 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             }
             vendor = &pEntry->vendor;
 
+            vendor->glxvc = &pEntry->imports;
             vendor->name = (char *) (pEntry + 1);
             memcpy(vendor->name, vendorName, vendorNameLen + 1);
 
@@ -551,9 +521,6 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
 
-            // Plug in the vendor imports table.
-            pEntry->imports.patchCallbacks = &pEntry->patchCallbacks;
-
             /* Initialize the dynamic dispatch table */
             LKDHASH_INIT(vendor->dynDispatchHash);
 
@@ -564,15 +531,28 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 goto fail;
             }
 
-            // Check to see whether this vendor library can support entrypoint
-            // patching.
-            if (!CheckVendorImportsTable(pEntry)) {
+            // Make sure all the required functions are there.
+            if (pEntry->imports.isScreenSupported == NULL
+                    || pEntry->imports.getProcAddress == NULL
+                    || pEntry->imports.getDispatchAddress == NULL
+                    || pEntry->imports.setDispatchIndex == NULL)
+            {
                 goto fail;
             }
-            vendor->glxvc = &pEntry->imports;
 
             if (!LookupVendorEntrypoints(vendor)) {
                 goto fail;
+            }
+
+            // Check to see whether this vendor library can support entrypoint
+            // patching.
+            if (pEntry->imports.isPatchSupported != NULL
+                    && pEntry->imports.initiatePatch != NULL) {
+                pEntry->patchCallbacks.isPatchSupported = pEntry->imports.isPatchSupported;
+                pEntry->patchCallbacks.initiatePatch = pEntry->imports.initiatePatch;
+                pEntry->patchCallbacks.releasePatch = pEntry->imports.releasePatch;
+                pEntry->patchCallbacks.threadAttach = pEntry->imports.patchThreadAttach;
+                pEntry->vendor.patchCallbacks = &pEntry->patchCallbacks;
             }
 
             HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendor->name,

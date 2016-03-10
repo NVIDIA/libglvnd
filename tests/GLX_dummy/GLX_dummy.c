@@ -679,8 +679,8 @@ PUBLIC Bool __glx_Main(uint32_t version,
         imports->getDispatchAddress = dummyGetDispatchAddress;
         imports->setDispatchIndex = dummySetDispatchIndex;
 #if defined(PATCH_ENTRYPOINTS)
-        imports->patchCallbacks->isPatchSupported = dummyCheckPatchSupported;
-        imports->patchCallbacks->initiatePatch = dummyInitiatePatch;
+        imports->isPatchSupported = dummyCheckPatchSupported;
+        imports->initiatePatch = dummyInitiatePatch;
 #endif
 
         return True;
