@@ -57,6 +57,18 @@
 static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
 
 /**
+ * This structure keeps track of the dispatch table used by one or more
+ * rendering contexts.
+ */
+typedef struct __GLXcontextDispatchHashRec {
+    __GLXdispatchHandle dispatchHandle;
+    __GLXvendorInfo *vendor;
+    __GLdispatchTable *dispatchTable;
+    int refCount;
+    UT_hash_handle hh;
+} __GLXcontextDispatchHash;
+
+/**
  * This structure keeps track of a rendering context.
  *
  * It's used both to keep track of which vendor owns each context and for
@@ -67,6 +79,7 @@ struct __GLXcontextInfoRec {
     __GLXvendorInfo *vendor;
     int currentCount;
     Bool deleted;
+    __GLXcontextDispatchHash *dispatchEntry;
     UT_hash_handle hh;
 };
 
@@ -97,6 +110,12 @@ static glvnd_mutex_t currentThreadStateListMutex = GLVND_MUTEX_INITIALIZER;
 
 static __GLXThreadState *CreateThreadState(__GLXvendorInfo *vendor);
 static void DestroyThreadState(__GLXThreadState *threadState);
+
+/*!
+ * Returns True if libGLX can switch between two contexts without calling into
+ * libGLdispatch.
+ */
+static Bool CanSwitchContexts(__GLXcontextInfo *newCtxInfo, __GLXcontextInfo *oldCtxInfo);
 
 /*!
  * Updates the current context.
@@ -131,6 +150,18 @@ static void FreeContextInfo(__GLXcontextInfo *ctx);
  * then it will remove and free the __GLXcontextInfo struct.
  */
 static void CheckContextDeleted(__GLXcontextInfo *ctx);
+
+/**
+ * Initializes any additional per-context state. This initializes any state
+ * that's needed before making the context current.
+ *
+ * The caller must take the \c glxContextHashLock mutex before calling this
+ * function.
+ *
+ * \param ctx The context structure.
+ * \return True on success, or False on error.
+ */
+static Bool InitContextInfo(__GLXcontextInfo *ctx);
 
 static void __glXSendError(Display *dpy, unsigned char errorCode,
         XID resourceID, unsigned char minorCode, Bool coreX11error);
@@ -665,7 +696,7 @@ int __glXAddVendorContextMapping(Display *dpy, GLXContext context, __GLXvendorIn
 
     HASH_FIND_PTR(glxContextHash, &context, ctxInfo);
     if (ctxInfo == NULL) {
-        ctxInfo = (__GLXcontextInfo *) malloc(sizeof(__GLXcontextInfo));
+        ctxInfo = (__GLXcontextInfo *) calloc(1, sizeof(__GLXcontextInfo));
         if (ctxInfo == NULL) {
             __glvndPthreadFuncs.mutex_unlock(&glxContextHashLock);
             return -1;
@@ -705,6 +736,16 @@ static void FreeContextInfo(__GLXcontextInfo *ctx)
 {
     if (ctx != NULL) {
         HASH_DELETE(hh, glxContextHash, ctx);
+        if (ctx->dispatchEntry != NULL) {
+            ctx->dispatchEntry->refCount--;
+            if (ctx->dispatchEntry->refCount <= 0) {
+                HASH_DELETE(hh, ctx->vendor->contextDispatchHash, ctx->dispatchEntry);
+                if (ctx->dispatchEntry->dispatchTable != NULL) {
+                    __glDispatchDestroyTable(ctx->dispatchEntry->dispatchTable);
+                }
+                free(ctx->dispatchEntry);
+            }
+        }
         free(ctx);
     }
 }
@@ -729,6 +770,84 @@ static void CheckContextDeleted(__GLXcontextInfo *ctx)
     if (ctx->deleted && ctx->currentCount == 0) {
         FreeContextInfo(ctx);
     }
+}
+
+static void *ContextGetProcAddressCallback(const char *procName, void *param)
+{
+    __GLXcontextDispatchHash *entry = (__GLXcontextDispatchHash *) param;
+    return entry->vendor->glxvc->getContextProcAddress(entry->dispatchHandle,
+        (const GLubyte *) procName);
+}
+
+static void *VendorGetProcAddressCallback(const char *procName, void *param)
+{
+    __GLXvendorInfo *vendor = (__GLXvendorInfo *) param;
+    return vendor->glxvc->getProcAddress((const GLubyte *) procName);
+}
+
+static Bool InitContextInfo(__GLXcontextInfo *ctx)
+{
+    if (ctx->dispatchEntry == NULL) {
+        __GLXcontextDispatchHash *entry = NULL;
+        __GLXdispatchHandle handle = NULL;
+
+        if (ctx->vendor->glxvc->getContextDispatchHandle != NULL) {
+            // If the vendor library supports per-context dispatch tables, then
+            // look up a dispatch handle for it. Otherwise, we'll just use NULL
+            // for the handle.
+            assert(ctx->vendor->glxvc->getContextProcAddress != NULL);
+            handle = ctx->vendor->glxvc->getContextDispatchHandle(ctx->context);
+        }
+        HASH_FIND_PTR(ctx->vendor->contextDispatchHash, &handle, entry);
+
+        if (entry == NULL) {
+            // We don't have a matching dispatch table yet, so create one.
+            entry = (__GLXcontextDispatchHash *) calloc(1, sizeof(__GLXcontextDispatchHash));
+            if (entry == NULL) {
+                return False;
+            }
+
+            entry->dispatchHandle = handle;
+            entry->vendor = ctx->vendor;
+            entry->refCount = 0;
+
+            if (ctx->vendor->glxvc->getContextDispatchHandle != NULL) {
+                entry->dispatchTable = __glDispatchCreateTable(
+                        ContextGetProcAddressCallback, entry);
+            } else {
+                entry->dispatchTable = __glDispatchCreateTable(
+                        VendorGetProcAddressCallback, ctx->vendor);
+            }
+            if (entry->dispatchTable == NULL) {
+                free(entry);
+                return False;
+            }
+
+            HASH_ADD_PTR(ctx->vendor->contextDispatchHash, dispatchHandle, entry);
+        }
+
+        entry->refCount++;
+        ctx->dispatchEntry = entry;
+    }
+
+    return True;
+}
+
+static Bool CanSwitchContexts(__GLXcontextInfo *newCtxInfo, __GLXcontextInfo *oldCtxInfo)
+{
+    assert(newCtxInfo != NULL);
+    assert(oldCtxInfo != NULL);
+    assert(newCtxInfo->dispatchEntry != NULL);
+    assert(oldCtxInfo->dispatchEntry != NULL);
+
+    if (newCtxInfo->vendor != oldCtxInfo->vendor) {
+        return False;
+    }
+    if (newCtxInfo->dispatchEntry->dispatchTable != oldCtxInfo->dispatchEntry->dispatchTable) {
+        return False;
+    }
+
+    return True;
 }
 
 static void __glXSendError(Display *dpy, unsigned char errorCode,
@@ -805,8 +924,8 @@ static Bool InternalLoseCurrent(void)
  * Calls into the vendor library to set the current context, and then updates
  * the thread state fields to match.
  *
- * This function does *not* call into libGLdispatch, so it can only switch
- * to another context with the same vendor.
+ * This function does *not* call into libGLdispatch, so it can only switch to
+ * another context with the same vendor and the same dispatch table.
  *
  * If this function succeeds, then it will update the current display, context,
  * and drawables in \p threadState.
@@ -873,7 +992,7 @@ static Bool InternalMakeCurrentDispatch(
 
     ret = __glDispatchMakeCurrent(
         &threadState->glas,
-        vendor->glDispatch,
+        ctxInfo->dispatchEntry->dispatchTable,
         vendor->vendorID,
         vendor->patchCallbacks
     );
@@ -986,42 +1105,48 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
         }
         newVendor = newCtxInfo->vendor;
         assert(newVendor != NULL);
+
+        if (!InitContextInfo(newCtxInfo)) {
+            __glvndPthreadFuncs.mutex_unlock(&glxContextHashLock);
+            return False;
+        }
     } else {
         newCtxInfo = NULL;
         newVendor = NULL;
     }
 
-    if (oldVendor == newVendor) {
-        assert(threadState != NULL);
-
-        /*
-         * We're switching between two contexts that use the same vendor. That
-         * means the dispatch table is also the same, which is the only thing
-         * that libGLdispatch cares about. Call into the vendor library to
-         * switch contexts, but don't call into libGLdispatch.
-         */
-        ret = InternalMakeCurrentVendor(dpy, draw, read, newCtxInfo, callerOpcode,
-                threadState, newVendor);
-        if (ret) {
-            UpdateCurrentContext(newCtxInfo, oldCtxInfo);
-        }
-    } else if (newVendor == NULL) {
+    if (newCtxInfo == NULL) {
         /*
          * We have a current context and we're releasing it.
          */
         assert(context == NULL);
         ret = InternalLoseCurrent();
 
-    } else if (oldVendor == NULL) {
+    } else if (oldCtxInfo == NULL) {
         /*
          * We don't have a current context, so we only need to make the new one
          * current.
          */
         ret = InternalMakeCurrentDispatch(dpy, draw, read, newCtxInfo, callerOpcode,
                 newVendor);
+    } else if (CanSwitchContexts(oldCtxInfo, newCtxInfo)) {
+        assert(threadState != NULL);
+
+        /*
+         * We're switching between two contexts that use the same vendor and
+         * dispatch table, so the two are the same as far as libGLdispatch is
+         * concerned. Call into the vendor library to switch contexts, but
+         * don't call into libGLdispatch.
+         */
+        ret = InternalMakeCurrentVendor(dpy, draw, read, newCtxInfo, callerOpcode,
+                threadState, newVendor);
+        if (ret) {
+            UpdateCurrentContext(newCtxInfo, oldCtxInfo);
+        }
     } else {
         /*
-         * We're switching between contexts with different vendors.
+         * We're switching between contexts with different vendors or different
+         * dispatch tables.
          *
          * This gets tricky because we have to call into both vendor libraries
          * and libGLdispatch. Any of those can fail, and if it does, then we

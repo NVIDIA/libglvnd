@@ -100,7 +100,7 @@ extern "C" {
  * will still work.
  */
 #define GLX_VENDOR_ABI_MAJOR_VERSION ((uint32_t) 1)
-#define GLX_VENDOR_ABI_MINOR_VERSION ((uint32_t) 0)
+#define GLX_VENDOR_ABI_MINOR_VERSION ((uint32_t) 1)
 #define GLX_VENDOR_ABI_VERSION ((GLX_VENDOR_ABI_MAJOR_VERSION << 16) | GLX_VENDOR_ABI_MINOR_VERSION)
 static inline uint32_t GLX_VENDOR_ABI_GET_MAJOR_VERSION(uint32_t version)
 {
@@ -118,6 +118,15 @@ static inline uint32_t GLX_VENDOR_ABI_GET_MINOR_VERSION(uint32_t version)
  * functions retrieve and operate on this structure using the API below.
  */
 typedef struct __GLXvendorInfoRec __GLXvendorInfo;
+
+/*!
+ * An opaque handle that identifies a dispatch table. The handle values are
+ * assigned by the vendor library.
+ *
+ * See __GLXapiImports::getContextDispatchHandle and
+ * __GLXapiImports::getContextProcAddress.
+ */
+typedef struct __GLXDispatchHandleRec *__GLXdispatchHandle;
 
 /****************************************************************************
  * API library exports                                                      *
@@ -389,6 +398,66 @@ typedef struct __GLXapiImportsRec {
      * \note This function may be called concurrently from multiple threads.
      */
     void (*patchThreadAttach)(void);
+
+    /* End of entrypoint patching functions */
+
+    /************************************************************************
+     * The getContextDispatchHandle and getContextProcAddress callbacks allow
+     * a vendor library to provide different dispatch tables for different
+     * contexts.
+     *
+     * If the vendor library provides these functions, then they will be used
+     * instead of getProcAddress for OpenGL functions. Note that getProcAddress
+     * is still used for looking up GLX functions.
+     *
+     * getContextDispatchHandle will return an opaque handle that tells libGLX
+     * which dispatch table to use for a context. Multiple contexts may use the
+     * same dispatch handle, in which case they will use the same dispatch
+     * table.
+     *
+     * The dispatch handle is passed to getContextProcAddress to look up the
+     * OpenGL implementation functions to plug into the dispatch table.
+     ************************************************************************/
+
+    /*!
+     * (OPTIONAL) Returns a dispatch table handle for \c getContextProcAddress.
+     *
+     * This function returns an opaque handle that libGLX will pass to
+     * \c getContextProcAddress to populate a dispatch table. This allows a
+     * vendor library to use different dispatch tables for different contexts.
+     *
+     * A vendor library may return the same dispatch handle for multiple
+     * contexts. If it does, then those contexts will share the same dispatch
+     * table. Sharing the same dispatch table is more memory efficient and
+     * allows libGLX to switch between contexts more efficiently.
+     *
+     * The dispatch handle must remain valid as long as any of the contexts
+     * that use it still exist.
+     *
+     * If a vendor library provides this function, then it must also provide
+     * \c getContextProcAddress.
+     *
+     * \param ctx A context handle.
+     * \return An opaque handle to identify a dispatch table. Any pointer value
+     *         is allowed, including \c NULL.
+     */
+    __GLXdispatchHandle (* getContextDispatchHandle) (GLXContext ctx);
+
+    /*!
+     * (OPTIONAL) Looks up an OpenGL function for a specific context.
+     *
+     * If the vendor library provides this function, then it will be used to
+     * look up OpenGL functions on a per-context basis instead of
+     * \c getProcAddress.
+     *
+     * \param dispatchHandle The dispatch handle returned by
+     *      \c getContextDispatchHandle.
+     * \param procName The function name to look up.
+     * \return A pointer to a function, or \c NULL if the vendor does not support
+     * the function.
+     */
+    __GLXextFuncPtr (* getContextProcAddress) (__GLXdispatchHandle dispatchHandle,
+            const GLubyte *procName);
 
 } __GLXapiImports;
 

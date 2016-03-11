@@ -379,10 +379,6 @@ static void CleanupVendorNameEntry(void *unused,
                                    __GLXvendorNameHash *pEntry)
 {
     __GLXvendorInfo *vendor = &pEntry->vendor;
-    if (vendor->glDispatch != NULL) {
-        __glDispatchDestroyTable(vendor->glDispatch);
-        vendor->glDispatch = NULL;
-    }
 
     /* Clean up the dynamic dispatch table */
     LKDHASH_TEARDOWN(__GLXdispatchFuncHash,
@@ -446,12 +442,6 @@ static GLboolean LookupVendorEntrypoints(__GLXvendorInfo *vendor)
     return GL_TRUE;
 }
 
-static void *VendorGetProcAddressCallback(const char *procName, void *param)
-{
-    __GLXvendorInfo *vendor = (__GLXvendorInfo *) param;
-    return vendor->glxvc->getProcAddress((const GLubyte *) procName);
-}
-
 __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 {
     __GLXvendorNameHash *pEntry = NULL;
@@ -511,15 +501,6 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             vendor->vendorID = __glDispatchNewVendorID();
             assert(vendor->vendorID >= 0);
 
-            vendor->glDispatch = (__GLdispatchTable *)
-                __glDispatchCreateTable(
-                    VendorGetProcAddressCallback,
-                    vendor
-                );
-            if (!vendor->glDispatch) {
-                goto fail;
-            }
-
             /* Initialize the dynamic dispatch table */
             LKDHASH_INIT(vendor->dynDispatchHash);
 
@@ -537,6 +518,16 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                     || pEntry->imports.setDispatchIndex == NULL)
             {
                 goto fail;
+            }
+
+            // The vendor must provide both or neither of
+            // getContextDispatchHandle and getContextProcAddress.
+            if (pEntry->imports.getContextDispatchHandle != NULL
+                    || pEntry->imports.getContextProcAddress != NULL) {
+                if (pEntry->imports.getContextDispatchHandle == NULL
+                        || pEntry->imports.getContextProcAddress == NULL) {
+                    goto fail;
+                }
             }
 
             if (!LookupVendorEntrypoints(vendor)) {
@@ -667,18 +658,6 @@ const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int s
         return &vendor->staticDispatch;
     } else {
         return __glXDispatchNoopPtr;
-    }
-}
-
-__GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen)
-{
-    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
-
-    if (vendor) {
-        assert(vendor->glDispatch);
-        return vendor->glDispatch;
-    } else {
-        return NULL;
     }
 }
 

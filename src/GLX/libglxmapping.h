@@ -47,7 +47,10 @@ struct __GLXvendorInfoRec {
     /// dynamic GLX dispatch table
     DEFINE_LKDHASH(struct __GLXdispatchFuncHashRec, dynDispatchHash);
 
-    __GLdispatchTable *glDispatch; //< GL dispatch table
+    /*!
+     * A hashtable to keep track of the dispatch tables for this vendor.
+     */
+    struct __GLXcontextDispatchHashRec *contextDispatchHash;
 
     const __GLXapiImports *glxvc;
     const __GLdispatchPatchCallbacks *patchCallbacks;
@@ -93,8 +96,6 @@ const __GLXdispatchTableStatic * __glXGetStaticDispatch(Display *dpy,
                                                         const int screen);
 __GLXvendorInfo *__glXGetDynDispatch(Display *dpy,
                                                const int screen);
-__GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
-
 /*!
  * Various functions to manage mappings used to determine the screen
  * of a particular GLX call.
