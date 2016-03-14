@@ -240,7 +240,6 @@ AC_CONFIG_FILES([Makefile
                  src/GLESv1/Makefile
                  src/GLESv2/Makefile
                  src/GLX/Makefile
-                 src/x11glvnd/Makefile
                  src/GLdispatch/Makefile
                  src/GLdispatch/vnd-glapi/Makefile
                  src/util/Makefile
