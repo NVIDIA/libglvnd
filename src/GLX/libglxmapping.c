@@ -42,12 +42,12 @@
 #include "libglxnoop.h"
 #include "libglxthread.h"
 #include "libglxstring.h"
+#include "libglxproto.h"
 #include "utils_misc.h"
 #include "glvnd_genentry.h"
 #include "trace.h"
 
 #include "lkdhash.h"
-#include "x11glvnd.h"
 
 #define _GNU_SOURCE 1
 
@@ -595,16 +595,26 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
         }
 
         if (!vendor) {
-            if (dpyInfo->x11glvndSupported) {
-                char *queriedVendorName = XGLVQueryScreenVendorMapping(dpy, screen);
-                vendor = __glXLookupVendorByName(queriedVendorName);
-                Xfree(queriedVendorName);
+            if (dpyInfo->libglvndExtensionSupported) {
+                char *queriedVendorNames =
+                    __glXQueryServerString(dpyInfo, screen, GLX_VENDOR_NAMES_EXT);
+                if (queriedVendorNames != NULL) {
+                    char *name, *saveptr;
+                    for (name = strtok_r(queriedVendorNames, " ", &saveptr);
+                            name != NULL;
+                            name = strtok_r(NULL, " ", &saveptr)) {
+                        vendor = __glXLookupVendorByName(name);
 
-                // Make sure that the vendor library can support this screen.
-                // If it can't, then we'll fall back to the indirect rendering
-                // library.
-                if (vendor != NULL && !vendor->glxvc->checkSupportsScreen(dpy, screen)) {
-                    vendor = NULL;
+                        // Make sure that the vendor library can support this screen.
+                        if (vendor != NULL && !vendor->glxvc->checkSupportsScreen(dpy, screen)) {
+                            vendor = NULL;
+                        }
+
+                        if (vendor != NULL) {
+                            break;
+                        }
+                    }
+                    free(queriedVendorNames);
                 }
             }
         }
@@ -666,7 +676,7 @@ static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
 {
     __GLXdisplayInfoHash *pEntry;
     size_t size;
-    int eventBase, errorBase;
+    int eventBase;
 
     size = sizeof(*pEntry) + ScreenCount(dpy) * sizeof(__GLXvendorInfo *);
     pEntry = (__GLXdisplayInfoHash *) malloc(size);
@@ -687,11 +697,26 @@ static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
             &pEntry->info.glxMajorOpcode, &eventBase,
             &pEntry->info.glxFirstError);
 
-    // Check whether the server supports the x11glvnd extension.
-    if (XGLVQueryExtension(dpy, &eventBase, &errorBase)) {
-        pEntry->info.x11glvndSupported = True;
-        XGLVQueryVersion(dpy, &pEntry->info.x11glvndMajor,
-                &pEntry->info.x11glvndMinor);
+    if (pEntry->info.glxSupported) {
+        int screen;
+
+        // Check to see if the server supports the GLX_EXT_libglvnd extension.
+        // Note that it has to be supported on every screen to use it.
+        pEntry->info.libglvndExtensionSupported = True;
+        for (screen = 0;
+                screen < ScreenCount(dpy) && pEntry->info.libglvndExtensionSupported;
+                screen++) {
+            char *extensions = __glXQueryServerString(&pEntry->info, screen, GLX_EXTENSIONS);
+            if (extensions != NULL) {
+                if (!IsExtensionInString(extensions, GLX_EXT_LIBGLVND_NAME,
+                            strlen(GLX_EXT_LIBGLVND_NAME))) {
+                    pEntry->info.libglvndExtensionSupported = False;
+                }
+                free(extensions);
+            } else {
+                pEntry->info.libglvndExtensionSupported = False;
+            }
+        }
     }
 
     return pEntry;
@@ -973,8 +998,8 @@ static void VendorFromXID(Display *dpy, __GLXdisplayInfo *dpyInfo, XID xid,
     } else {
         LKDHASH_UNLOCK(dpyInfo->xidVendorHash);
 
-        if (dpyInfo->x11glvndSupported) {
-            int screen = XGLVQueryXIDScreenMapping(dpy, xid);
+        if (dpyInfo->libglvndExtensionSupported) {
+            int screen = __glXGetDrawableScreen(dpyInfo, xid);
             if (screen >= 0 && screen < ScreenCount(dpy)) {
                 vendor = __glXLookupVendorByScreen(dpy, screen);
                 if (vendor != NULL) {
@@ -1015,7 +1040,7 @@ int __glXVendorFromDrawable(Display *dpy, GLXDrawable drawable, __GLXvendorInfo 
     __GLXdisplayInfo *dpyInfo = __glXLookupDisplay(dpy);
     __GLXvendorInfo *vendor = NULL;
     if (dpyInfo != NULL) {
-        if (dpyInfo->x11glvndSupported) {
+        if (dpyInfo->libglvndExtensionSupported) {
             VendorFromXID(dpy, dpyInfo, drawable, &vendor);
         } else {
             // We'll use the same vendor for every screen in this case.

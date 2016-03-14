@@ -41,7 +41,6 @@ UTIL_DIR = ../util
 TRACE_DIR = ../util/trace
 UTHASH_DIR = ../util/uthash/src
 GL_DISPATCH_DIR = ../GLdispatch
-X11GLVND_DIR = ../x11glvnd
 
 # Warning settings
 # Include paths
@@ -50,7 +49,6 @@ libGLX_la_CFLAGS += -I$(srcdir)/$(UTIL_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(TRACE_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(GL_DISPATCH_DIR)
 libGLX_la_CFLAGS += -I$(top_srcdir)/include
-libGLX_la_CFLAGS += -I$(srcdir)/$(X11GLVND_DIR)
 
 # Required library flags
 libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)
@@ -60,7 +58,6 @@ libGLX_la_LIBADD = -ldl
 libGLX_la_LIBADD += $(X11_LIBS)
 libGLX_la_LIBADD += $(XEXT_LIBS)
 libGLX_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
-libGLX_la_LIBADD += $(X11GLVND_DIR)/libx11glvnd_client.la
 libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
 
 libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)

@@ -43,7 +43,6 @@
 #include "utils_misc.h"
 #include "trace.h"
 #include "GL/glxproto.h"
-#include "x11glvnd.h"
 #include "libglxgl.h"
 #include "glvnd_list.h"
 

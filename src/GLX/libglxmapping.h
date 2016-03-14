@@ -80,9 +80,7 @@ typedef struct __GLXdisplayInfoRec {
     int glxMajorOpcode;
     int glxFirstError;
 
-    Bool x11glvndSupported;
-    int x11glvndMajor;
-    int x11glvndMinor;
+    Bool libglvndExtensionSupported;
 } __GLXdisplayInfo;
 
 /*!
