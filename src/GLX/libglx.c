@@ -1580,7 +1580,7 @@ PUBLIC GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
         GLXFBConfig *fbconfigs = vendor->staticDispatch.getFBConfigs(dpy, screen, nelements);
         if (fbconfigs != NULL) {
             int i;
-            Bool success;
+            Bool success = True;
             for (i = 0; i < *nelements; i++) {
                 if (__glXAddVendorFBConfigMapping(dpy, fbconfigs[i], vendor) != 0) {
                     success = False;
