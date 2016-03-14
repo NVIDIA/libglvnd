@@ -1,0 +1,8 @@
+testglxgetclientstr
+testglxgetprocaddress
+testglxmakecurrent
+testglxmakecurrent_oldlink
+testglxnscreens
+testglxqueryversion
+testpatchentrypoints
+testx11glvndproto
