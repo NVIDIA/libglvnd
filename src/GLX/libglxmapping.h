@@ -59,6 +59,8 @@ typedef struct __GLXvendorXIDMappingHashRec __GLXvendorXIDMappingHash;
  * Structure containing per-display information.
  */
 typedef struct __GLXdisplayInfoRec {
+    Display *dpy;
+
     char *clientStrings[GLX_CLIENT_STRING_LAST_ATTRIB];
 
     /**
@@ -78,9 +80,7 @@ typedef struct __GLXdisplayInfoRec {
     int glxMajorOpcode;
     int glxFirstError;
 
-    Bool x11glvndSupported;
-    int x11glvndMajor;
-    int x11glvndMinor;
+    Bool libglvndExtensionSupported;
 } __GLXdisplayInfo;
 
 /*!
@@ -131,9 +131,10 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen);
 __GLXdisplayInfo *__glXLookupDisplay(Display *dpy);
 
 /*!
- * Frees the __GLXdisplayInfo structure for a display, if one exists.
+ * This is called to perform any context-related cleanup when a display is
+ * closed.
  */
-void __glXFreeDisplay(Display *dpy);
+void __glXDisplayClosed(__GLXdisplayInfo *dpyInfo);
 
 /*
  * Close the vendor library and perform any relevant teardown. This should

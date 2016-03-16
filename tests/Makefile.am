@@ -41,14 +41,18 @@ TESTS = \
 	testglxmcloop.sh \
 	testglxmcthreads.sh \
 	testglxmclate.sh \
-	testx11glvndproto.sh \
 	testglxmcoldlink.sh \
 	testglxgetclientstr.sh \
 	testglxqueryversion.sh \
-	testglxnscreens.sh \
 	testglxnscrthreads.sh \
 	testpatchentrypoints.sh \
 	fini_test_env.sh
+
+# TODO: These tests depend on the x11glvnd server extension, which isn't used
+# anymore. They need to be rewritten to use the GLX_EXT_libglvnd extension
+# instead.
+#TESTS += testx11glvndproto.sh
+#TESTS += testglxnscreens.sh
 
 EXTRA_DIST = $(TESTS)
 
@@ -56,26 +60,25 @@ check_PROGRAMS = \
 	testglxgetprocaddress \
 	testglxmakecurrent \
 	testglxmakecurrent_oldlink \
-	testx11glvndproto \
 	testglxgetclientstr \
 	testglxqueryversion \
-	testpatchentrypoints \
-	testglxnscreens
+	testpatchentrypoints
+
+#check_PROGRAMS += testx11glvndproto
+#check_PROGRAMS += testglxnscreens
 
 testglxnscreens_SOURCES = \
 	$(top_srcdir)/src/util/glvnd_pthread.c \
 	testglxnscreens.c \
 	test_utils.c
 
-X11GLVND_DIR = src/x11glvnd
-
-testglxnscreens_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR) $(AM_CFLAGS)
-
-testglxnscreens_LDADD = -lX11
-testglxnscreens_LDADD += $(top_builddir)/src/GLX/libGLX.la
-testglxnscreens_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testglxnscreens_LDADD += $(top_builddir)/src/util/trace/libtrace.la
-testglxnscreens_LDADD += -lX11 -ldl $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
+#testglxnscreens_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR) $(AM_CFLAGS)
+#
+#testglxnscreens_LDADD = -lX11
+#testglxnscreens_LDADD += $(top_builddir)/src/GLX/libGLX.la
+#testglxnscreens_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
+#testglxnscreens_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+#testglxnscreens_LDADD += -lX11 -ldl $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
 
@@ -94,8 +97,8 @@ testglxmakecurrent_oldlink_LDADD = -lX11 -ldl
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/trace/libtrace.la
 
-testx11glvndproto_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR)
-testx11glvndproto_LDADD = -lX11 $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
+#testx11glvndproto_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR)
+#testx11glvndproto_LDADD = -lX11 $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
 
 # Disable annoying "unused" errors
 AM_CFLAGS =                                  \

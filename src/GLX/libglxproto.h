@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, NVIDIA CORPORATION.
+ * Copyright (c) 2016, NVIDIA CORPORATION.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -27,29 +27,45 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
-#ifndef __X11GLVNDSERVER_H__
-#define __X11GLVNDSERVER_H__
-
-#include <X11/Xdefs.h>
-#include "compiler.h"
+#ifndef LIBGLXPROTO_H
+#define LIBGLXPROTO_H
 
 /*!
- * Public symbols exported by the x11glvnd X server module. Server-side GLX can
- * hook into these symbols in order to implement tracking of GLX drawables and
- * potentially implement active notification of clients when XID -> screen
- * mappings change (this could be done via shared memory in the direct rendering
- * case). The latter will allow clients to cache XID -> screen values, saving a
- * round trip in the common case.
- *
- * XXX: Currently there is a race between the XID -> screen lookup and potential
- * destruction of a GLX drawable and recycling of its XID. Will we need to
- * somehow lock drawables on the server to prevent them from going away until we
- * have dispatched to the vendor? Or should it be safe to dispatch even if the
- * drawable disappears?
+ * Functions to handle various GLX protocol requests.
  */
 
-#define XGLV_X_CONFIG_OPTION_NAME "GLVendor"
+#include "libglxmapping.h"
 
-PUBLIC void _XGLVRegisterGLXDrawableType(RESTYPE rtype);
-
+#ifndef GLX_VENDOR_NAMES_EXT
+#define GLX_VENDOR_NAMES_EXT 0x20F6
 #endif
+
+#define GLX_EXT_LIBGLVND_NAME "GLX_EXT_libglvnd"
+
+/*!
+ * Sends a glXQueryServerString request. If an error occurs, then it will
+ * return \c NULL, but won't call the X error handler.
+ *
+ * \param dpyInfo The display connection.
+ * \param screen The screen number.
+ * \param name The name enum to request.
+ * \return The string, or \c NULL on error. The caller must free the string
+ * using \c free.
+ */
+char *__glXQueryServerString(__GLXdisplayInfo *dpyInfo, int screen, int name);
+
+/*!
+ * Looks up the screen number for a drawable.
+ *
+ * Note that if the drawable is valid, but server doesn't send a screen number,
+ * then that means the server doesn't support the GLX_EXT_libglvnd extension.
+ * In that case, this function will return zero, since we'll be using the same
+ * screen for every drawable anyway.
+ *
+ * \param dpyInfo The display connection.
+ * \param drawable The drawable to query.
+ * \return The screen number for the drawable, or -1 on error.
+ */
+int __glXGetDrawableScreen(__GLXdisplayInfo *dpyInfo, GLXDrawable drawable);
+
+#endif // LIBGLXPROTO_H
