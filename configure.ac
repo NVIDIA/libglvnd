@@ -37,39 +37,6 @@ if test "x$ac_cv_prog_cc_c99" = xno; then
 fi
 
 dnl
-dnl Auxiliary ELF symbol filtering support
-dnl
-AC_ARG_ENABLE([dt-auxiliary],
-    [AS_HELP_STRING([--enable-dt-auxiliary],
-    [enable auxiliary ELF symbol filtering @<:@default=disabled@:>@])],
-    [enable_dt_auxiliary="$enableval"],
-    [enable_dt_auxiliary=no]
-)
-AC_MSG_CHECKING([whether to enable auxiliary ELF symbol filtering])
-
-if test "x$enable_dt_auxiliary" = xyes; then
-    (
-        _SAVE_LDFLAGS="$LDFLAGS"
-        LDFLAGS='-shared -Wl,--auxiliary=libc.so.6'
-        AC_LINK_IFELSE([AC_LANG_SOURCE([])],
-                        [dt_auxiliary_supported=yes],
-                        [dt_auxiliary_supported=no])
-        if test "x$dt_auxiliary_supported" = xyes; then
-            AC_MSG_RESULT([yes, supported])
-        else
-            AC_MSG_RESULT([no, not supported])
-        fi
-        test "x$dt_auxiliary_supported" = xyes
-        LDFLAGS ="$_SAVE_LDFLAGS"
-    ) && dt_auxiliary_supported=yes
-else
-    dt_auxiliary_supported=no
-    AC_MSG_RESULT([no])
-fi
-
-AM_CONDITIONAL([USE_DT_AUXILIARY], [test "x$dt_auxiliary_supported" = xyes])
-
-dnl
 dnl Arch/platform-specific settings. Copied from mesa
 dnl
 AC_ARG_ENABLE([asm],

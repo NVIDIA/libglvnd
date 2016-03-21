@@ -63,12 +63,6 @@ g_glapi_mapi_$(ENTRYPOINT_TARGET)_tmp.h : $(glapi_gen_mapi_deps)
 g_$(ENTRYPOINT_TARGET)_exports.sym : $(glapi_gen_libopengl_exports_deps)
 	$(call glapi_gen_libopengl_exports, $(ENTRYPOINT_TARGET))
 
-if USE_DT_AUXILIARY
-DT_AUX_FLAGS = -Xlinker "--auxiliary=libGLdispatch.so.0"
-else
-DT_AUX_FLAGS =
-endif
-
 ENTRYPOINT_COMMON_CFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
@@ -82,8 +76,7 @@ ENTRYPOINT_COMMON_DEPENDENCIES = $(builddir)/g_$(ENTRYPOINT_TARGET)_exports.sym
 
 ENTRYPOINT_COMMON_LDFLAGS = -shared \
 	$(LINKER_FLAG_NO_UNDEFINED) \
-	-export-symbols $(builddir)/g_$(ENTRYPOINT_TARGET)_exports.sym \
-	$(DT_AUX_FLAGS)
+	-export-symbols $(builddir)/g_$(ENTRYPOINT_TARGET)_exports.sym
 
 ENTRYPOINT_COMMON_LIBADD = ../GLdispatch/libGLdispatch.la
 

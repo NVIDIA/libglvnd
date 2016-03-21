@@ -57,15 +57,7 @@ g_libglglxwrapper.c : $(glapi_gen_libglglxstubs_deps)
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
 
-if USE_DT_AUXILIARY
-# XXX: libtool has trouble processing "-Wl,*" options, so we use -Xlinker here
-# instead.
-DT_AUX_FLAGS = -Xlinker "--auxiliary=libGLX.so.0" -Xlinker "--auxiliary=libGLdispatch.so.0"
-else
-DT_AUX_FLAGS =
-endif
-
-libGL_la_LDFLAGS = -shared -version-info 1 $(LINKER_FLAG_NO_UNDEFINED) $(DT_AUX_FLAGS)
+libGL_la_LDFLAGS = -shared -version-info 1 $(LINKER_FLAG_NO_UNDEFINED)
 
 AM_CPPFLAGS = \
 	-I$(TOP)/src/GLdispatch/vnd-glapi/mapi \
