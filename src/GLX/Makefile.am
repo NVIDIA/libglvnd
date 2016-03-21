@@ -50,6 +50,7 @@ libGLX_la_CFLAGS += -I$(srcdir)/$(TRACE_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(GL_DISPATCH_DIR)
 libGLX_la_CFLAGS += -I$(top_srcdir)/include
 libGLX_la_CFLAGS += -I$(srcdir)/$(X11GLVND_DIR)
+libGLX_la_CFLAGS += $(GLPROTO_CFLAGS)
 
 # Required library flags
 libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)
