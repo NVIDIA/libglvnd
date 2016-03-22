@@ -29,23 +29,18 @@
 #include <stdio.h>
 
 #include "table.h"
+#include "app_error_check.h"
 
 static void
 noop_warn(const char *name)
 {
-   static int debug = -1;
-   
-   if (debug < 0)
-      debug = (getenv("MESA_DEBUG") || getenv("LIBGL_DEBUG"));
-
-   if (debug)
-      fprintf(stderr, "%s is no-op\n", name);
+    glvndAppErrorCheckReportError("%s called without a current context\n", name);
 }
 
 static int
 noop_generic(void)
 {
-   noop_warn("function");
+   noop_warn("OpenGL function");
    return 0;
 }
 
