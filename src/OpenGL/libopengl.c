@@ -29,7 +29,6 @@
 
 #include <dlfcn.h>
 #include <GL/gl.h>
-#include <GL/glx.h>
 #include "compiler.h"
 #include "entry.h"
 #include "stub.h"
