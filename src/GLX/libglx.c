@@ -43,7 +43,6 @@
 #include "utils_misc.h"
 #include "trace.h"
 #include "GL/glxproto.h"
-#include "x11glvnd.h"
 #include "libglxgl.h"
 #include "glvnd_list.h"
 
@@ -562,13 +561,12 @@ PUBLIC Bool glXIsDirect(Display *dpy, GLXContext context)
     }
 }
 
-void DisplayClosed(Display *dpy)
+void __glXDisplayClosed(__GLXdisplayInfo *dpyInfo)
 {
     __GLXThreadState *threadState;
-    __glXFreeDisplay(dpy);
 
     threadState = __glXGetCurrentThreadState();
-    if (threadState != NULL && threadState->currentDisplay == dpy) {
+    if (threadState != NULL && threadState->currentDisplay == dpyInfo->dpy) {
         // Clear out the current context, but don't call into the vendor
         // library or do anything that might require a valid display.
         __glDispatchLoseCurrent();
@@ -583,7 +581,7 @@ void DisplayClosed(Display *dpy)
         /*
          * Stub out any references to this display in any other thread states.
          */
-        if (threadState->currentDisplay == dpy) {
+        if (threadState->currentDisplay == dpyInfo->dpy) {
             threadState->currentDisplay = NULL;
         }
     }
@@ -2070,9 +2068,6 @@ void _init(void)
 
     /* TODO install fork handlers using __register_atfork */
 
-    /* Register our XCloseDisplay() callback */
-    XGLVRegisterCloseDisplayCallback(DisplayClosed);
-
     DBG_PRINTF(0, "Loading GLX...\n");
 
 }
@@ -2097,11 +2092,7 @@ void _fini(void)
         __glDispatchLoseCurrent();
     }
 
-
-    /* Unregister all XCloseDisplay() callbacks */
-    XGLVUnregisterCloseDisplayCallbacks();
-
-    /* Tear down all GLX thread state */
+    /* Tear down all GLX API state */
     __glXAPITeardown(False);
 
     /* Tear down all mapping state */
