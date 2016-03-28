@@ -387,11 +387,11 @@ typedef struct __GLXapiImportsRec {
 /*****************************************************************************/
 
 #define __GLX_MAIN_PROTO_NAME "__glx_Main"
-#define __GLX_MAIN_PROTO(version, exports, vendor, imports)                \
-    __GLXapiImports *__glx_Main(uint32_t version,               \
-                                      const __GLXapiExports *exports, \
-                                      __GLXvendorInfo *vendor, \
-                                      __GLXapiImports *imports)
+#define __GLX_MAIN_PROTO(version, exports, vendor, imports) \
+    Bool __glx_Main(uint32_t version, \
+                    const __GLXapiExports *exports, \
+                    __GLXvendorInfo *vendor, \
+                    __GLXapiImports *imports)
 
 typedef Bool (*__PFNGLXMAINPROC)
     (uint32_t version, const __GLXapiExports *exports, __GLXvendorInfo *vendor, __GLXapiImports *imports);

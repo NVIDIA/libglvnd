@@ -42,7 +42,7 @@
 #include "compiler.h"
 
 
-static __GLXapiExports apiExports;
+static const __GLXapiExports *apiExports = NULL;
 
 /*
  * Dummy context structure.
@@ -329,7 +329,7 @@ static void          dummySelectEvent           (Display *dpy,
  */
 static void dummy_glBegin (void)
 {
-    GLXContext ctx = apiExports.getCurrentContext();
+    GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     ctx->beginHit++;
@@ -337,7 +337,7 @@ static void dummy_glBegin (void)
 
 static void dummy_glVertex3fv(GLfloat *v)
 {
-    GLXContext ctx = apiExports.getCurrentContext();
+    GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     ctx->vertex3fvHit++;
@@ -345,7 +345,7 @@ static void dummy_glVertex3fv(GLfloat *v)
 
 static void dummy_glEnd (void)
 {
-    GLXContext ctx = apiExports.getCurrentContext();
+    GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     ctx->endHit++;
@@ -355,7 +355,7 @@ static void dummy_glMakeCurrentTestResults(GLint req,
                                         GLboolean *saw,
                                         void **ret)
 {
-    GLXContext ctx = apiExports.getCurrentContext();
+    GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     *saw = GL_TRUE;
@@ -405,13 +405,13 @@ static void dispatch_glXExampleExtensionFunction(Display *dpy,
     ExampleExtensionFunctionPtr func;
     const int index = dummyExampleExtensionFunctionIndex;
 
-    dynDispatch = apiExports.getDynDispatch(dpy, screen);
+    dynDispatch = apiExports->getDynDispatch(dpy, screen);
     if (!dynDispatch) {
         return;
     }
 
     func = (ExampleExtensionFunctionPtr)
-        apiExports.fetchDispatchEntry(dynDispatch, index);
+        apiExports->fetchDispatchEntry(dynDispatch, index);
     if (func) {
         func(dpy, screen, retval);
     }
@@ -671,20 +671,23 @@ PUBLIC Bool __glx_Main(uint32_t version,
                                   __GLXvendorInfo *vendor,
                                   __GLXapiImports *imports)
 {
-    if (version <= GLX_VENDOR_ABI_VERSION) {
-        memcpy(&apiExports, exports, sizeof(*exports));
+    if (GLX_VENDOR_ABI_GET_MAJOR_VERSION(version)
+            == GLX_VENDOR_ABI_GET_MAJOR_VERSION(GLX_VENDOR_ABI_VERSION)) {
+        if (GLX_VENDOR_ABI_GET_MINOR_VERSION(version)
+                >= GLX_VENDOR_ABI_GET_MINOR_VERSION(GLX_VENDOR_ABI_VERSION)) {
+            apiExports = exports;
 
-        imports->isScreenSupported = dummyCheckSupportsScreen;
-        imports->getProcAddress = dummyGetProcAddress;
-        imports->getDispatchAddress = dummyGetDispatchAddress;
-        imports->setDispatchIndex = dummySetDispatchIndex;
+            imports->isScreenSupported = dummyCheckSupportsScreen;
+            imports->getProcAddress = dummyGetProcAddress;
+            imports->getDispatchAddress = dummyGetDispatchAddress;
+            imports->setDispatchIndex = dummySetDispatchIndex;
 #if defined(PATCH_ENTRYPOINTS)
-        imports->isPatchSupported = dummyCheckPatchSupported;
-        imports->initiatePatch = dummyInitiatePatch;
+            imports->isPatchSupported = dummyCheckPatchSupported;
+            imports->initiatePatch = dummyInitiatePatch;
 #endif
 
-        return True;
-    } else {
-        return False;
+            return True;
+        }
     }
+    return False;
 }
