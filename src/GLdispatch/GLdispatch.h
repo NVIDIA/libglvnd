@@ -137,6 +137,81 @@ typedef struct __GLdispatchThreadStateRec {
     struct __GLdispatchThreadStatePrivateRec *priv;
 } __GLdispatchThreadState;
 
+typedef struct __GLdispatchPatchCallbacksRec {
+    /*!
+     * Checks to see if the vendor library supports patching the given stub
+     * type and size.
+     *
+     * \param type The type of entrypoints. This will be a one of the
+     * __GLDISPATCH_STUB_* values.
+     * \param stubSize The maximum size of the stub that the vendor library can
+     * write, in bytes.
+     * \param lookupStubOffset A callback into libglvnd to look up the address
+     * of each entrypoint.
+     */
+    GLboolean (* isPatchSupported)(int type, int stubSize);
+
+    /*!
+     * Called by libglvnd to request that a vendor library patch its top-level
+     * entrypoints.
+     *
+     * The vendor library should use the \p lookupStubOffset callback to find
+     * the addresses of each entrypoint.
+     *
+     * This function may be called more than once to patch multiple sets of
+     * entrypoints. For example, depending on how they're built, libOpenGL.so
+     * or libGL.so may have their own entrypoints that are separate functions
+     * from the ones in libGLdispatch.
+     *
+     * Note that during this call is the only time that the entrypoints can be
+     * modified. After the call to \c initiatePatch returns, the vendor library
+     * should treat the entrypoints as read-only.
+     *
+     * \param type The type of entrypoints. This will be a one of the
+     * __GLDISPATCH_STUB_* values.
+     * \param stubSize The maximum size of the stub that the vendor library can
+     * write, in bytes.
+     * \param lookupStubOffset A callback into libglvnd to look up the address
+     * of each entrypoint.
+     *
+     * \return GL_TRUE if the vendor library supports patching with this type
+     * and size.
+     */
+    GLboolean (*initiatePatch)(int type,
+                               int stubSize,
+                               DispatchPatchLookupStubOffset lookupStubOffset);
+
+    /*!
+     * (OPTIONAL) Called by libglvnd to notify the current vendor that it no
+     * longer owns the top-level entrypoints.
+     *
+     * Libglvnd will take care of the restoring the entrypoints back to their
+     * original state. The vendor library must not try to modify them.
+     */
+    void (*releasePatch)(void);
+
+    /*!
+     * (OPTIONAL) Called at the start of window-system functions (GLX and EGL).
+     * This callback allows vendor libraries to perform any per-thread
+     * initialization.
+     *
+     * This is basically a workaround for broken applications. A lot of apps
+     * will make one or more invalid GLX/EGL calls on a thread (often including
+     * a MakeCurrent with invalid parameters), and then will try to call an
+     * OpenGL function.
+     *
+     * A non-libglvnd-based driver would be able to initialize any thread state
+     * even on a bogus GLX call, but with libglvnd, those calls wouldn't get
+     * past libGLX.
+     *
+     * This function is optional. If it's \c NULL, then libGLdispatch will
+     * simply ignore it.
+     *
+     * \note This function may be called concurrently from multiple threads.
+     */
+    void (*threadAttach)(void);
+} __GLdispatchPatchCallbacks;
+
 /*!
  * Gets the version number for the ABI between libGLdispatch and the
  * window-system libraries.

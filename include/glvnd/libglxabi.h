@@ -90,8 +90,18 @@ extern "C" {
 
 /*!
  * Current version of the ABI.
+ *
+ * This version number contains a major number in the high-order 16 bits, and
+ * a minor version number in the low-order 16 bits.
+ *
+ * The major version number is incremented when an interface change will break
+ * backwards compatibility with existing vendor libraries. The minor version
+ * number is incremented when there's a change but existing vendor libraries
+ * will still work.
  */
-#define GLX_VENDOR_ABI_VERSION 0
+#define GLX_VENDOR_ABI_VERSION ((1 << 16) | 0)
+#define GLX_VENDOR_ABI_GET_MAJOR_VERSION(version) ((version) & 0xFFFF)
+#define GLX_VENDOR_ABI_GET_MINOR_VERSION(version) ((version) >> 16)
 
 
 /*!
@@ -151,15 +161,19 @@ typedef struct __GLXapiExportsRec {
 
     /************************************************************************
      * These routines are used by vendor dispatch functions to look up
-     * and add mappings between various objects and screens.
+     * and add mappings between various objects and vendors.
      ************************************************************************/
 
     /*!
-     * Records the screen number and vendor for a context. The screen and
-     * vendor must be the ones returned for the XVisualInfo or GLXFBConfig that
-     * the context is created from.
+     * Records the vendor for a context. The vendor must be the one returned
+     * for the XVisualInfo or GLXFBConfig that the context is created from.
+     *
+     * \param dpy The display pointer.
+     * \param context The context handle.
+     * \param vendor The vendor that created the context.
+     * \return Zero on success, non-zero on error.
      */
-    void (*addVendorContextMapping)(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
+    int (*addVendorContextMapping)(Display *dpy, GLXContext context, __GLXvendorInfo *vendor);
 
     /*!
      * Removes a mapping from context to vendor. The context must have been
@@ -168,33 +182,27 @@ typedef struct __GLXapiExportsRec {
     void (*removeVendorContextMapping)(Display *dpy, GLXContext context);
 
     /*!
-     * Looks up the screen and vendor for a context.
+     * Looks up the vendor for a context.
      *
-     * If no mapping is found, then \p retScreen will be set to -1, and
-     * \p retVendor and \p retDisplay will be set to NULL.
-     *
-     * \p retScreen, \p retVendor, and \p retDisplay may be NULL if the screen,
-     * vendor, or display are not required.
+     * If no mapping is found, then this function will return \c NULL. No
+     * errors are raised, so the dispatch function must raise any appropriate X
+     * errors.
      *
      * Note that this function does not take a display connection, since
      * there are cases (e.g., glXGetContextIDEXT) that take a GLXContext but
      * not a display.
      *
      * \param context The context to look up.
-     * \param[out] retVendor Returns the vendor.
-     * \return Zero if a match was found, or non-zero if it was not.
+     * \return The vendor for the context, or NULL if no matching context was
+     * found.
      */
-    int (*vendorFromContext)(GLXContext context, __GLXvendorInfo **retVendor);
+    __GLXvendorInfo * (*vendorFromContext)(GLXContext context);
 
-    void (*addVendorFBConfigMapping)(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
+    int (*addVendorFBConfigMapping)(Display *dpy, GLXFBConfig config, __GLXvendorInfo *vendor);
     void (*removeVendorFBConfigMapping)(Display *dpy, GLXFBConfig config);
-    int (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config, __GLXvendorInfo **retVendor);
+    __GLXvendorInfo * (*vendorFromFBConfig)(Display *dpy, GLXFBConfig config);
 
-    void (*addScreenVisualMapping)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo *vendor);
-    void (*removeScreenVisualMapping)(Display *dpy, const XVisualInfo *visual);
-    int (*vendorFromVisual)(Display *dpy, const XVisualInfo *visual, __GLXvendorInfo **retVendor);
-
-    void (*addVendorDrawableMapping)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
+    int (*addVendorDrawableMapping)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo *vendor);
     void (*removeVendorDrawableMapping)(Display *dpy, GLXDrawable drawable);
 
     /*!
@@ -210,7 +218,7 @@ typedef struct __GLXapiExportsRec {
      * All of this should be opaque to a dispatch function, since the only
      * thing that matters is finding out which vendor to dispatch to.
      */
-    int (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable, __GLXvendorInfo **retVendor);
+    __GLXvendorInfo * (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable);
 
 } __GLXapiExports;
 
@@ -231,7 +239,7 @@ typedef struct __GLXapiImportsRec {
      * \param screen The screen number.
      * \return True if the vendor library can support this screen.
      */
-    Bool (* checkSupportsScreen) (Display *dpy, int screen);
+    Bool (* isScreenSupported) (Display *dpy, int screen);
 
     /*!
      * This retrieves the pointer to the real GLX or core GL function.
@@ -289,39 +297,134 @@ typedef struct __GLXapiImportsRec {
                                  XID resid, unsigned char opcode,
                                  Bool coreX11error);
 
-    /*!
-     * (OPTIONAL) Callbacks by which the vendor library may re-write libglvnd's
+    /*
+     * The vendor library may use the isPatchSupported, initiatePatch,
+     * releasePatch, and patchThreadAttach callbacks to re-write libglvnd's
      * entrypoints at make current time, provided no other contexts are current
-     * and the TLS model supports this functionality.  This is a performance
+     * and the TLS model supports this functionality. This is a performance
      * optimization that may not be available at runtime; the vendor library
-     * must not depend on this functionality for correctness.  This should
-     * point to a statically-allocated structure, or NULL if unimplemented.
+     * must not depend on this functionality for correctness.
+     *
+     * To use this optimization, the vendor library must provide at least the
+     * isPatchSupported and initiatePatch entrypoints.
      */
-    const __GLdispatchPatchCallbacks *patchCallbacks;
+
+    /*!
+     * (OPTIONAL) Checks to see if the vendor library supports patching the
+     * given stub type and size.
+     *
+     * \param type The type of entrypoints. This will be a one of the
+     * __GLDISPATCH_STUB_* values.
+     * \param stubSize The maximum size of the stub that the vendor library can
+     * write, in bytes.
+     * \param lookupStubOffset A callback into libglvnd to look up the address
+     * of each entrypoint.
+     */
+    GLboolean (* isPatchSupported)(int type, int stubSize);
+
+    /*!
+     * (OPTIONAL) Called by libglvnd to request that a vendor library patch its
+     * top-level entrypoints.
+     *
+     * The vendor library should use the \p lookupStubOffset callback to find
+     * the addresses of each entrypoint.
+     *
+     * This function may be called more than once to patch multiple sets of
+     * entrypoints. For example, depending on how they're built, libOpenGL.so
+     * or libGL.so may have their own entrypoints that are separate functions
+     * from the ones in libGLdispatch.
+     *
+     * Note that during this call is the only time that the entrypoints can be
+     * modified. After the call to \c initiatePatch returns, the vendor library
+     * should treat the entrypoints as read-only.
+     *
+     * \param type The type of entrypoints. This will be a one of the
+     * __GLDISPATCH_STUB_* values.
+     * \param stubSize The maximum size of the stub that the vendor library can
+     * write, in bytes.
+     * \param lookupStubOffset A callback into libglvnd to look up the address
+     * of each entrypoint.
+     *
+     * \return GL_TRUE if the vendor library supports patching with this type
+     * and size.
+     */
+    GLboolean (*initiatePatch)(int type,
+                               int stubSize,
+                               DispatchPatchLookupStubOffset lookupStubOffset);
+
+    /*!
+     * (OPTIONAL) Called by libglvnd to notify the current vendor that it no
+     * longer owns the top-level entrypoints.
+     *
+     * Libglvnd will take care of the restoring the entrypoints back to their
+     * original state. The vendor library must not try to modify them.
+     */
+    void (*releasePatch)(void);
+
+    /*!
+     * (OPTIONAL) Called at the start of window-system functions (GLX and EGL).
+     * This callback allows vendor libraries to perform any per-thread
+     * initialization.
+     *
+     * This is basically a workaround for broken applications. A lot of apps
+     * will make one or more invalid GLX/EGL calls on a thread (often including
+     * a MakeCurrent with invalid parameters), and then will try to call an
+     * OpenGL function.
+     *
+     * A non-libglvnd-based driver would be able to initialize any thread state
+     * even on a bogus GLX call, but with libglvnd, those calls wouldn't get
+     * past libGLX.
+     *
+     * This function is optional. If it's \c NULL, then libGLdispatch will
+     * simply ignore it.
+     *
+     * \note This function may be called concurrently from multiple threads.
+     */
+    void (*patchThreadAttach)(void);
 
 } __GLXapiImports;
 
 /*****************************************************************************/
 
+#define __GLX_MAIN_PROTO_NAME "__glx_Main"
+#define __GLX_MAIN_PROTO(version, exports, vendor, imports) \
+    Bool __glx_Main(uint32_t version, \
+                    const __GLXapiExports *exports, \
+                    __GLXvendorInfo *vendor, \
+                    __GLXapiImports *imports)
+
+typedef Bool (*__PFNGLXMAINPROC)
+    (uint32_t version, const __GLXapiExports *exports, __GLXvendorInfo *vendor, __GLXapiImports *imports);
+
 /*!
  * Vendor libraries must export a function called __glx_Main() with the
- * following prototype. This function also performs a handshake based on the ABI
- * version number. This function receives a pointer to an exports table whose
- * lifetime is only guaranteed to be at a minimum that of the call to
- * __glx_Main(), in addition to the version number and a string identifying the
- * vendor. If there is an ABI version mismatch or some other error occurs, this
- * function returns NULL; otherwise this returns a pointer to a filled-in
- * dispatch table.
+ * following prototype.
+ *
+ * This function also performs a handshake based on the ABI version number.
+ * Vendor libraries can optionally use the version number to support older
+ * versions of the ABI.
+ *
+ * \param[in] version The ABI version. The upper 16 bits contains the major version
+ * number, and the lower 16 bits contains the minor version number.
+ *
+ * \param[in] exports The table of functions provided by libGLX. This pointer will
+ * remain valid for as long as the vendor is loaded.
+ *
+ * \param[in] vendor The opaque pointer used to identify this vendor library. This
+ * may be used in future versions to provide additional per-vendor information.
+ *
+ * \param[out] imports The function table that the vendor library should fill
+ * in. The vendor library must assign every non-optional function in the
+ * struct.
+ *
+ * \return True on success. If the vendor library does not support the
+ * requested ABI version or if some other error occurs, then it should return
+ * False.
  */
-#define __GLX_MAIN_PROTO_NAME "__glx_Main"
-#define __GLX_MAIN_PROTO(version, exports, vendorName)                \
-    const __GLXapiImports *__glx_Main(uint32_t version,               \
-                                      const __GLXapiExports *exports, \
-                                      const char *vendorName,         \
-                                      int vendorID)
-
-typedef const __GLXapiImports *(*__PFNGLXMAINPROC)
-    (uint32_t, const __GLXapiExports *, const char *, int);
+Bool __glx_Main(uint32_t version,
+                                  const __GLXapiExports *exports,
+                                  __GLXvendorInfo *vendor,
+                                  __GLXapiImports *imports);
 
 /*!
  * @}

@@ -36,6 +36,7 @@
 #include "utils_misc.h"
 #include "u_macros.h"
 #include "glapi/glapi.h"
+#include "glvnd/GLdispatchABI.h"
 
 #define ENTRY_STUB_ALIGN 32
 #define ENTRY_STUB_SIZE ENTRY_STUB_ALIGN
@@ -74,7 +75,7 @@ __asm__("x86_64_current_tls:\n\t"
 extern unsigned long
 x86_64_current_tls();
 
-const int entry_type = ENTRY_X86_64_TLS;
+const int entry_type = __GLDISPATCH_STUB_X86_64;
 const int entry_stub_size = ENTRY_STUB_SIZE;
 
 void entry_generate_default_code(char *entry, int slot)

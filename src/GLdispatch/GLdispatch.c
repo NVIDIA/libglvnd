@@ -563,14 +563,16 @@ static int PatchEntrypoints(
     if (stubCurrentPatchCb) {
         // Notify the previous vendor that it no longer owns these
         // entrypoints.
-        stubCurrentPatchCb->releasePatch();
+        if (stubCurrentPatchCb->releasePatch != NULL) {
+            stubCurrentPatchCb->releasePatch();
+        }
     }
 
     if (patchCb) {
         GLboolean anySuccess = GL_FALSE;
 
         glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-            if (patchCb->checkPatchSupported(stub->callbacks.getStubType(),
+            if (patchCb->isPatchSupported(stub->callbacks.getStubType(),
                         stub->callbacks.getStubSize()))
             {
                 if (stub->callbacks.startPatch()) {
@@ -826,6 +828,10 @@ void __glDispatchCheckMultithreaded(void)
             }
         }
         UnlockDispatch();
+
+        if (stubCurrentPatchCb != NULL && stubCurrentPatchCb->threadAttach != NULL) {
+            stubCurrentPatchCb->threadAttach();
+        }
     }
 }
 

@@ -44,18 +44,45 @@ extern "C" {
  * these client ABIs.
  */
 
-/*
- * Thread-local implementation used by libglvnd.  This is passed into
- * the patch function callback via the type parameter.
+/*!
+ * Thread-local implementation used by libglvnd. This is passed into the patch
+ * function callback via the type parameter.
+ *
+ * For most architectures, the vendor library can ignore this parameter, since
+ * it will always be the same value. It's used for systems like ARM, where the
+ * stubs might be use the ARM or Thumb instruction sets.
+ *
+ * The stub type does not make any distinction between TLS and TSD stubs. The
+ * entire purpose of entrypoint rewriting is to skip the dispatch table in
+ * libGLdispatch.so, so it doesn't matter how that dispatch table is stored.
  */
 enum {
-    __GLDISPATCH_STUB_X86_TLS,
-    __GLDISPATCH_STUB_X86_64_TLS,
-    __GLDISPATCH_STUB_X86_TSD,
-    __GLDISPATCH_STUB_PURE_C,
-    __GLDISPATCH_STUB_X86_64_TSD,
-    __GLDISPATCH_STUB_ARMV7_THUMB_TSD,
-    __GLDISPATCH_STUB_NUM_TYPES
+    /*!
+     * Indicates that the stubs aren't defined in assembly. For example, if the
+     * dispatch stubs are written in C. Vendor libraries generally won't see
+     * this value.
+     */
+    __GLDISPATCH_STUB_UNKNOWN,
+
+    /*!
+     * Used for stubs on x86 systems.
+     */
+    __GLDISPATCH_STUB_X86,
+
+    /*!
+     * Used for stubs on x86-64 systems.
+     */
+    __GLDISPATCH_STUB_X86_64,
+
+    /*!
+     * Used for stubs on ARMv7, using the Thumb instruction set.
+     */
+    __GLDISPATCH_STUB_ARMV7_THUMB,
+
+    /*!
+     * Used for stubs on ARMv7, using the normal ARM instruction set.
+     */
+    __GLDISPATCH_STUB_ARMV7_ARM
 };
 
 /*!
@@ -85,60 +112,6 @@ enum {
  */
 typedef GLboolean (*DispatchPatchLookupStubOffset)(const char *funcName,
         void **writePtr, const void **execPtr);
-
-typedef struct __GLdispatchPatchCallbacksRec {
-    /*!
-     * Checks to see if the vendor library supports patching the given stub
-     * type and size.
-     *
-     * \param type The type of entrypoints. This will be a one of the
-     * __GLDISPATCH_STUB_* values.
-     * \param stubSize The maximum size of the stub that the vendor library can
-     * write, in bytes.
-     * \param lookupStubOffset A callback into libglvnd to look up the address
-     * of each entrypoint.
-     */
-    GLboolean (* checkPatchSupported)(int type, int stubSize);
-
-    /*!
-     * Called by libglvnd to request that a vendor library patch its top-level
-     * entrypoints.
-     *
-     * The vendor library should use the \p lookupStubOffset callback to find
-     * the addresses of each entrypoint.
-     *
-     * This function may be called more than once to patch multiple sets of
-     * entrypoints. For example, depending on how they're built, libOpenGL.so
-     * or libGL.so may have their own entrypoints that are separate functions
-     * from the ones in libGLdispatch.
-     *
-     * Note that during this call is the only time that the entrypoints can be
-     * modified. After the call to \c initiatePatch returns, the vendor library
-     * should treat the entrypoints as read-only.
-     *
-     * \param type The type of entrypoints. This will be a one of the
-     * __GLDISPATCH_STUB_* values.
-     * \param stubSize The maximum size of the stub that the vendor library can
-     * write, in bytes.
-     * \param lookupStubOffset A callback into libglvnd to look up the address
-     * of each entrypoint.
-     *
-     * \return GL_TRUE if the vendor library supports patching with this type
-     * and size.
-     */
-    GLboolean (*initiatePatch)(int type,
-                               int stubSize,
-                               DispatchPatchLookupStubOffset lookupStubOffset);
-
-    /*!
-     * Called by libglvnd to notify the current vendor that it no longer owns
-     * the top-level entrypoints.
-     *
-     * Libglvnd will take care of the restoring the entrypoints back to their
-     * original state. The vendor library must not try to modify them.
-     */
-    void (*releasePatch)(void);
-} __GLdispatchPatchCallbacks;
 
 #if defined(__cplusplus)
 }

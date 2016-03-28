@@ -36,6 +36,7 @@
 
 #include "u_macros.h"
 #include "glapi/glapi.h"
+#include "glvnd/GLdispatchABI.h"
 
 #define X86_ENTRY_SIZE 32
 
@@ -68,7 +69,7 @@ __asm__(".balign 4096\n"
         "public_entry_end:");
 __asm__(".text\n");
 
-const int entry_type = ENTRY_X86_TSD;
+const int entry_type = __GLDISPATCH_STUB_X86;
 const int entry_stub_size = X86_ENTRY_SIZE;
 
 static const unsigned char ENTRY_TEMPLATE[] =

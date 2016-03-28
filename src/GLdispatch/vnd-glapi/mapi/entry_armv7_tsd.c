@@ -39,6 +39,7 @@
 #include "u_macros.h"
 #include "u_current.h"
 #include "utils_misc.h"
+#include "glvnd/GLdispatchABI.h"
 
 /*
  * See: https://sourceware.org/binutils/docs/as/ARM-Directives.html
@@ -157,7 +158,7 @@ __asm__(".balign 4096\n"
 __asm__(".arm\n\t");
 #endif
 
-const int entry_type = ENTRY_ARMV7_THUMB_TSD;
+const int entry_type = __GLDISPATCH_STUB_ARMV7_THUMB;
 const int entry_stub_size = ARMV7_ENTRY_SIZE;
 
 static const int TEMPLATE_OFFSET_CURRENT_TABLE     = ARMV7_BYTECODE_SIZE - 3*4;

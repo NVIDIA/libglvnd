@@ -42,8 +42,7 @@
 #include "compiler.h"
 
 
-static char *thisVendorName;
-static __GLXapiExports apiExports;
+static const __GLXapiExports *apiExports = NULL;
 
 /*
  * Dummy context structure.
@@ -330,7 +329,7 @@ static void          dummySelectEvent           (Display *dpy,
  */
 static void dummy_glBegin (void)
 {
-    GLXContext ctx = apiExports.getCurrentContext();
+    GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     ctx->beginHit++;
@@ -338,7 +337,7 @@ static void dummy_glBegin (void)
 
 static void dummy_glVertex3fv(GLfloat *v)
 {
-    GLXContext ctx = apiExports.getCurrentContext();
+    GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     ctx->vertex3fvHit++;
@@ -346,7 +345,7 @@ static void dummy_glVertex3fv(GLfloat *v)
 
 static void dummy_glEnd (void)
 {
-    GLXContext ctx = apiExports.getCurrentContext();
+    GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     ctx->endHit++;
@@ -356,7 +355,7 @@ static void dummy_glMakeCurrentTestResults(GLint req,
                                         GLboolean *saw,
                                         void **ret)
 {
-    GLXContext ctx = apiExports.getCurrentContext();
+    GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     *saw = GL_TRUE;
@@ -372,7 +371,11 @@ static void dummy_glMakeCurrentTestResults(GLint req,
         break;
     case GL_MC_VENDOR_STRING:
         {
-            *ret = thisVendorName ? strdup(thisVendorName) : NULL;
+            // FIXME: This is used from testglxnscreens to check that the
+            // correct vendor library is loaded from each display. Originally,
+            // it used the vendor name passed to __glx_Main, but libGLX doesn't
+            // provide the vendor name anymore.
+            *ret = NULL;
         }
         break;
     case GL_MC_LAST_REQ:
@@ -402,13 +405,13 @@ static void dispatch_glXExampleExtensionFunction(Display *dpy,
     ExampleExtensionFunctionPtr func;
     const int index = dummyExampleExtensionFunctionIndex;
 
-    dynDispatch = apiExports.getDynDispatch(dpy, screen);
+    dynDispatch = apiExports->getDynDispatch(dpy, screen);
     if (!dynDispatch) {
         return;
     }
 
     func = (ExampleExtensionFunctionPtr)
-        apiExports.fetchDispatchEntry(dynDispatch, index);
+        apiExports->fetchDispatchEntry(dynDispatch, index);
     if (func) {
         func(dpy, screen, retval);
     }
@@ -503,7 +506,7 @@ static void         dummySetDispatchIndex      (const GLubyte *procName, int ind
 #if defined(PATCH_ENTRYPOINTS)
 PUBLIC int __glXSawVertex3fv;
 
-static void patch_x86_64_tls(char *writeEntry,
+static void patch_x86_64(char *writeEntry,
                              const char *execEntry,
                              int stubSize)
 {
@@ -535,7 +538,7 @@ static void patch_x86_64_tls(char *writeEntry,
 #endif
 }
 
-static void patch_x86_tls(char *writeEntry,
+static void patch_x86(char *writeEntry,
                           const char *execEntry,
                           int stubSize)
 {
@@ -575,7 +578,7 @@ static void patch_x86_tls(char *writeEntry,
 #endif
 }
 
-static void patch_armv7_thumb_tsd(char *writeEntry,
+static void patch_armv7_thumb(char *writeEntry,
                                   const char *execEntry,
                                   int stubSize)
 {
@@ -621,11 +624,9 @@ static void patch_armv7_thumb_tsd(char *writeEntry,
 static GLboolean dummyCheckPatchSupported(int type, int stubSize)
 {
     switch (type) {
-        case __GLDISPATCH_STUB_X86_64_TLS:
-        case __GLDISPATCH_STUB_X86_TLS:
-        case __GLDISPATCH_STUB_X86_TSD:
-        case __GLDISPATCH_STUB_X86_64_TSD:
-        case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
+        case __GLDISPATCH_STUB_X86_64:
+        case __GLDISPATCH_STUB_X86:
+        case __GLDISPATCH_STUB_ARMV7_THUMB:
             return GL_TRUE;
         default:
             return GL_FALSE;
@@ -646,16 +647,14 @@ static GLboolean dummyInitiatePatch(int type,
 
     if (lookupStubOffset("Vertex3fv", &writeAddr, &execAddr)) {
         switch (type) {
-            case __GLDISPATCH_STUB_X86_64_TLS:
-            case __GLDISPATCH_STUB_X86_64_TSD:
-                patch_x86_64_tls(writeAddr, execAddr, stubSize);
+            case __GLDISPATCH_STUB_X86_64:
+                patch_x86_64(writeAddr, execAddr, stubSize);
                 break;
-            case __GLDISPATCH_STUB_X86_TLS:
-            case __GLDISPATCH_STUB_X86_TSD:
-                patch_x86_tls(writeAddr, execAddr, stubSize);
+            case __GLDISPATCH_STUB_X86:
+                patch_x86(writeAddr, execAddr, stubSize);
                 break;
-            case __GLDISPATCH_STUB_ARMV7_THUMB_TSD:
-                patch_armv7_thumb_tsd(writeAddr, execAddr, stubSize);
+            case __GLDISPATCH_STUB_ARMV7_THUMB:
+                patch_armv7_thumb(writeAddr, execAddr, stubSize);
                 break;
             default:
                 assert(0);
@@ -665,38 +664,30 @@ static GLboolean dummyInitiatePatch(int type,
     return GL_TRUE;
 }
 
-static void dummyReleasePatch(void)
-{
-}
-
-static const __GLdispatchPatchCallbacks dummyPatchCallbacks =
-{
-    .checkPatchSupported = dummyCheckPatchSupported,
-    .initiatePatch = dummyInitiatePatch,
-    .releasePatch = dummyReleasePatch,
-};
 #endif // defined(PATCH_ENTRYPOINTS)
 
-static const __GLXapiImports dummyImports =
+PUBLIC Bool __glx_Main(uint32_t version,
+                                  const __GLXapiExports *exports,
+                                  __GLXvendorInfo *vendor,
+                                  __GLXapiImports *imports)
 {
-    .checkSupportsScreen = dummyCheckSupportsScreen,
-    .getProcAddress = dummyGetProcAddress,
-    .getDispatchAddress = dummyGetDispatchAddress,
-    .setDispatchIndex = dummySetDispatchIndex,
-#if defined(PATCH_ENTRYPOINTS)
-    .patchCallbacks = &dummyPatchCallbacks,
-#else
-    .patchCallbacks = NULL,
-#endif
-};
+    if (GLX_VENDOR_ABI_GET_MAJOR_VERSION(version)
+            == GLX_VENDOR_ABI_GET_MAJOR_VERSION(GLX_VENDOR_ABI_VERSION)) {
+        if (GLX_VENDOR_ABI_GET_MINOR_VERSION(version)
+                >= GLX_VENDOR_ABI_GET_MINOR_VERSION(GLX_VENDOR_ABI_VERSION)) {
+            apiExports = exports;
 
-PUBLIC __GLX_MAIN_PROTO(version, exports, vendorName)
-{
-    thisVendorName = strdup(vendorName);
-    if (version <= GLX_VENDOR_ABI_VERSION) {
-        memcpy(&apiExports, exports, sizeof(*exports));
-        return &dummyImports;
-    } else {
-        return NULL;
+            imports->isScreenSupported = dummyCheckSupportsScreen;
+            imports->getProcAddress = dummyGetProcAddress;
+            imports->getDispatchAddress = dummyGetDispatchAddress;
+            imports->setDispatchIndex = dummySetDispatchIndex;
+#if defined(PATCH_ENTRYPOINTS)
+            imports->isPatchSupported = dummyCheckPatchSupported;
+            imports->initiatePatch = dummyInitiatePatch;
+#endif
+
+            return True;
+        }
     }
+    return False;
 }
