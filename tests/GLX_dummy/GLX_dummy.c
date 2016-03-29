@@ -57,6 +57,25 @@ typedef struct __GLXcontextRec {
 
 static const int FBCONFIGS_PER_SCREEN = 10;
 
+static void dummy_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
+static void dispatch_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
+
+enum
+{
+    DI_glXExampleExtensionFunction,
+    DI_COUNT,
+};
+static struct {
+    const char *name;
+    void *addr;
+    void *dispatchAddress;
+    int index;
+} glxExtensionProcs[] = {
+#define PROC_ENTRY(name) { #name, dummy_##name, dispatch_##name, -1 }
+    PROC_ENTRY(glXExampleExtensionFunction),
+#undef PROC_ENTRY
+};
+
 static GLXFBConfig GetFBConfigFromScreen(Display *dpy, int screen, int index)
 {
     // Pick an arbitrary base address.
@@ -90,7 +109,7 @@ static GLXDrawable CommonCreateDrawable(Display *dpy, int screen)
     }
 }
 
-static XVisualInfo*  dummyChooseVisual          (Display *dpy,
+static XVisualInfo*  dummy_glXChooseVisual          (Display *dpy,
                                                  int screen,
                                                  int *attrib_list)
 {
@@ -113,7 +132,7 @@ static XVisualInfo*  dummyChooseVisual          (Display *dpy,
     return ret_visual;
 }
 
-static void          dummyCopyContext           (Display *dpy,
+static void          dummy_glXCopyContext           (Display *dpy,
                                                  GLXContext src,
                                                  GLXContext dst,
                                                  unsigned long mask)
@@ -134,7 +153,7 @@ static GLXContext CommonCreateContext(Display *dpy, int screen)
     }
 }
 
-static GLXContext    dummyCreateContext         (Display *dpy,
+static GLXContext    dummy_glXCreateContext         (Display *dpy,
                                                  XVisualInfo *vis,
                                                  GLXContext share_list,
                                                  Bool direct)
@@ -142,7 +161,7 @@ static GLXContext    dummyCreateContext         (Display *dpy,
     return CommonCreateContext(dpy, vis->screen);
 }
 
-static GLXContext    dummyCreateNewContext      (Display *dpy,
+static GLXContext    dummy_glXCreateNewContext      (Display *dpy,
                                                  GLXFBConfig config,
                                                  int render_type,
                                                  GLXContext share_list,
@@ -151,26 +170,26 @@ static GLXContext    dummyCreateNewContext      (Display *dpy,
     return CommonCreateContext(dpy, GetScreenFromFBConfig(dpy, config));
 }
 
-static GLXPixmap     dummyCreateGLXPixmap       (Display *dpy,
+static GLXPixmap     dummy_glXCreateGLXPixmap       (Display *dpy,
                                                  XVisualInfo *vis,
                                                  Pixmap pixmap)
 {
     return CommonCreateDrawable(dpy, vis->screen);
 }
 
-static void          dummyDestroyContext        (Display *dpy,
+static void          dummy_glXDestroyContext        (Display *dpy,
                                               GLXContext ctx)
 {
     free(ctx);
 }
 
-static void          dummyDestroyGLXPixmap      (Display *dpy,
+static void          dummy_glXDestroyGLXPixmap      (Display *dpy,
                                                  GLXPixmap pix)
 {
     // nop
 }
 
-static int           dummyGetConfig             (Display *dpy,
+static int           dummy_glXGetConfig             (Display *dpy,
                                                  XVisualInfo *vis,
                                                  int attrib,
                                                  int *value)
@@ -178,13 +197,13 @@ static int           dummyGetConfig             (Display *dpy,
     return 0;
 }
 
-static Bool          dummyIsDirect              (Display *dpy,
+static Bool          dummy_glXIsDirect              (Display *dpy,
                                                  GLXContext ctx)
 {
     return False;
 }
 
-static Bool          dummyMakeCurrent           (Display *dpy,
+static Bool          dummy_glXMakeCurrent           (Display *dpy,
                                               GLXDrawable drawable,
                                               GLXContext ctx)
 {
@@ -192,13 +211,13 @@ static Bool          dummyMakeCurrent           (Display *dpy,
     return True;
 }
 
-static void          dummySwapBuffers           (Display *dpy,
+static void          dummy_glXSwapBuffers           (Display *dpy,
                                                  GLXDrawable drawable)
 {
     // nop
 }
 
-static void          dummyUseXFont              (Font font,
+static void          dummy_glXUseXFont              (Font font,
                                                  int first,
                                                  int count,
                                                  int list_base)
@@ -206,12 +225,12 @@ static void          dummyUseXFont              (Font font,
     // nop
 }
 
-static void          dummyWaitGL                (void)
+static void          dummy_glXWaitGL                (void)
 {
     // nop
 }
 
-static void          dummyWaitX                 (void)
+static void          dummy_glXWaitX                 (void)
 {
     // nop
 }
@@ -227,7 +246,7 @@ static void          dummyWaitX                 (void)
 #define LONG_EXT_STR EXT_STR4 EXT_STR4
 
 
-static const char*   dummyGetClientString     (Display *dpy,
+static const char*   dummy_glXGetClientString     (Display *dpy,
                                                int name)
 {
     /* Used for client string unit test */
@@ -249,20 +268,20 @@ static const char*   dummyGetClientString     (Display *dpy,
     }
 }
 
-static const char*   dummyQueryServerString     (Display *dpy,
+static const char*   dummy_glXQueryServerString     (Display *dpy,
                                                  int screen,
                                                  int name)
 {
-    return dummyGetClientString(dpy, name);
+    return dummy_glXGetClientString(dpy, name);
 }
 
-static const char*   dummyQueryExtensionsString (Display *dpy,
+static const char*   dummy_glXQueryExtensionsString (Display *dpy,
                                                  int screen)
 {
-    return dummyQueryServerString(dpy, screen, GLX_EXTENSIONS);
+    return dummy_glXQueryServerString(dpy, screen, GLX_EXTENSIONS);
 }
 
-static GLXFBConfig*  dummyGetFBConfigs          (Display *dpy,
+static GLXFBConfig*  dummy_glXGetFBConfigs          (Display *dpy,
                                                  int screen,
                                                  int *nelements)
 {
@@ -280,22 +299,22 @@ static GLXFBConfig*  dummyGetFBConfigs          (Display *dpy,
     return configs;
 }
 
-static GLXFBConfig*  dummyChooseFBConfig        (Display *dpy,
+static GLXFBConfig*  dummy_glXChooseFBConfig        (Display *dpy,
                                               int screen,
                                               const int *attrib_list,
                                               int *nelements)
 {
-    return dummyGetFBConfigs(dpy, screen, nelements);
+    return dummy_glXGetFBConfigs(dpy, screen, nelements);
 }
 
-static GLXPbuffer    dummyCreatePbuffer         (Display *dpy,
+static GLXPbuffer    dummy_glXCreatePbuffer         (Display *dpy,
                                                  GLXFBConfig config,
                                                  const int *attrib_list)
 {
     return CommonCreateDrawable(dpy, GetScreenFromFBConfig(dpy, config));
 }
 
-static GLXPixmap     dummyCreatePixmap          (Display *dpy,
+static GLXPixmap     dummy_glXCreatePixmap          (Display *dpy,
                                                  GLXFBConfig config,
                                                  Pixmap pixmap,
                                                  const int *attrib_list)
@@ -303,7 +322,7 @@ static GLXPixmap     dummyCreatePixmap          (Display *dpy,
     return CommonCreateDrawable(dpy, GetScreenFromFBConfig(dpy, config));
 }
 
-static GLXWindow     dummyCreateWindow          (Display *dpy,
+static GLXWindow     dummy_glXCreateWindow          (Display *dpy,
                                                  GLXFBConfig config,
                                                  Window win,
                                                  const int *attrib_list)
@@ -311,25 +330,25 @@ static GLXWindow     dummyCreateWindow          (Display *dpy,
     return CommonCreateDrawable(dpy, GetScreenFromFBConfig(dpy, config));
 }
 
-static void          dummyDestroyPbuffer        (Display *dpy,
+static void          dummy_glXDestroyPbuffer        (Display *dpy,
                                                  GLXPbuffer pbuf)
 {
     // nop
 }
 
-static void          dummyDestroyPixmap         (Display *dpy,
+static void          dummy_glXDestroyPixmap         (Display *dpy,
                                                  GLXPixmap pixmap)
 {
     // nop
 }
 
-static void          dummyDestroyWindow         (Display *dpy,
+static void          dummy_glXDestroyWindow         (Display *dpy,
                                                  GLXWindow win)
 {
     // nop
 }
 
-static int           dummyGetFBConfigAttrib     (Display *dpy,
+static int           dummy_glXGetFBConfigAttrib     (Display *dpy,
                                                  GLXFBConfig config,
                                                  int attribute,
                                                  int *value)
@@ -337,32 +356,32 @@ static int           dummyGetFBConfigAttrib     (Display *dpy,
     return 0;
 }
 
-static void          dummyGetSelectedEvent      (Display *dpy,
+static void          dummy_glXGetSelectedEvent      (Display *dpy,
                                                  GLXDrawable draw,
                                                  unsigned long *event_mask)
 {
     // nop
 }
 
-static XVisualInfo*  dummyGetVisualFromFBConfig (Display *dpy,
+static XVisualInfo*  dummy_glXGetVisualFromFBConfig (Display *dpy,
                                                  GLXFBConfig config)
 {
     int screen = GetScreenFromFBConfig(dpy, config);
     if (screen >= 0) {
-        return dummyChooseVisual(dpy, screen, NULL);
+        return dummy_glXChooseVisual(dpy, screen, NULL);
     } else {
         return NULL;
     }
 }
 
-static Bool          dummyMakeContextCurrent    (Display *dpy, GLXDrawable draw,
+static Bool          dummy_glXMakeContextCurrent    (Display *dpy, GLXDrawable draw,
                                               GLXDrawable read, GLXContext ctx)
 {
     // This doesn't do anything, but fakes success
     return True;
 }
 
-static int           dummyQueryContext          (Display *dpy,
+static int           dummy_glXQueryContext          (Display *dpy,
                                                  GLXContext ctx,
                                                  int attribute,
                                                  int *value)
@@ -370,7 +389,7 @@ static int           dummyQueryContext          (Display *dpy,
     return 0;
 }
 
-static void          dummyQueryDrawable         (Display *dpy,
+static void          dummy_glXQueryDrawable         (Display *dpy,
                                                  GLXDrawable draw,
                                                  int attribute,
                                                  unsigned int *value)
@@ -378,7 +397,7 @@ static void          dummyQueryDrawable         (Display *dpy,
     // nop
 }
 
-static void          dummySelectEvent           (Display *dpy,
+static void          dummy_glXSelectEvent           (Display *dpy,
                                                  GLXDrawable draw,
                                                  unsigned long event_mask)
 {
@@ -447,25 +466,22 @@ static void dummy_glMakeCurrentTestResults(GLint req,
     }
 }
 
-static void dummyExampleExtensionFunction(Display *dpy, int screen, int *retval)
+static void dummy_glXExampleExtensionFunction(Display *dpy, int screen, int *retval)
 {
     // Indicate that we've called the real function, and not a dispatch stub
     *retval = 1;
 }
 
-typedef void (*ExampleExtensionFunctionPtr)(Display *dpy,
-                                            int screen,
-                                            int *retval);
-
-static int dummyExampleExtensionFunctionIndex = -1;
-
 static void dispatch_glXExampleExtensionFunction(Display *dpy,
                                                 int screen,
                                                 int *retval)
 {
+    typedef void (*ExampleExtensionFunctionPtr)(Display *dpy,
+                                                int screen,
+                                                int *retval);
     __GLXvendorInfo *dynDispatch;
     ExampleExtensionFunctionPtr func;
-    const int index = dummyExampleExtensionFunctionIndex;
+    const int index = glxExtensionProcs[DI_glXExampleExtensionFunction].index;
 
     dynDispatch = apiExports->getDynDispatch(dpy, screen);
     if (!dynDispatch) {
@@ -479,59 +495,55 @@ static void dispatch_glXExampleExtensionFunction(Display *dpy,
     }
 }
 
-#define GL_PROC_ENTRY(x) { (void *)dummy_gl ## x, "gl" #x }
-#define GLX_PROC_ENTRY(x) { (void *)dummy ## x, "glX" #x }
-
 /*
  * Note we only fill in real implementations for a few core GL functions.
  * The rest will dispatch to the NOP stub.
  */
-static struct {
-    void *addr;
+static const struct {
     const char *name;
+    void *addr;
 } procAddresses[] = {
-    GL_PROC_ENTRY(Begin),
-    GL_PROC_ENTRY(End),
-    GL_PROC_ENTRY(Vertex3fv),
-    GL_PROC_ENTRY(MakeCurrentTestResults),
-    GLX_PROC_ENTRY(ExampleExtensionFunction),
+#define PROC_ENTRY(name) { #name, (void *)dummy_ ## name }
+    PROC_ENTRY(glBegin),
+    PROC_ENTRY(glEnd),
+    PROC_ENTRY(glVertex3fv),
+    PROC_ENTRY(glMakeCurrentTestResults),
 
-    GLX_PROC_ENTRY(ChooseVisual),
-    GLX_PROC_ENTRY(CopyContext),
-    GLX_PROC_ENTRY(CreateContext),
-    GLX_PROC_ENTRY(CreateGLXPixmap),
-    GLX_PROC_ENTRY(DestroyContext),
-    GLX_PROC_ENTRY(DestroyGLXPixmap),
-    GLX_PROC_ENTRY(GetConfig),
-    GLX_PROC_ENTRY(IsDirect),
-    GLX_PROC_ENTRY(MakeCurrent),
-    GLX_PROC_ENTRY(SwapBuffers),
-    GLX_PROC_ENTRY(UseXFont),
-    GLX_PROC_ENTRY(WaitGL),
-    GLX_PROC_ENTRY(WaitX),
-    GLX_PROC_ENTRY(QueryServerString),
-    GLX_PROC_ENTRY(GetClientString),
-    GLX_PROC_ENTRY(QueryExtensionsString),
-    GLX_PROC_ENTRY(ChooseFBConfig),
-    GLX_PROC_ENTRY(CreateNewContext),
-    GLX_PROC_ENTRY(CreatePbuffer),
-    GLX_PROC_ENTRY(CreatePixmap),
-    GLX_PROC_ENTRY(CreateWindow),
-    GLX_PROC_ENTRY(DestroyPbuffer),
-    GLX_PROC_ENTRY(DestroyPixmap),
-    GLX_PROC_ENTRY(DestroyWindow),
-    GLX_PROC_ENTRY(GetFBConfigAttrib),
-    GLX_PROC_ENTRY(GetFBConfigs),
-    GLX_PROC_ENTRY(GetSelectedEvent),
-    GLX_PROC_ENTRY(GetVisualFromFBConfig),
-    GLX_PROC_ENTRY(MakeContextCurrent),
-    GLX_PROC_ENTRY(QueryContext),
-    GLX_PROC_ENTRY(QueryDrawable),
-    GLX_PROC_ENTRY(SelectEvent),
+    PROC_ENTRY(glXChooseVisual),
+    PROC_ENTRY(glXCopyContext),
+    PROC_ENTRY(glXCreateContext),
+    PROC_ENTRY(glXCreateGLXPixmap),
+    PROC_ENTRY(glXDestroyContext),
+    PROC_ENTRY(glXDestroyGLXPixmap),
+    PROC_ENTRY(glXGetConfig),
+    PROC_ENTRY(glXIsDirect),
+    PROC_ENTRY(glXMakeCurrent),
+    PROC_ENTRY(glXSwapBuffers),
+    PROC_ENTRY(glXUseXFont),
+    PROC_ENTRY(glXWaitGL),
+    PROC_ENTRY(glXWaitX),
+    PROC_ENTRY(glXQueryServerString),
+    PROC_ENTRY(glXGetClientString),
+    PROC_ENTRY(glXQueryExtensionsString),
+    PROC_ENTRY(glXChooseFBConfig),
+    PROC_ENTRY(glXCreateNewContext),
+    PROC_ENTRY(glXCreatePbuffer),
+    PROC_ENTRY(glXCreatePixmap),
+    PROC_ENTRY(glXCreateWindow),
+    PROC_ENTRY(glXDestroyPbuffer),
+    PROC_ENTRY(glXDestroyPixmap),
+    PROC_ENTRY(glXDestroyWindow),
+    PROC_ENTRY(glXGetFBConfigAttrib),
+    PROC_ENTRY(glXGetFBConfigs),
+    PROC_ENTRY(glXGetSelectedEvent),
+    PROC_ENTRY(glXGetVisualFromFBConfig),
+    PROC_ENTRY(glXMakeContextCurrent),
+    PROC_ENTRY(glXQueryContext),
+    PROC_ENTRY(glXQueryDrawable),
+    PROC_ENTRY(glXSelectEvent),
+#undef PROC_ENTRY
 };
 
-
-// XXX non-entry point ABI functions
 static Bool          dummyCheckSupportsScreen    (Display *dpy, int screen)
 {
     return True;
@@ -540,9 +552,16 @@ static Bool          dummyCheckSupportsScreen    (Display *dpy, int screen)
 static void         *dummyGetProcAddress         (const GLubyte *procName)
 {
     int i;
+
     for (i = 0; i < ARRAY_LEN(procAddresses); i++) {
         if (!strcmp(procAddresses[i].name, (const char *)procName)) {
             return procAddresses[i].addr;
+        }
+    }
+
+    for (i = 0; i<DI_COUNT; i++) {
+        if (!strcmp(glxExtensionProcs[i].name, (const char *)procName)) {
+            return glxExtensionProcs[i].addr;
         }
     }
 
@@ -551,17 +570,22 @@ static void         *dummyGetProcAddress         (const GLubyte *procName)
 
 static void         *dummyGetDispatchAddress     (const GLubyte *procName)
 {
-    if (!strcmp((const char *)procName, "glXExampleExtensionFunction")) {
-        return dispatch_glXExampleExtensionFunction;
+    int i;
+    for (i = 0; i<DI_COUNT; i++) {
+        if (!strcmp(glxExtensionProcs[i].name, (const char *)procName)) {
+            return glxExtensionProcs[i].dispatchAddress;
+        }
     }
     return NULL;
 }
 
 static void         dummySetDispatchIndex      (const GLubyte *procName, int index)
 {
-    // nop
-    if (!strcmp((const char *)procName, "glXExampleExtensionFunction")) {
-        dummyExampleExtensionFunctionIndex = index;
+    int i;
+    for (i = 0; i<DI_COUNT; i++) {
+        if (!strcmp(glxExtensionProcs[i].name, (const char *)procName)) {
+            glxExtensionProcs[i].index = index;
+        }
     }
 }
 
@@ -733,6 +757,8 @@ PUBLIC Bool __glx_Main(uint32_t version,
                                   __GLXvendorInfo *vendor,
                                   __GLXapiImports *imports)
 {
+    assert(ARRAY_LEN(glxExtensionProcs) == DI_COUNT);
+
     if (GLX_VENDOR_ABI_GET_MAJOR_VERSION(version)
             == GLX_VENDOR_ABI_MAJOR_VERSION) {
         if (GLX_VENDOR_ABI_GET_MINOR_VERSION(version)
