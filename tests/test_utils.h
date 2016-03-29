@@ -40,13 +40,20 @@
 struct window_info {
     Display *dpy;
     Window win;
+    GLXDrawable draw;
     XVisualInfo *visinfo;
+    GLXFBConfig config;
     Colormap cmap;
 };
 
 GLboolean testUtilsCreateWindow(Display *dpy,
                                 struct window_info *wi,
                                 int screen);
+
+GLboolean testUtilsCreateWindowConfig(Display *dpy,
+                                struct window_info *wi,
+                                int screen);
+
 void testUtilsDestroyWindow(Display *dpy,
                             struct window_info *wi);
 
