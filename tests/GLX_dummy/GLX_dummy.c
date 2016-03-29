@@ -32,6 +32,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <X11/Xlib.h>
+#include <X11/Xlibint.h>
 #include <GL/glx.h>
 #include <GL/glxint.h>
 
@@ -52,6 +54,41 @@ typedef struct __GLXcontextRec {
     GLint vertex3fvHit;
     GLint endHit;
 } __GLXcontext;
+
+static const int FBCONFIGS_PER_SCREEN = 10;
+
+static GLXFBConfig GetFBConfigFromScreen(Display *dpy, int screen, int index)
+{
+    // Pick an arbitrary base address.
+    uintptr_t baseConfig = (uintptr_t) &FBCONFIGS_PER_SCREEN;
+    baseConfig += (screen * FBCONFIGS_PER_SCREEN);
+    return (GLXFBConfig) (baseConfig + index);
+}
+
+static int GetScreenFromFBConfig(Display *dpy, GLXFBConfig config)
+{
+    uintptr_t screen = ((uintptr_t) config) - ((uintptr_t) &FBCONFIGS_PER_SCREEN);
+    screen = screen / FBCONFIGS_PER_SCREEN;
+    if (screen < (uintptr_t) ScreenCount(dpy)) {
+        return (int) screen;
+    } else {
+        return -1;
+    }
+}
+
+static GLXDrawable CommonCreateDrawable(Display *dpy, int screen)
+{
+    // Just hand back a fresh XID
+    if (screen >= 0) {
+        XID id;
+        LockDisplay(dpy);
+        id = XAllocID(dpy);
+        UnlockDisplay(dpy);
+        return id;
+    } else {
+        return None;
+    }
+}
 
 static XVisualInfo*  dummyChooseVisual          (Display *dpy,
                                                  int screen,
@@ -84,23 +121,41 @@ static void          dummyCopyContext           (Display *dpy,
     // nop
 }
 
+static GLXContext CommonCreateContext(Display *dpy, int screen)
+{
+    if (screen >= 0) {
+        __GLXcontext *context = malloc(sizeof(*context));
+        context->beginHit = 0;
+        context->vertex3fvHit = 0;
+        context->endHit = 0;
+        return context;
+    } else {
+        return NULL;
+    }
+}
+
 static GLXContext    dummyCreateContext         (Display *dpy,
                                                  XVisualInfo *vis,
                                                  GLXContext share_list,
                                                  Bool direct)
 {
-    __GLXcontext *context = malloc(sizeof(*context));
-    context->beginHit = 0;
-    context->vertex3fvHit = 0;
-    context->endHit = 0;
-    return context;
+    return CommonCreateContext(dpy, vis->screen);
+}
+
+static GLXContext    dummyCreateNewContext      (Display *dpy,
+                                                 GLXFBConfig config,
+                                                 int render_type,
+                                                 GLXContext share_list,
+                                                 Bool direct)
+{
+    return CommonCreateContext(dpy, GetScreenFromFBConfig(dpy, config));
 }
 
 static GLXPixmap     dummyCreateGLXPixmap       (Display *dpy,
                                                  XVisualInfo *vis,
                                                  Pixmap pixmap)
 {
-    return None;
+    return CommonCreateDrawable(dpy, vis->screen);
 }
 
 static void          dummyDestroyContext        (Display *dpy,
@@ -161,13 +216,6 @@ static void          dummyWaitX                 (void)
     // nop
 }
 
-static const char*   dummyQueryServerString     (Display *dpy,
-                                                 int screen,
-                                                 int name)
-{
-    return NULL;
-}
-
 /*
  * Macro magic to construct a long extension string
  */
@@ -201,10 +249,35 @@ static const char*   dummyGetClientString     (Display *dpy,
     }
 }
 
+static const char*   dummyQueryServerString     (Display *dpy,
+                                                 int screen,
+                                                 int name)
+{
+    return dummyGetClientString(dpy, name);
+}
+
 static const char*   dummyQueryExtensionsString (Display *dpy,
                                                  int screen)
 {
-    return NULL;
+    return dummyQueryServerString(dpy, screen, GLX_EXTENSIONS);
+}
+
+static GLXFBConfig*  dummyGetFBConfigs          (Display *dpy,
+                                                 int screen,
+                                                 int *nelements)
+{
+    GLXFBConfig *configs = NULL;
+    int i;
+
+    // Pick an arbitrary base address.
+    configs = malloc(sizeof(GLXFBConfig) * FBCONFIGS_PER_SCREEN);
+    if (configs != NULL) {
+        for (i=0; i<FBCONFIGS_PER_SCREEN; i++) {
+            configs[i] = GetFBConfigFromScreen(dpy, screen, i);
+        }
+    }
+    *nelements = FBCONFIGS_PER_SCREEN;
+    return configs;
 }
 
 static GLXFBConfig*  dummyChooseFBConfig        (Display *dpy,
@@ -212,23 +285,14 @@ static GLXFBConfig*  dummyChooseFBConfig        (Display *dpy,
                                               const int *attrib_list,
                                               int *nelements)
 {
-    return NULL;
-}
-
-static GLXContext    dummyCreateNewContext      (Display *dpy,
-                                                 GLXFBConfig config,
-                                                 int render_type,
-                                                 GLXContext share_list,
-                                                 Bool direct)
-{
-    return NULL;
+    return dummyGetFBConfigs(dpy, screen, nelements);
 }
 
 static GLXPbuffer    dummyCreatePbuffer         (Display *dpy,
                                                  GLXFBConfig config,
                                                  const int *attrib_list)
 {
-    return None;
+    return CommonCreateDrawable(dpy, GetScreenFromFBConfig(dpy, config));
 }
 
 static GLXPixmap     dummyCreatePixmap          (Display *dpy,
@@ -236,7 +300,7 @@ static GLXPixmap     dummyCreatePixmap          (Display *dpy,
                                                  Pixmap pixmap,
                                                  const int *attrib_list)
 {
-    return None;
+    return CommonCreateDrawable(dpy, GetScreenFromFBConfig(dpy, config));
 }
 
 static GLXWindow     dummyCreateWindow          (Display *dpy,
@@ -244,7 +308,7 @@ static GLXWindow     dummyCreateWindow          (Display *dpy,
                                                  Window win,
                                                  const int *attrib_list)
 {
-    return None;
+    return CommonCreateDrawable(dpy, GetScreenFromFBConfig(dpy, config));
 }
 
 static void          dummyDestroyPbuffer        (Display *dpy,
@@ -273,13 +337,6 @@ static int           dummyGetFBConfigAttrib     (Display *dpy,
     return 0;
 }
 
-static GLXFBConfig*  dummyGetFBConfigs          (Display *dpy,
-                                                 int screen,
-                                                 int *nelements)
-{
-    return NULL;
-}
-
 static void          dummyGetSelectedEvent      (Display *dpy,
                                                  GLXDrawable draw,
                                                  unsigned long *event_mask)
@@ -290,7 +347,12 @@ static void          dummyGetSelectedEvent      (Display *dpy,
 static XVisualInfo*  dummyGetVisualFromFBConfig (Display *dpy,
                                                  GLXFBConfig config)
 {
-    return NULL;
+    int screen = GetScreenFromFBConfig(dpy, config);
+    if (screen >= 0) {
+        return dummyChooseVisual(dpy, screen, NULL);
+    } else {
+        return NULL;
+    }
 }
 
 static Bool          dummyMakeContextCurrent    (Display *dpy, GLXDrawable draw,
