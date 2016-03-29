@@ -57,12 +57,19 @@ typedef struct __GLXcontextRec {
 
 static const int FBCONFIGS_PER_SCREEN = 10;
 
+static GLXContext dummy_glXCreateContextAttribsARB(Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list);
+static GLXContext dispatch_glXCreateContextAttribsARB(Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list);
 static void dummy_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
 static void dispatch_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
 
 enum
 {
     DI_glXExampleExtensionFunction,
+    DI_glXCreateContextAttribsARB,
     DI_COUNT,
 };
 static struct {
@@ -73,6 +80,7 @@ static struct {
 } glxExtensionProcs[] = {
 #define PROC_ENTRY(name) { #name, dummy_##name, dispatch_##name, -1 }
     PROC_ENTRY(glXExampleExtensionFunction),
+    PROC_ENTRY(glXCreateContextAttribsARB),
 #undef PROC_ENTRY
 };
 
@@ -169,6 +177,36 @@ static GLXContext    dummy_glXCreateNewContext      (Display *dpy,
 {
     return CommonCreateContext(dpy, GetScreenFromFBConfig(dpy, config));
 }
+
+static GLXContext dummy_glXCreateContextAttribsARB(Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list)
+{
+    return CommonCreateContext(dpy, GetScreenFromFBConfig(dpy, config));
+}
+
+static GLXContext dispatch_glXCreateContextAttribsARB(Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list)
+{
+    PFNGLXCREATECONTEXTATTRIBSARBPROC pCreateContextAttribsARB = NULL;
+    __GLXvendorInfo *vendor = apiExports->vendorFromFBConfig(dpy, config);
+    const int index = glxExtensionProcs[DI_glXCreateContextAttribsARB].index;
+    GLXContext ret = NULL;
+
+    if (vendor != NULL) {
+        pCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)
+            apiExports->fetchDispatchEntry(vendor, index);
+        if (pCreateContextAttribsARB != NULL) {
+            ret = pCreateContextAttribsARB(dpy, config, share_list, direct, attrib_list);
+            if (ret != NULL) {
+                apiExports->addVendorContextMapping(dpy, ret, vendor);
+            }
+        }
+    }
+    return ret;
+}
+
 
 static GLXPixmap     dummy_glXCreateGLXPixmap       (Display *dpy,
                                                  XVisualInfo *vis,
