@@ -672,9 +672,9 @@ PUBLIC Bool __glx_Main(uint32_t version,
                                   __GLXapiImports *imports)
 {
     if (GLX_VENDOR_ABI_GET_MAJOR_VERSION(version)
-            == GLX_VENDOR_ABI_GET_MAJOR_VERSION(GLX_VENDOR_ABI_VERSION)) {
+            == GLX_VENDOR_ABI_MAJOR_VERSION) {
         if (GLX_VENDOR_ABI_GET_MINOR_VERSION(version)
-                >= GLX_VENDOR_ABI_GET_MINOR_VERSION(GLX_VENDOR_ABI_VERSION)) {
+                >= GLX_VENDOR_ABI_MINOR_VERSION) {
             apiExports = exports;
 
             imports->isScreenSupported = dummyCheckSupportsScreen;

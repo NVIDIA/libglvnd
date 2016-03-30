@@ -99,9 +99,17 @@ extern "C" {
  * number is incremented when there's a change but existing vendor libraries
  * will still work.
  */
-#define GLX_VENDOR_ABI_VERSION ((1 << 16) | 0)
-#define GLX_VENDOR_ABI_GET_MAJOR_VERSION(version) ((version) & 0xFFFF)
-#define GLX_VENDOR_ABI_GET_MINOR_VERSION(version) ((version) >> 16)
+#define GLX_VENDOR_ABI_MAJOR_VERSION ((uint32_t) 1)
+#define GLX_VENDOR_ABI_MINOR_VERSION ((uint32_t) 0)
+#define GLX_VENDOR_ABI_VERSION ((GLX_VENDOR_ABI_MAJOR_VERSION << 16) | GLX_VENDOR_ABI_MINOR_VERSION)
+static inline uint32_t GLX_VENDOR_ABI_GET_MAJOR_VERSION(uint32_t version)
+{
+    return version >> 16;
+}
+static inline uint32_t GLX_VENDOR_ABI_GET_MINOR_VERSION(uint32_t version)
+{
+    return version & 0xFFFF;
+}
 
 
 /*!
