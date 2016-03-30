@@ -141,6 +141,7 @@ static unsigned char BYTECODE_TEMPLATE[] =
 __asm__(".section wtext,\"ax\"\n"
         ".balign 4096\n"
        ".globl public_entry_start\n"
+       ".hidden public_entry_start\n"
         "public_entry_start:\n");
 
 #define MAPI_TMP_STUB_ASM_GCC
@@ -148,6 +149,7 @@ __asm__(".section wtext,\"ax\"\n"
 
 __asm__(".balign 4096\n"
        ".globl public_entry_end\n"
+       ".hidden public_entry_end\n"
         "public_entry_end:\n"
         ".text\n\t");
 
