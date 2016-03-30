@@ -37,6 +37,7 @@
 #include "GLdispatchPrivate.h"
 #include "stub.h"
 #include "glvnd_pthread.h"
+#include "app_error_check.h"
 
 /*
  * Global current dispatch table list. We need this to fix up all current
@@ -193,6 +194,7 @@ void _init(void)
     // Here, we only initialize the pthreads imports. Everything else we'll
     // deal with in __glDispatchInit.
     glvndSetupPthreads();
+    glvndAppErrorCheckInit();
 }
 
 void __glDispatchInit(void)
@@ -414,6 +416,11 @@ static inline int PatchingIsDisabledByEnvVar(void)
         char *disallowPatchStr = getenv("__GLVND_DISALLOW_PATCHING");
         if (disallowPatchStr) {
             disallowPatch = atoi(disallowPatchStr);
+        } else if (glvndAppErrorCheckGetEnabled()) {
+            // Entrypoint rewriting means skipping the dispatch table in
+            // libGLdispatch, which would disable checking for calling OpenGL
+            // functions without a context.
+            disallowPatch = GL_TRUE;
         }
         inited = GL_TRUE;
     }

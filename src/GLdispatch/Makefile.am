@@ -47,6 +47,7 @@ libGLdispatch_la_LDFLAGS += \
 
 libGLdispatch_la_SOURCES = \
 	$(top_srcdir)/src/util/glvnd_pthread.c \
+	$(top_srcdir)/src/util/app_error_check.c \
 	GLdispatch.c
 
 libGLdispatch_la_LIBADD = vnd-glapi/libglapi.la
