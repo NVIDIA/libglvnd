@@ -1937,12 +1937,11 @@ int AtomicDecrementClampAtZero(int volatile *val)
 
 static void __glXResetOnFork(void);
 
-/*
- * Perform checks that need to occur when entering any GLX entrypoint.
- * Currently, this only detects whether a fork occurred since the last
- * entrypoint was called, and performs recovery as needed.
+/*!
+ * Checks to see if a fork occurred since the last GLX entrypoint was called,
+ * and performs recovery if needed.
  */
-void __glXThreadInitialize(void)
+static void CheckFork(void)
 {
     volatile static int g_threadsInCheck = 0;
     volatile static int g_lastPid = -1;
@@ -1974,7 +1973,15 @@ void __glXThreadInitialize(void)
             sched_yield();
         }
     }
+}
 
+/*!
+ * Handles any common tasks that need to occur at the beginning of any GLX
+ * entrypoint.
+ */
+void __glXThreadInitialize(void)
+{
+    CheckFork();
     __glDispatchCheckMultithreaded();
 }
 
@@ -2078,8 +2085,14 @@ void __attribute__ ((destructor)) __glXFini(void)
 void _fini(void)
 #endif
 {
+    /*
+     * Note that the dynamic linker may have already called the destructors for
+     * the vendor libraries. As a result, we can't do anything here that would
+     * try to call into any vendor library.
+     */
+
     /* Check for a fork before going further. */
-    __glXThreadInitialize();
+    CheckFork();
 
     /*
      * If libGLX owns the current thread state, lose current
