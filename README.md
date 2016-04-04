@@ -245,7 +245,7 @@ Issues
   (GLXContext and GLXFBConfig) in one table, and all XID types (GLXDrawable,
   GLXPixmap, GLXWindow, and GLXPbuffer) in another table.  Should there instead
   be more finer-grained hash tables?  There probably couldn't be finer-grained
-  tables for XIDs, because GLXDrawable is used interchangably with the other
+  tables for XIDs, because GLXDrawable is used interchangeably with the other
   XID-based types.
 
 * The issue above applies to XIDs in the x11glvnd extension as well: we

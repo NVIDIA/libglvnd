@@ -188,7 +188,7 @@ def _flattenText(elem):
 
 def _fixupTypeName(typeName):
     """
-    Converts a typename into a more consistant format.
+    Converts a typename into a more consistent format.
     """
 
     rv = typeName.strip()
