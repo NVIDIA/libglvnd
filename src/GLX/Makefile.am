@@ -60,6 +60,10 @@ libGLX_la_LIBADD += $(X11_LIBS)
 libGLX_la_LIBADD += $(XEXT_LIBS)
 libGLX_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
 libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
+libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_pthread.la
+libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_genentry.la
+libGLX_la_LIBADD += $(UTIL_DIR)/libutils_misc.la
+libGLX_la_LIBADD += $(UTIL_DIR)/libapp_error_check.la
 
 libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)
 
@@ -73,12 +77,8 @@ g_libglxnoop.c : gen_stubs.pl glx_funcs.spec
 	$(AM_V_GEN)$(PERL) $(srcdir)/gen_stubs.pl "noop" $(srcdir)/glx_funcs.spec > $@
 
 libGLX_la_SOURCES = \
-	$(top_srcdir)/src/util/glvnd_pthread.c \
 	libglx.c \
 	libglxmapping.c \
 	libglxstring.c \
 	libglxproto.c \
-	$(UTIL_DIR)/glvnd_genentry.c \
-	$(UTIL_DIR)/utils_misc.c \
-	$(UTIL_DIR)/app_error_check.c \
 	g_libglxnoop.c

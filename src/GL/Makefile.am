@@ -41,8 +41,7 @@ libGL_la_SOURCES =      \
 	libgl.c             \
 	$(MAPI_GLDISPATCH_ENTRY_FILES) \
 	$(MAPI)/stub.c      \
-	g_libglglxwrapper.c \
-	$(top_srcdir)/src/util/utils_misc.c
+	g_libglglxwrapper.c
 
 BUILT_SOURCES = g_glapi_mapi_gl_tmp.h g_libglglxwrapper.c
 CLEANFILES = $(BUILT_SOURCES)
@@ -64,10 +63,10 @@ AM_CPPFLAGS = \
 	-I$(TOP)/src/GLX \
 	-I$(TOP)/src/GLdispatch \
 	-I$(TOP)/src/util \
-	-I$(TOP)/src/util/glvnd_pthread \
 	-DMAPI_ABI_HEADER=\"$(builddir)/g_glapi_mapi_gl_tmp.h\" \
 	-DSTATIC_DISPATCH_ONLY
 
 libGL_la_LIBADD  = ../GLX/libGLX.la
 libGL_la_LIBADD += ../GLdispatch/libGLdispatch.la
+libGL_la_LIBADD += ../util/libutils_misc.la
 libGL_la_LIBADD += -ldl

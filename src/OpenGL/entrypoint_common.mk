@@ -38,8 +38,7 @@ include $(top_srcdir)/src/generate/glvnd_gen.mk
 ENTRYPOINT_COMMON_FILES = \
 	$(top_srcdir)/src/OpenGL/libopengl.c \
 	$(MAPI_GLDISPATCH_ENTRY_FILES) \
-	$(MAPI)/stub.c     \
-	$(top_srcdir)/src/util/utils_misc.c
+	$(MAPI)/stub.c
 
 noinst_HEADERS = \
 	g_glapi_mapi_$(ENTRYPOINT_TARGET)_tmp.h
@@ -68,15 +67,16 @@ ENTRYPOINT_COMMON_CFLAGS = \
 	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
 	-I$(top_srcdir)/src/GLdispatch/ \
 	-I$(top_srcdir)/src/util \
-	-I$(top_srcdir)/src/util/glvnd_pthread \
 	-DMAPI_ABI_HEADER=\"$(builddir)/g_glapi_mapi_$(ENTRYPOINT_TARGET)_tmp.h\" \
 	-DSTATIC_DISPATCH_ONLY
 
-ENTRYPOINT_COMMON_DEPENDENCIES = $(builddir)/g_$(ENTRYPOINT_TARGET)_exports.sym
+ENTRYPOINT_COMMON_DEPS = $(builddir)/g_$(ENTRYPOINT_TARGET)_exports.sym
 
 ENTRYPOINT_COMMON_LDFLAGS = -shared \
 	$(LINKER_FLAG_NO_UNDEFINED) \
 	-export-symbols $(builddir)/g_$(ENTRYPOINT_TARGET)_exports.sym
 
-ENTRYPOINT_COMMON_LIBADD = ../GLdispatch/libGLdispatch.la
+ENTRYPOINT_COMMON_LIBADD = \
+	../GLdispatch/libGLdispatch.la \
+	../util/libutils_misc.la
 

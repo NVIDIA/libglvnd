@@ -46,12 +46,12 @@ libGLdispatch_la_LDFLAGS += \
 	-export-symbols $(top_srcdir)/src/GLdispatch/export_list.sym
 
 libGLdispatch_la_SOURCES = \
-	$(top_srcdir)/src/util/glvnd_pthread.c \
-	$(top_srcdir)/src/util/app_error_check.c \
 	GLdispatch.c
 
 libGLdispatch_la_LIBADD = vnd-glapi/libglapi.la
 libGLdispatch_la_LIBADD += ../util/trace/libtrace.la
+libGLdispatch_la_LIBADD += ../util/libglvnd_pthread.la
+libGLdispatch_la_LIBADD += ../util/libapp_error_check.la
 libGLdispatch_la_LIBADD += -ldl
 
 EXTRA_DIST = export_list.sym

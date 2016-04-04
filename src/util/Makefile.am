@@ -6,3 +6,21 @@ noinst_HEADERS = \
 	app_error_check.h
 
 EXTRA_DIST = uthash
+
+noinst_LTLIBRARIES =
+AM_CPPFLAGS = -I$(top_srcdir)/include
+
+noinst_LTLIBRARIES += libglvnd_pthread.la
+libglvnd_pthread_la_LIBADD = -ldl
+libglvnd_pthread_la_CFLAGS = -I$(top_srcdir)/src/util/trace/
+libglvnd_pthread_la_SOURCES = glvnd_pthread.c
+
+noinst_LTLIBRARIES += libapp_error_check.la
+libapp_error_check_la_SOURCES = app_error_check.c
+
+noinst_LTLIBRARIES += libutils_misc.la
+libutils_misc_la_SOURCES = utils_misc.c
+
+noinst_LTLIBRARIES += libglvnd_genentry.la
+libglvnd_genentry_la_SOURCES = glvnd_genentry.c
+

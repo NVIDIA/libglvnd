@@ -17,8 +17,7 @@ MAPI_GLAPI_FILES = \
 	$(TOP)/$(MAPI_PREFIX)/mapi_glapi.c \
 	$(TOP)/$(MAPI_PREFIX)/stub.c \
 	$(TOP)/$(MAPI_PREFIX)/table.c \
-	$(MAPI_UTIL_FILES) \
-	$(TOP)/src/util/utils_misc.c
+	$(MAPI_UTIL_FILES)
 
 libglapi_la_SOURCES = \
 	$(MAPI_GLAPI_FILES) \
@@ -32,6 +31,7 @@ libglapi_la_SOURCES += $(top_srcdir)/$(MAPI_PREFIX)/u_current_tsd.c
 endif
 
 libglapi_la_LDFLAGS = -no-undefined
+libglapi_la_LIBADD = $(top_builddir)/src/util/libutils_misc.la
 
 include $(top_srcdir)/src/generate/glvnd_gen.mk
 glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
