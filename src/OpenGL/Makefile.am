@@ -25,19 +25,34 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
+noinst_LTLIBRARIES = libopengl_main.la
+libopengl_main_la_SOURCES = libopengl.c
+libopengl_main_la_CFLAGS = \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
+	-I$(top_srcdir)/src/GLdispatch/ \
+	-I$(top_srcdir)/src/util
+
+
 lib_LTLIBRARIES = libOpenGL.la
 
-ENTRYPOINT_TARGET=opengl
-include $(top_srcdir)/src/OpenGL/entrypoint_common.mk
-
-libOpenGL_la_SOURCES = $(ENTRYPOINT_COMMON_FILES)
-
-libOpenGL_la_CFLAGS = $(ENTRYPOINT_COMMON_CFLAGS)
-
-EXTRA_libOpenGL_la_DEPENDENCIES = $(ENTRYPOINT_COMMON_DEPS)
-
-libOpenGL_la_LDFLAGS = $(ENTRYPOINT_COMMON_LDFLAGS) \
+libOpenGL_la_SOURCES = 
+EXTRA_libOpenGL_la_DEPENDENCIES = $(builddir)/g_opengl_exports.sym
+libOpenGL_la_LDFLAGS = -shared \
+	$(LINKER_FLAG_NO_UNDEFINED) \
+	-export-symbols $(builddir)/g_opengl_exports.sym \
 	-version-info 0
 
-libOpenGL_la_LIBADD = $(ENTRYPOINT_COMMON_LIBADD)
+libOpenGL_la_LIBADD = \
+	libopengl_main.la \
+	../GLdispatch/libGLdispatch.la \
+	../GLdispatch/vnd-glapi/libglapi_opengl.la \
+	../util/libutils_misc.la
+
+include $(top_srcdir)/src/generate/glvnd_gen.mk
+
+BUILT_SOURCES = g_opengl_exports.sym
+CLEANFILES = $(BUILT_SOURCES)
+g_opengl_exports.sym : $(glapi_gen_libopengl_exports_deps)
+	$(call glapi_gen_libopengl_exports, opengl)
 

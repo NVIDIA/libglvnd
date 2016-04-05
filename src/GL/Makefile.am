@@ -39,8 +39,6 @@ include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
 
 libGL_la_SOURCES =      \
 	libgl.c             \
-	$(MAPI_GLDISPATCH_ENTRY_FILES) \
-	$(MAPI)/stub.c      \
 	g_libglglxwrapper.c
 
 BUILT_SOURCES = g_glapi_mapi_gl_tmp.h g_libglglxwrapper.c
@@ -68,5 +66,6 @@ AM_CPPFLAGS = \
 
 libGL_la_LIBADD  = ../GLX/libGLX.la
 libGL_la_LIBADD += ../GLdispatch/libGLdispatch.la
+libGL_la_LIBADD += ../GLdispatch/vnd-glapi/libglapi_gl.la
 libGL_la_LIBADD += ../util/libutils_misc.la
 libGL_la_LIBADD += -ldl

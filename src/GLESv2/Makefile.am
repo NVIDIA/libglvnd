@@ -27,17 +27,24 @@
 
 lib_LTLIBRARIES = libGLESv2.la
 
-ENTRYPOINT_TARGET=glesv2
-include $(top_srcdir)/src/OpenGL/entrypoint_common.mk
+EXTRA_libGLESv2_la_DEPENDENCIES = $(builddir)/g_glesv2_exports.sym
 
-libGLESv2_la_SOURCES = $(ENTRYPOINT_COMMON_FILES)
-
-libGLESv2_la_CFLAGS = $(ENTRYPOINT_COMMON_CFLAGS)
-
-EXTRA_libGLESv2_la_DEPENDENCIES = $(ENTRYPOINT_COMMON_DEPS)
-
-libGLESv2_la_LDFLAGS = $(ENTRYPOINT_COMMON_LDFLAGS) \
+libGLESv2_la_SOURCES = 
+libGLESv2_la_LDFLAGS = -shared \
+	$(LINKER_FLAG_NO_UNDEFINED) \
+	-export-symbols $(builddir)/g_glesv2_exports.sym \
 	-version-info 2
 
-libGLESv2_la_LIBADD = $(ENTRYPOINT_COMMON_LIBADD)
+libGLESv2_la_LIBADD = \
+	../OpenGL/libopengl_main.la \
+	../GLdispatch/libGLdispatch.la \
+	../GLdispatch/vnd-glapi/libglapi_glesv2.la \
+	../util/libutils_misc.la
+
+include $(top_srcdir)/src/generate/glvnd_gen.mk
+
+BUILT_SOURCES = $(builddir)/g_glesv2_exports.sym
+CLEANFILES = $(BUILT_SOURCES)
+g_glesv2_exports.sym : $(glapi_gen_libopengl_exports_deps)
+	$(call glapi_gen_libopengl_exports, glesv2)
 
