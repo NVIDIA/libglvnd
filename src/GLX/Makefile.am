@@ -38,7 +38,6 @@ noinst_HEADERS = \
 lib_LTLIBRARIES = libGLX.la
 
 UTIL_DIR = ../util
-TRACE_DIR = ../util/trace
 UTHASH_DIR = ../util/uthash/src
 GL_DISPATCH_DIR = ../GLdispatch
 
@@ -46,7 +45,6 @@ GL_DISPATCH_DIR = ../GLdispatch
 # Include paths
 libGLX_la_CFLAGS =  -I$(srcdir)/$(UTHASH_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(UTIL_DIR)
-libGLX_la_CFLAGS += -I$(srcdir)/$(TRACE_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(GL_DISPATCH_DIR)
 libGLX_la_CFLAGS += -I$(top_srcdir)/include
 libGLX_la_CFLAGS += $(GLPROTO_CFLAGS)
@@ -59,7 +57,7 @@ libGLX_la_LIBADD = -ldl
 libGLX_la_LIBADD += $(X11_LIBS)
 libGLX_la_LIBADD += $(XEXT_LIBS)
 libGLX_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
-libGLX_la_LIBADD += $(TRACE_DIR)/libtrace.la
+libGLX_la_LIBADD += $(UTIL_DIR)/libtrace.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_pthread.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_genentry.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libutils_misc.la

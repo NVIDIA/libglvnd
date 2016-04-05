@@ -1,9 +1,9 @@
-SUBDIRS = trace
 noinst_HEADERS = \
 	glvnd_genentry.h \
 	utils_misc.h \
 	glvnd_pthread.h \
-	app_error_check.h
+	app_error_check.h \
+	trace.h
 
 EXTRA_DIST = uthash
 
@@ -12,7 +12,6 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 
 noinst_LTLIBRARIES += libglvnd_pthread.la
 libglvnd_pthread_la_LIBADD = -ldl
-libglvnd_pthread_la_CFLAGS = -I$(top_srcdir)/src/util/trace/
 libglvnd_pthread_la_SOURCES = glvnd_pthread.c
 
 noinst_LTLIBRARIES += libapp_error_check.la
@@ -24,3 +23,5 @@ libutils_misc_la_SOURCES = utils_misc.c
 noinst_LTLIBRARIES += libglvnd_genentry.la
 libglvnd_genentry_la_SOURCES = glvnd_genentry.c
 
+noinst_LTLIBRARIES += libtrace.la
+libtrace_la_SOURCES = trace.c

@@ -77,7 +77,7 @@ check_PROGRAMS = \
 #testglxnscreens_LDADD = -lX11
 #testglxnscreens_LDADD += $(top_builddir)/src/GLX/libGLX.la
 #testglxnscreens_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-#testglxnscreens_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+#testglxnscreens_LDADD += $(top_builddir)/src/util/libtrace.la
 #testglxnscreens_LDADD += -lX11 -ldl $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
@@ -95,7 +95,7 @@ testglxmakecurrent_oldlink_SOURCES = \
 testglxmakecurrent_oldlink_LDADD = -lX11 -ldl
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
-testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libtrace.la
 
 #testx11glvndproto_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR)
 #testx11glvndproto_LDADD = -lX11 $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
@@ -106,7 +106,6 @@ AM_CFLAGS =                                  \
 	-Wno-error=unused-label                  \
 	-I$(top_srcdir)/include                  \
 	-I$(top_srcdir)/src/util                 \
-	-I$(top_srcdir)/src/util/trace           \
 	-I$(top_srcdir)/src/util/glvnd_pthread
 
 
@@ -117,12 +116,12 @@ testglxmakecurrent_LDADD = -lX11 -ldl
 testglxmakecurrent_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
-testglxmakecurrent_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+testglxmakecurrent_LDADD += $(top_builddir)/src/util/libtrace.la
 
 testglxgetclientstr_LDADD = -lX11
 testglxgetclientstr_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxgetclientstr_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testglxgetclientstr_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+testglxgetclientstr_LDADD += $(top_builddir)/src/util/libtrace.la
 
 testglxqueryversion_LDADD = -lX11
 testglxqueryversion_LDADD += $(top_builddir)/src/GLX/libGLX.la
@@ -135,4 +134,4 @@ testpatchentrypoints_SOURCES = \
 testpatchentrypoints_LDADD = -lX11 -ldl
 testpatchentrypoints_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testpatchentrypoints_LDADD += $(top_builddir)/src/util/trace/libtrace.la
+testpatchentrypoints_LDADD += $(top_builddir)/src/util/libtrace.la

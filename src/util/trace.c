@@ -29,11 +29,9 @@
 
 
 #define _GNU_SOURCE 1
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <pthread.h>
 
 #include "trace.h"
 

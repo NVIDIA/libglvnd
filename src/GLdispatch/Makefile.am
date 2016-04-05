@@ -35,7 +35,6 @@ SUBDIRS = vnd-glapi
 
 libGLdispatch_la_CFLAGS =  -I$(srcdir)/vnd-glapi/mapi/glapi
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util
-libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util/trace
 libGLdispatch_la_CFLAGS += -I$(srcdir)/vnd-glapi/mapi
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/include
 
@@ -49,7 +48,7 @@ libGLdispatch_la_SOURCES = \
 	GLdispatch.c
 
 libGLdispatch_la_LIBADD = vnd-glapi/libglapi.la
-libGLdispatch_la_LIBADD += ../util/trace/libtrace.la
+libGLdispatch_la_LIBADD += ../util/libtrace.la
 libGLdispatch_la_LIBADD += ../util/libglvnd_pthread.la
 libGLdispatch_la_LIBADD += ../util/libapp_error_check.la
 libGLdispatch_la_LIBADD += -ldl
