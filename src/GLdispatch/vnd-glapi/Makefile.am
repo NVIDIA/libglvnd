@@ -1,5 +1,6 @@
 # Used by OpenGL vendor-neutral dispatch library
 
+AUTOMAKE_OPTIONS = subdir-objects
 EXTRA_DIST = mapi
 
 MAPI_PREFIX = src/GLdispatch/vnd-glapi/mapi
@@ -10,25 +11,19 @@ noinst_HEADERS =
 
 noinst_LTLIBRARIES = libglapi.la
 
-MAPI_UTIL_FILES = \
-	$(top_srcdir)/$(MAPI_PREFIX)/u_execmem.c
-
-MAPI_GLAPI_FILES = \
-	$(MAPI_GLDISPATCH_ENTRY_FILES) \
-	$(top_srcdir)/$(MAPI_PREFIX)/mapi_glapi.c \
-	$(top_srcdir)/$(MAPI_PREFIX)/stub.c \
-	$(top_srcdir)/$(MAPI_PREFIX)/table.c \
-	$(MAPI_UTIL_FILES)
-
 libglapi_la_SOURCES = \
-	$(MAPI_GLAPI_FILES) \
+	$(MAPI_GLDISPATCH_ENTRY_FILES) \
+	mapi/mapi_glapi.c \
+	mapi/stub.c \
+	mapi/table.c \
+	mapi/u_execmem.c \
 	g_glapi_inittable.c
 
 # Select the appropriate file for looking up the current dispatch table.
 if GLDISPATCH_USE_TLS
-libglapi_la_SOURCES += $(top_srcdir)/$(MAPI_PREFIX)/u_current_tls.c
+libglapi_la_SOURCES += mapi/u_current_tls.c
 else
-libglapi_la_SOURCES += $(top_srcdir)/$(MAPI_PREFIX)/u_current_tsd.c
+libglapi_la_SOURCES += mapi/u_current_tsd.c
 endif
 
 libglapi_la_LDFLAGS = -no-undefined
@@ -62,7 +57,7 @@ libglapi_la_CPPFLAGS = \
 
 ENTRYPOINT_SOURCES = \
 	$(MAPI_GLDISPATCH_ENTRY_FILES) \
-	$(top_srcdir)/$(MAPI_PREFIX)/stub.c
+	mapi/stub.c
 
 ENTRYPOINT_CPPFLAGS = \
 	$(COMMON_CPPFLAGS) \
