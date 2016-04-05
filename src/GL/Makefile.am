@@ -57,7 +57,7 @@ libGL_la_CFLAGS = \
 libGL_la_LDFLAGS = -shared -version-info 1 $(LINKER_FLAG_NO_UNDEFINED)
 
 AM_CPPFLAGS = \
-	-I$(TOP)/src/GLdispatch/vnd-glapi/mapi \
+	-I$(TOP)/src/GLdispatch/vnd-glapi \
 	-I$(TOP)/src/GLX \
 	-I$(TOP)/src/GLdispatch \
 	-I$(TOP)/src/util \

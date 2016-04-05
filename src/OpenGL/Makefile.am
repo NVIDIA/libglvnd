@@ -29,7 +29,7 @@ noinst_LTLIBRARIES = libopengl_main.la
 libopengl_main_la_SOURCES = libopengl.c
 libopengl_main_la_CFLAGS = \
 	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src/GLdispatch/vnd-glapi/mapi \
+	-I$(top_srcdir)/src/GLdispatch/vnd-glapi \
 	-I$(top_srcdir)/src/GLdispatch/ \
 	-I$(top_srcdir)/src/util
 

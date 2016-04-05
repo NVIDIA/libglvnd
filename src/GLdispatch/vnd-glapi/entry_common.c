@@ -34,46 +34,43 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "glapi/glapi.h"
+#include "glapi.h"
 #include "u_macros.h"
 #include "u_current.h"
 #include "utils_misc.h"
 
-/**
- * \file
- *
- * Common functions for the x86 and x86-64 stubs.
- *
- * These functions are almost identical to the ones used for ARMv7, except that
- * the ARM stubs have to add 1 to the address of each entrypoint to force
- * switching to Thumb mode.
- */
-
-void entry_init_public(void)
+static int entry_patch_mprotect(int prot)
 {
-}
+    size_t size;
+    size_t pageSize = (size_t) sysconf(_SC_PAGESIZE);
 
-mapi_func entry_get_public(int index)
-{
-    return (mapi_func)(public_entry_start + (index * entry_stub_size));
-}
-
-void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
-{
-    *execPtr = (const void *) entry;
-    *writePtr = u_execmem_get_writable(entry);
-}
-
-#if !defined(STATIC_DISPATCH_ONLY)
-mapi_func entry_generate(int slot)
-{
-    void *code = u_execmem_alloc(entry_stub_size);
-    if (!code) {
-        return NULL;
+    if (((uintptr_t) public_entry_start) % pageSize != 0
+            || ((uintptr_t) public_entry_end) % pageSize != 0) {
+        assert(((uintptr_t) public_entry_start) % pageSize == 0);
+        assert(((uintptr_t) public_entry_end) % pageSize == 0);
+        return 0;
     }
 
-    entry_generate_default_code(code, slot);
+    size = ((uintptr_t) public_entry_end) - ((uintptr_t) public_entry_start);
 
-    return (mapi_func) code;
+    if (mprotect(public_entry_start, size, prot) != 0) {
+        return 0;
+    }
+    return 1;
 }
-#endif // !defined(STATIC_DISPATCH_ONLY)
+
+int entry_patch_start(void)
+{
+    // Set the memory protections to read/write/exec.
+    // Since this only gets called when no thread has a current context, this
+    // could also just be read/write, without exec, and then set it back to
+    // read/exec afterward. But then, if the first mprotect succeeds and the
+    // second fails, we'll be left with un-executable entrypoints.
+    return entry_patch_mprotect(PROT_READ | PROT_WRITE | PROT_EXEC);
+}
+
+int entry_patch_finish(void)
+{
+    return entry_patch_mprotect(PROT_READ | PROT_EXEC);
+}
+

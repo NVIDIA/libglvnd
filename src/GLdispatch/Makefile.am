@@ -33,9 +33,8 @@ lib_LTLIBRARIES = libGLdispatch.la
 
 SUBDIRS = vnd-glapi
 
-libGLdispatch_la_CFLAGS =  -I$(srcdir)/vnd-glapi/mapi/glapi
-libGLdispatch_la_CFLAGS += -I$(top_srcdir)/src/util
-libGLdispatch_la_CFLAGS += -I$(srcdir)/vnd-glapi/mapi
+libGLdispatch_la_CFLAGS = -I$(top_srcdir)/src/util
+libGLdispatch_la_CFLAGS += -I$(srcdir)/vnd-glapi
 libGLdispatch_la_CFLAGS += -I$(top_srcdir)/include
 
 libGLdispatch_la_LDFLAGS = -shared -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)

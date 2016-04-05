@@ -37,7 +37,7 @@
 #include <string.h>
 
 #include "u_macros.h"
-#include "glapi/glapi.h"
+#include "glapi.h"
 #include "glvnd/GLdispatchABI.h"
 
 #define X86_64_ENTRY_SIZE 64
