@@ -96,9 +96,6 @@ dnl
 dnl mapi top-relative paths: defined here so mapi can be used elsewhere
 dnl
 
-AC_SUBST([MAPI_PREFIX], [src/GLdispatch/vnd-glapi/mapi])
-AC_SUBST([MAPI_MESA_PREFIX], [src/GLdispatch/mesa])
-
 dnl Checks for libraries.
 AX_PTHREAD()
 

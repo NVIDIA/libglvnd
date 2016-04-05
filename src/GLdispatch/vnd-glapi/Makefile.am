@@ -2,8 +2,7 @@
 
 EXTRA_DIST = mapi
 
-TOP = $(top_srcdir)
-GLAPI = $(top_srcdir)/$(MAPI_PREFIX)/glapi
+MAPI_PREFIX = src/GLdispatch/vnd-glapi/mapi
 
 include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
 
@@ -12,13 +11,13 @@ noinst_HEADERS =
 noinst_LTLIBRARIES = libglapi.la
 
 MAPI_UTIL_FILES = \
-	$(TOP)/$(MAPI_PREFIX)/u_execmem.c
+	$(top_srcdir)/$(MAPI_PREFIX)/u_execmem.c
 
 MAPI_GLAPI_FILES = \
 	$(MAPI_GLDISPATCH_ENTRY_FILES) \
-	$(TOP)/$(MAPI_PREFIX)/mapi_glapi.c \
-	$(TOP)/$(MAPI_PREFIX)/stub.c \
-	$(TOP)/$(MAPI_PREFIX)/table.c \
+	$(top_srcdir)/$(MAPI_PREFIX)/mapi_glapi.c \
+	$(top_srcdir)/$(MAPI_PREFIX)/stub.c \
+	$(top_srcdir)/$(MAPI_PREFIX)/table.c \
 	$(MAPI_UTIL_FILES)
 
 libglapi_la_SOURCES = \
@@ -63,7 +62,7 @@ libglapi_la_CPPFLAGS = \
 
 ENTRYPOINT_SOURCES = \
 	$(MAPI_GLDISPATCH_ENTRY_FILES) \
-	$(TOP)/$(MAPI_PREFIX)/stub.c
+	$(top_srcdir)/$(MAPI_PREFIX)/stub.c
 
 ENTRYPOINT_CPPFLAGS = \
 	$(COMMON_CPPFLAGS) \
