@@ -627,7 +627,6 @@ static void         dummySetDispatchIndex      (const GLubyte *procName, int ind
     }
 }
 
-#if defined(PATCH_ENTRYPOINTS)
 PUBLIC int __glXSawVertex3fv;
 
 static void patch_x86_64(char *writeEntry,
@@ -788,7 +787,15 @@ static GLboolean dummyInitiatePatch(int type,
     return GL_TRUE;
 }
 
-#endif // defined(PATCH_ENTRYPOINTS)
+static Bool GetEnvFlag(const char *name)
+{
+    const char *env = getenv(name);
+    if (env != NULL && atoi(env) != 0) {
+        return True;
+    } else {
+        return False;
+    }
+}
 
 PUBLIC Bool __glx_Main(uint32_t version,
                                   const __GLXapiExports *exports,
@@ -807,10 +814,11 @@ PUBLIC Bool __glx_Main(uint32_t version,
             imports->getProcAddress = dummyGetProcAddress;
             imports->getDispatchAddress = dummyGetDispatchAddress;
             imports->setDispatchIndex = dummySetDispatchIndex;
-#if defined(PATCH_ENTRYPOINTS)
-            imports->isPatchSupported = dummyCheckPatchSupported;
-            imports->initiatePatch = dummyInitiatePatch;
-#endif
+
+            if (GetEnvFlag("GLVND_TEST_PATCH_ENTRYPOINTS")) {
+                imports->isPatchSupported = dummyCheckPatchSupported;
+                imports->initiatePatch = dummyInitiatePatch;
+            }
 
             return True;
         }

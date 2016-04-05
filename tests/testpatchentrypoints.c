@@ -41,7 +41,7 @@ int main(int argc, char **argv)
         goto fail;
     }
 
-    vendorHandle = dlopen("libGLX_patchentry.so", RTLD_LAZY);
+    vendorHandle = dlopen("libGLX_dummy.so", RTLD_LAZY);
     if (!vendorHandle) {
         printError("No valid vendor library handle\n");
         goto fail;

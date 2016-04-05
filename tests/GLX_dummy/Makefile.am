@@ -1,5 +1,5 @@
 noinst_HEADERS = GLX_dummy.h
-check_LTLIBRARIES = libGLX_dummy.la libGLX_patchentry.la
+check_LTLIBRARIES = libGLX_dummy.la
 
 check-local: libGLX_dummy_copy
 
@@ -32,8 +32,3 @@ libGLX_dummy_la_LIBADD = $(top_builddir)/src/util/libtrace.la
 libGLX_dummy_la_LIBADD += $(top_builddir)/src/util/libutils_misc.la
 libGLX_dummy_la_LDFLAGS = $(COMMON_LDFLAGS)
 
-libGLX_patchentry_la_CFLAGS = $(COMMON_CFLAGS) -DPATCH_ENTRYPOINTS
-libGLX_patchentry_la_SOURCES = $(COMMON_SOURCES)
-libGLX_patchentry_la_LIBADD = $(top_builddir)/src/util/libtrace.la
-libGLX_patchentry_la_LIBADD += $(top_builddir)/src/util/libutils_misc.la
-libGLX_patchentry_la_LDFLAGS = $(COMMON_LDFLAGS)
