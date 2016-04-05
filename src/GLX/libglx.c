@@ -268,7 +268,17 @@ PUBLIC GLXContext glXCreateNewContext(Display *dpy, GLXFBConfig config,
 
 PUBLIC void glXDestroyContext(Display *dpy, GLXContext context)
 {
-    __GLXvendorInfo *vendor = CommonDispatchContext(dpy, context, X_GLXDestroyContext);
+    __GLXvendorInfo *vendor;
+
+    if (context == NULL) {
+        // Some drivers will just return without generating an error if the app
+        // passes NULL for a context, and unfortunately there are some broken
+        // applications that depend on that behavior.
+        glvndAppErrorCheckReportError("glXDestroyContext called with NULL for context\n");
+        return;
+    }
+
+    vendor = CommonDispatchContext(dpy, context, X_GLXDestroyContext);
     if (vendor != NULL) {
         __glXRemoveVendorContextMapping(dpy, context);
         vendor->staticDispatch.destroyContext(dpy, context);
