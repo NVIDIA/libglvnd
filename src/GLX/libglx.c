@@ -45,6 +45,7 @@
 #include "GL/glxproto.h"
 #include "libglxgl.h"
 #include "glvnd_list.h"
+#include "app_error_check.h"
 
 #include "lkdhash.h"
 
@@ -2045,6 +2046,7 @@ void _init(void)
     /* Initialize GLdispatch; this will also initialize our pthreads imports */
     __glDispatchInit();
     glvndSetupPthreads();
+    glvndAppErrorCheckInit();
 
     glvnd_list_init(&currentThreadStateList);
 

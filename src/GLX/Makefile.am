@@ -80,4 +80,5 @@ libGLX_la_SOURCES = \
 	libglxproto.c \
 	$(UTIL_DIR)/glvnd_genentry.c \
 	$(UTIL_DIR)/utils_misc.c \
+	$(UTIL_DIR)/app_error_check.c \
 	g_libglxnoop.c
