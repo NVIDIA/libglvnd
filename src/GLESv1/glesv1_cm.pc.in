@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=@libdir@
+includedir=@includedir@
+
+Name: gl
+Description: libglvnd OpenGL ES v1 library
+Version: @PACKAGE_VERSION@
+Libs: -L${libdir} -lGLESv1_CM
+Cflags: -I${includedir}

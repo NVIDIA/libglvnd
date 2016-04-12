@@ -82,3 +82,6 @@ libGLX_la_SOURCES = \
 	$(UTIL_DIR)/utils_misc.c \
 	$(UTIL_DIR)/app_error_check.c \
 	g_libglxnoop.c
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = glx.pc

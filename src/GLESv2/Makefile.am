@@ -41,3 +41,5 @@ libGLESv2_la_LDFLAGS = $(ENTRYPOINT_COMMON_LDFLAGS) \
 
 libGLESv2_la_LIBADD = $(ENTRYPOINT_COMMON_LIBADD)
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = glesv2.pc

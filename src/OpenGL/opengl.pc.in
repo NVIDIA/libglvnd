@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=@libdir@
+includedir=@includedir@
+
+Name: openg
+Description: libglvnd OpenGL library
+Version: @PACKAGE_VERSION@
+Libs: -L${libdir} -lOpenGL
+Cflags: -I${includedir}

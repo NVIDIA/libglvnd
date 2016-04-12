@@ -71,3 +71,6 @@ AM_CPPFLAGS = \
 libGL_la_LIBADD  = ../GLX/libGLX.la
 libGL_la_LIBADD += ../GLdispatch/libGLdispatch.la
 libGL_la_LIBADD += -ldl
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = gl.pc

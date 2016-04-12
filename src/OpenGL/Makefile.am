@@ -41,3 +41,5 @@ libOpenGL_la_LDFLAGS = $(ENTRYPOINT_COMMON_LDFLAGS) \
 
 libOpenGL_la_LIBADD = $(ENTRYPOINT_COMMON_LIBADD)
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = opengl.pc
