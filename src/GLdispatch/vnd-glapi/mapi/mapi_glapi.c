@@ -88,8 +88,8 @@ _glapi_get_stub(const char *name, int generate)
 {
    const struct mapi_stub *stub;
 
-    if (!name)
-        return NULL;
+   if (!name)
+      return NULL;
 
    stub = stub_find_public(name);
    if (!stub)
