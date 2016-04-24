@@ -1275,13 +1275,13 @@ static char *MergeExtensionStrings(char *currentString, const char *newString)
     name = newString;
     nameLen = 0;
     while (FindNextExtensionName(&name, &nameLen)) {
-        if (!IsExtensionInString(currentString, name, nameLen)) {
+        if (!IsExtensionInString(buf, name, nameLen)) {
             *ptr++ = ' ';
             memcpy(ptr, name, nameLen);
             ptr += nameLen;
+            *ptr = '\0';
         }
     }
-    *ptr = '\0';
     assert((size_t) (ptr - buf) == newLen);
     return buf;
 }
