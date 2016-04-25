@@ -657,19 +657,6 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchThreadState *threadState,
         return GL_FALSE;
     }
 
-    if (!dispatch->table ||
-        (dispatch->generation < latestGeneration)) {
-
-        // Lazily create the dispatch table if we haven't already
-        if (!dispatch->table) {
-            dispatch->table = CreateGLAPITable(dispatch->getProcAddress,
-                    dispatch->getProcAddressParam);
-        }
-
-        FixupDispatchTable(dispatch);
-    }
-
-    DispatchCurrentRef(dispatch);
     numCurrentContexts++;
 
     UnlockDispatch();
@@ -677,7 +664,7 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchThreadState *threadState,
     /*
      * Update the API state with the new values.
      */
-    priv->dispatch = dispatch;
+    priv->dispatch = NULL;
     priv->vendorID = vendorID;
     priv->threadState = threadState;
     threadState->priv = priv;
@@ -686,9 +673,66 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchThreadState *threadState,
      * Set the current state in TLS.
      */
     SetCurrentThreadState(threadState);
-    _glapi_set_current(dispatch->table);
+    _glapi_set_current(NULL);
+
+    __glDispatchSetDispatch(dispatch);
 
     return GL_TRUE;
+}
+
+PUBLIC void __glDispatchSetDispatch(__GLdispatchTable *dispatch)
+{
+    __GLdispatchThreadState *threadState;
+    __GLdispatchTable *prevDispatch;
+
+    threadState = __glDispatchGetCurrentThreadState();
+    if (threadState == NULL) {
+        assert(threadState != NULL);
+        return;
+    }
+
+    prevDispatch = threadState->priv->dispatch;
+    if (prevDispatch == dispatch) {
+        return;
+    }
+
+    LockDispatch();
+
+    if (dispatch != NULL) {
+        if (!dispatch->table ||
+            (dispatch->generation < latestGeneration)) {
+
+            // Lazily create the dispatch table if we haven't already
+            if (!dispatch->table) {
+                dispatch->table = CreateGLAPITable(dispatch->getProcAddress,
+                        dispatch->getProcAddressParam);
+            }
+
+            FixupDispatchTable(dispatch);
+        }
+        DispatchCurrentRef(dispatch);
+        _glapi_set_current(dispatch->table);
+    } else {
+        _glapi_set_current(NULL);
+    }
+    threadState->priv->dispatch = dispatch;
+
+    if (prevDispatch != NULL) {
+        DispatchCurrentUnref(prevDispatch);
+    }
+
+    UnlockDispatch();
+    return;
+}
+
+PUBLIC __GLdispatchTable *__glDispatchGetCurrentDispatch(void)
+{
+    __GLdispatchThreadState *threadState = __glDispatchGetCurrentThreadState();
+    if (threadState != NULL) {
+        return threadState->priv->dispatch;
+    } else {
+        return NULL;
+    }
 }
 
 static void LoseCurrentInternal(__GLdispatchThreadState *curThreadState,

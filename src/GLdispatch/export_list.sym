@@ -15,3 +15,5 @@ __glDispatchNewVendorID
 __glDispatchRegisterStubCallbacks
 __glDispatchReset
 __glDispatchUnregisterStubCallbacks
+__glDispatchSetDispatch
+__glDispatchGetCurrentDispatch

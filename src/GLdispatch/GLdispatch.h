@@ -298,6 +298,22 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchThreadState *threadState,
                                          const __GLdispatchPatchCallbacks *patchCb);
 
 /*!
+ * Sets the dispatch table for the curernt thread. This may only be called when
+ * there's already a current context. The caller is responsible for ensuring
+ * that the dispatch table is compatible with the current context and vendor.
+ *
+ * \param dispatch The new dispatch table. If this is \c NULL, then a no-op
+ * table is used instead.
+ */
+PUBLIC void __glDispatchSetDispatch(__GLdispatchTable *dispatch);
+
+/*!
+ * Returns a pointer to the dispatch table for the current thread, as set by
+ * \c __glDispatchMakeCurrent or \c __glDispatchSetDispatch.
+ */
+PUBLIC __GLdispatchTable *__glDispatchGetCurrentDispatch(void);
+
+/*!
  * This makes the NOP dispatch table current and sets the current thread state
  * to NULL.
  *
