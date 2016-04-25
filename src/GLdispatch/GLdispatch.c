@@ -234,23 +234,46 @@ static void noop_func(void)
     // nop
 }
 
+/*!
+ * Frees a dispatch table.
+ */
+static void FreeDispatchTable(__GLdispatchTable *dispatch)
+{
+    glvnd_list_del(&dispatch->entry);
+    free(dispatch->table);
+    free(dispatch);
+}
+
+/*!
+ * Checks if a dispatch table is unreferenced, and frees it if it is.
+ */
+static void DispatchCheckDelete(__GLdispatchTable *dispatch)
+{
+    CheckDispatchLocked();
+    if (dispatch->currentThreads <= 0 && dispatch->getProcAddress == NULL) {
+        FreeDispatchTable(dispatch);
+    }
+}
+
+/*!
+ * Increments the refcount of a dispatch table.
+ */
 static void DispatchCurrentRef(__GLdispatchTable *dispatch)
 {
     CheckDispatchLocked();
     dispatch->currentThreads++;
-    if (dispatch->currentThreads == 1) {
-        glvnd_list_add(&dispatch->entry, &currentDispatchList);
-    }
 }
 
+/*!
+ * Decrements the refcount of a dispatch table, and then frees it if it's no
+ * longer referenced.
+ */
 static void DispatchCurrentUnref(__GLdispatchTable *dispatch)
 {
     CheckDispatchLocked();
     dispatch->currentThreads--;
-    if (dispatch->currentThreads == 0) {
-        glvnd_list_del(&dispatch->entry);
-    }
     assert(dispatch->currentThreads >= 0);
+    DispatchCheckDelete(dispatch);
 }
 
 /*
@@ -278,9 +301,13 @@ static void FixupDispatchTable(__GLdispatchTable *dispatch)
             assert(curProc->offset != -1);
             assert(curProc->procName);
 
-            procAddr = (void*)(*dispatch->getProcAddress)(
-                curProc->procName,
-                dispatch->getProcAddressParam);
+            if (dispatch->getProcAddress != NULL) {
+                procAddr = (void*)(*dispatch->getProcAddress)(
+                    curProc->procName,
+                    dispatch->getProcAddressParam);
+            } else {
+                procAddr = NULL;
+            }
 
             tbl[curProc->offset] = procAddr ? procAddr : (void *)noop_func;
             DBG_PRINTF(20, "extProc procName=%s, addr=%p, noop=%p\n",
@@ -342,7 +369,9 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
              * to this proc.
              */
             glvnd_list_for_each_entry(curDispatch, &currentDispatchList, entry) {
-                FixupDispatchTable(curDispatch);
+                if (curDispatch->currentThreads > 0) {
+                    FixupDispatchTable(curDispatch);
+                }
             }
         }
     }
@@ -354,7 +383,17 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(
         __GLgetProcAddressCallback getProcAddress, void *param)
 {
-    __GLdispatchTable *dispatch = malloc(sizeof(__GLdispatchTable));
+    __GLdispatchTable *dispatch;
+
+    if (getProcAddress == NULL) {
+        assert(getProcAddress != NULL);
+        return NULL;
+    }
+
+    dispatch = malloc(sizeof(__GLdispatchTable));
+    if (dispatch == NULL) {
+        return NULL;
+    }
 
     dispatch->generation = 0;
     dispatch->currentThreads = 0;
@@ -363,20 +402,24 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(
     dispatch->getProcAddress = getProcAddress;
     dispatch->getProcAddressParam = param;
 
+    LockDispatch();
+    glvnd_list_add(&dispatch->entry, &currentDispatchList);
+    UnlockDispatch();
+
     return dispatch;
 }
 
 PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch)
 {
     /*
-     * XXX: Technically, dispatch->currentThreads should be 0 if we're calling
-     * into this function, but buggy apps may unload libGLX without losing
-     * current, in which case this won't be true when the dispatch table
-     * is destroyed.
+     * It's possible that this dispatch table is still current to some thread.
+     * In that case, we'll stub out the getProcAddress callback, but wait until
+     * it's no longer used before we free it.
      */
     LockDispatch();
-    free(dispatch->table);
-    free(dispatch);
+    dispatch->getProcAddress = NULL;
+    dispatch->getProcAddressParam = NULL;
+    DispatchCheckDelete(dispatch);
     UnlockDispatch();
 }
 
@@ -798,7 +841,7 @@ void __glDispatchReset(void)
 
     glvnd_list_for_each_entry_safe(cur, tmp, &currentDispatchList, entry) {
         cur->currentThreads = 0;
-        glvnd_list_del(&cur->entry);
+        DispatchCheckDelete(cur);
     }
     UnlockDispatch();
 
@@ -824,15 +867,18 @@ void __glDispatchFini(void)
 
     if (clientRefcount == 0) {
         __GLdispatchProcEntry *curProc, *tmpProc;
+        __GLdispatchTable *curDispatch, *tmpDispatch;
 
         /* This frees the dispatchStubList */
         UnregisterAllStubCallbacks();
 
-        /* 
-         * Before we get here, client libraries should
-         * have cleared out the current dispatch list.
+        /*
+         * Free any remaining dispatch tables. There might still be some if the
+         * app still had a current context on some thread.
          */
-        assert(glvnd_list_is_empty(&currentDispatchList));
+        glvnd_list_for_each_entry_safe(curDispatch, tmpDispatch, &currentDispatchList, entry) {
+            FreeDispatchTable(curDispatch);
+        }
 
         /*
          * Clear out the getProcAddress lists.
