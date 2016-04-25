@@ -128,6 +128,10 @@ static const __GLXapiExports glxExportsTable = {
     .addVendorDrawableMapping = __glXAddVendorDrawableMapping,
     .removeVendorDrawableMapping = __glXRemoveVendorDrawableMapping,
     .vendorFromDrawable = __glXVendorFromDrawable,
+
+    .createGLDispatchTable = __glXCreateGLDispatchTable,
+    .destroyGLDispatchTable = __glXDestroyGLDispatchTable,
+    .setGLDispatchTable = __glXSetGLDispatchTable,
 };
 
 /*!
@@ -441,15 +445,6 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             vendor->vendorID = __glDispatchNewVendorID();
             assert(vendor->vendorID >= 0);
 
-            vendor->glDispatch = (__GLdispatchTable *)
-                __glDispatchCreateTable(
-                    VendorGetProcAddressCallback,
-                    vendor
-                );
-            if (!vendor->glDispatch) {
-                goto fail;
-            }
-
             /* Initialize the dynamic dispatch table */
             vendor->dynDispatch = __glvndWinsysVendorDispatchCreate();
             if (vendor->dynDispatch == NULL) {
@@ -474,6 +469,17 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 
             if (!LookupVendorEntrypoints(vendor)) {
                 goto fail;
+            }
+
+            if (vendor->glxvc->makeContextCurrent == NULL) {
+                vendor->glDispatch = (__GLdispatchTable *)
+                    __glDispatchCreateTable(
+                        VendorGetProcAddressCallback,
+                        vendor
+                    );
+                if (!vendor->glDispatch) {
+                    goto fail;
+                }
             }
 
             // Check to see whether this vendor library can support entrypoint

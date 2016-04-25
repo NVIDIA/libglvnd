@@ -56,6 +56,22 @@
 
 static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
 
+/*!
+ * This structure keeps track of a vendor-allocated dispatch table.
+ *
+ * Note that most of the code for deleting the dispatch tables is in
+ * libGLdispatch. In libGLX, we only keep track of them for some simple error
+ * checking and to delete them when libGLX is unloaded.
+ */
+struct __GLXdispatchTableRec {
+    __GLXvendorInfo *vendor;
+    __GLdispatchTable *table;
+    struct glvnd_list entry;
+};
+
+struct glvnd_list dispatchTableList;
+static glvnd_mutex_t dispatchTableListMutex = GLVND_MUTEX_INITIALIZER;
+
 /**
  * This structure keeps track of a rendering context.
  *
@@ -816,27 +832,41 @@ static Bool InternalMakeCurrentVendor(
         __GLXThreadState *threadState,
         __GLXvendorInfo *vendor)
 {
-    Bool ret;
+    __GLdispatchTable *dispatch = NULL;
 
     assert(threadState->currentVendor == vendor);
 
-    if (callerOpcode == X_GLXMakeCurrent && draw == read) {
-        ret = vendor->staticDispatch.makeCurrent(dpy, draw, ctxInfo->context);
+    if (vendor->glxvc->makeContextCurrent != NULL) {
+        __GLXdispatchTable *glxDispatch = vendor->glxvc->makeContextCurrent(dpy, draw,
+                read, ctxInfo->context, callerOpcode);
+        if (glxDispatch != NULL) {
+            dispatch = glxDispatch->table;
+        }
     } else {
-        ret = vendor->staticDispatch.makeContextCurrent(dpy,
-                                                    draw,
-                                                    read,
-                                                    ctxInfo->context);
+        Bool ret;
+        if (callerOpcode == X_GLXMakeCurrent && draw == read) {
+            ret = vendor->staticDispatch.makeCurrent(dpy, draw, ctxInfo->context);
+        } else {
+            ret = vendor->staticDispatch.makeContextCurrent(dpy,
+                                                        draw,
+                                                        read,
+                                                        ctxInfo->context);
+        }
+        if (ret) {
+            dispatch = vendor->glDispatch;
+        }
     }
 
-    if (ret) {
+    if (dispatch != NULL) {
+        __glDispatchSetDispatch(dispatch);
         threadState->currentDisplay = dpy;
         threadState->currentDraw = draw;
         threadState->currentRead = read;
         threadState->currentContext = ctxInfo;
+        return True;
+    } else {
+        return False;
     }
-
-    return ret;
 }
 
 /**
@@ -869,7 +899,7 @@ static Bool InternalMakeCurrentDispatch(
 
     ret = __glDispatchMakeCurrent(
         &threadState->glas,
-        vendor->glDispatch,
+        NULL,
         vendor->vendorID,
         vendor->patchCallbacks
     );
@@ -1824,6 +1854,52 @@ PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
     return func;
 }
 
+__GLXdispatchTable * __glXCreateGLDispatchTable(
+        __GLXvendorInfo *vendor,
+        __GLXdispatchGetProcAddress callback,
+        void *param)
+{
+    __GLXdispatchTable *dispatch;
+    dispatch = (__GLXdispatchTable *) malloc(sizeof(__GLXdispatchTable));
+    if (dispatch == NULL) {
+        return NULL;
+    }
+
+    dispatch->vendor = vendor;
+    dispatch->table = __glDispatchCreateTable(
+            (__GLgetProcAddressCallback) callback, param);
+    if (dispatch->table == NULL) {
+        free(dispatch);
+        return NULL;
+    }
+
+    __glvndPthreadFuncs.mutex_lock(&dispatchTableListMutex);
+    glvnd_list_add(&dispatch->entry, &dispatchTableList);
+    __glvndPthreadFuncs.mutex_unlock(&dispatchTableListMutex);
+
+    return dispatch;
+}
+
+void __glXDestroyGLDispatchTable(__GLXdispatchTable *dispatch)
+{
+    if (dispatch != NULL) {
+        __glvndPthreadFuncs.mutex_lock(&dispatchTableListMutex);
+        glvnd_list_del(&dispatch->entry);
+        __glvndPthreadFuncs.mutex_unlock(&dispatchTableListMutex);
+
+        __glDispatchDestroyTable(dispatch->table);
+        free(dispatch);
+    }
+}
+
+void __glXSetGLDispatchTable(__GLXdispatchTable *dispatch)
+{
+    __GLXThreadState *threadState = __glXGetCurrentThreadState();
+    if (threadState != NULL && threadState->currentVendor == dispatch->vendor) {
+        __glDispatchSetDispatch(dispatch->table);
+    }
+}
+
 int AtomicIncrement(int volatile *val)
 {
 #if defined(HAVE_SYNC_INTRINSICS)
@@ -1970,9 +2046,17 @@ static void __glXAPITeardown(Bool doReset)
          */
         __glvndPthreadFuncs.rwlock_init(&__glXProcAddressHash.lock, NULL);
         __glvndPthreadFuncs.mutex_init(&currentThreadStateListMutex, NULL);
+        __glvndPthreadFuncs.mutex_init(&dispatchTableListMutex, NULL);
     } else {
+        __GLXdispatchTable *dispatch, *dispatchTemp;
+
         LKDHASH_TEARDOWN(__GLXprocAddressHash,
                          __glXProcAddressHash, NULL, NULL, False);
+
+        glvnd_list_for_each_entry_safe(dispatch, dispatchTemp, &dispatchTableList, entry) {
+            __glDispatchDestroyTable(dispatch->table);
+            free(dispatch);
+        }
     }
 }
 
@@ -2007,6 +2091,7 @@ void _init(void)
     glvndAppErrorCheckInit();
 
     glvnd_list_init(&currentThreadStateList);
+    glvnd_list_init(&dispatchTableList);
 
     /*
      * glxContextHashLock must be a recursive mutex, because we'll have it

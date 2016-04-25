@@ -100,7 +100,7 @@ extern "C" {
  * will still work.
  */
 #define GLX_VENDOR_ABI_MAJOR_VERSION ((uint32_t) 1)
-#define GLX_VENDOR_ABI_MINOR_VERSION ((uint32_t) 0)
+#define GLX_VENDOR_ABI_MINOR_VERSION ((uint32_t) 1)
 #define GLX_VENDOR_ABI_VERSION ((GLX_VENDOR_ABI_MAJOR_VERSION << 16) | GLX_VENDOR_ABI_MINOR_VERSION)
 static inline uint32_t GLX_VENDOR_ABI_GET_MAJOR_VERSION(uint32_t version)
 {
@@ -118,6 +118,9 @@ static inline uint32_t GLX_VENDOR_ABI_GET_MINOR_VERSION(uint32_t version)
  * functions retrieve and operate on this structure using the API below.
  */
 typedef struct __GLXvendorInfoRec __GLXvendorInfo;
+
+typedef struct __GLXdispatchTableRec __GLXdispatchTable;
+typedef void * (* __GLXdispatchGetProcAddress) (const char *procName, void *param);
 
 /****************************************************************************
  * API library exports                                                      *
@@ -228,6 +231,41 @@ typedef struct __GLXapiExportsRec {
      */
     __GLXvendorInfo * (*vendorFromDrawable)(Display *dpy, GLXDrawable drawable);
 
+    /*!
+     * Allocates an OpenGL dispatch table.
+     *
+     * The vendor library can then use the returned dispatch table in 
+     * setGLDispatchTable and makeContextCurrent.
+     *
+     * \param vendor The vendor library handle.
+     * \param callback A callback function to populate the dispatch table.
+     * \param param A parameter to pass to \p callback.
+     * \return An opaque dispatch table handle, or \c NULL on error.
+     */
+    __GLXdispatchTable * (* createGLDispatchTable) (
+            __GLXvendorInfo *vendor,
+            __GLXdispatchGetProcAddress callback,
+            void *param);
+
+    /*!
+     * Frees an OpenGL dispatch table.
+     *
+     * \param dispatch A dispatch table handle.
+     */
+    void (* destroyGLDispatchTable) (__GLXdispatchTable *dispatch);
+
+    /*!
+     * Sets the current dispatch table.
+     *
+     * A vendor library can call this function to switch to a different
+     * dispatch table without changing the current context.
+     *
+     * The current thread must have a current context that belongs to the
+     * vendor.
+     *
+     * \param dispatch A dispatch table handle.
+     */
+    void (* setGLDispatchTable) (__GLXdispatchTable *dispatch);
 } __GLXapiExports;
 
 /*****************************************************************************
@@ -389,6 +427,31 @@ typedef struct __GLXapiImportsRec {
      * \note This function may be called concurrently from multiple threads.
      */
     void (*patchThreadAttach)(void);
+
+    /*!
+     * (OPTIONAL) Called to make a context current.
+     *
+     * If a vendor library provides this function, then libGLX will call it
+     * instead of the normal glXMakeCurrent or glXMakeContextCurrent functions.
+     *
+     * This allows a vendor library to specify the dispatch table to use for
+     * the current thread.
+     *
+     * Note that this function is not called when a context is released.
+     *
+     * If the vendor does not provide this function, then libGLX will create
+     * a dispatch table and populate it by calling \c getProcAddress.
+     *
+     * \param dpy The new display.
+     * \param draw The new drawable.
+     * \param read The new read drawable.
+     * \param ctx The new context handle.
+     * \param opcode The opcode for the function that was called. This will be
+     * either \c X_GLXMakeCurrent or \c X_GLXMakeContextCurrent.
+     * \return The dispatch table to use, or \c NULL on error.
+     */
+    __GLXdispatchTable * (* makeContextCurrent) (Display *dpy,
+            GLXDrawable draw, GLXDrawable read, GLXContext ctx, char opcode);
 
 } __GLXapiImports;
 

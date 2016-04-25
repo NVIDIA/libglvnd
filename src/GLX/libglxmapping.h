@@ -148,4 +148,12 @@ void __glXMappingInit(void);
  */
 void __glXMappingTeardown(Bool doReset);
 
+__GLXdispatchTable * __glXCreateGLDispatchTable(
+        __GLXvendorInfo *vendor,
+        __GLXdispatchGetProcAddress callback,
+        void *param);
+
+void __glXDestroyGLDispatchTable(__GLXdispatchTable *dispatch);
+void __glXSetGLDispatchTable(__GLXdispatchTable *dispatch);
+
 #endif /* __LIB_GLX_MAPPING_H */
