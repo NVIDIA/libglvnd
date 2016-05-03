@@ -76,12 +76,6 @@
  */
 static glvnd_rwlock_t dispatchIndexLock = GLVND_RWLOCK_INITIALIZER;
 
-typedef struct __GLXdispatchFuncHashRec {
-    int index;
-    __GLXextFuncPtr addr;
-    UT_hash_handle hh;
-} __GLXdispatchFuncHash;
-
 /****************************************************************************/
 
 /*
@@ -284,22 +278,9 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
                                         int index)
 {
     __GLXextFuncPtr addr = NULL;
-    __GLXdispatchFuncHash *pEntry;
     const GLubyte *procName = NULL;
 
-    LKDHASH_RDLOCK(vendor->dynDispatchHash);
-
-    HASH_FIND_INT(_LH(vendor->dynDispatchHash), &index, pEntry);
-
-    if (pEntry) {
-        // This can be NULL, which indicates the vendor does not implement this
-        // entry. Vendor library provided dispatch functions are expected to
-        // default to a no-op in case dispatching fails.
-        addr = pEntry->addr;
-    }
-
-    LKDHASH_UNLOCK(vendor->dynDispatchHash);
-
+    addr = (__GLXextFuncPtr) __glvndWinsysVendorDispatchLookupFunc(vendor->dynDispatch, index);
     if (addr != NULL) {
         return addr;
     }
@@ -317,26 +298,14 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
         return NULL;
     }
 
-    // Get the real address
+    // Get the real address.
     addr = vendor->glxvc->getProcAddress(procName);
-    if (addr == NULL) {
-        return NULL;
+    if (addr != NULL) {
+        // Record the address in the vendor's hashtable. Note that if this
+        // fails, it's not fatal. It just means we'll have to call
+        // getProcAddress again the next time we need this function.
+        __glvndWinsysVendorDispatchAddFunc(vendor->dynDispatch, index, addr);
     }
-
-    LKDHASH_WRLOCK(vendor->dynDispatchHash);
-    HASH_FIND_INT(_LH(vendor->dynDispatchHash), &index, pEntry);
-    if (!pEntry) {
-        // If this malloc fails, then it's not fatal. It just means we'll
-        // have to query the vendor library again next time.
-        pEntry = malloc(sizeof(*pEntry));
-        if (pEntry != NULL) {
-            pEntry->index = index;
-            pEntry->addr = addr;
-            HASH_ADD_INT(_LH(vendor->dynDispatchHash), index, pEntry);
-        }
-    }
-    LKDHASH_UNLOCK(vendor->dynDispatchHash);
-
     return addr;
 }
 
@@ -363,9 +332,10 @@ static void CleanupVendorNameEntry(void *unused,
         vendor->glDispatch = NULL;
     }
 
-    /* Clean up the dynamic dispatch table */
-    LKDHASH_TEARDOWN(__GLXdispatchFuncHash,
-                     vendor->dynDispatchHash, NULL, NULL, True);
+    if (vendor->dynDispatch != NULL) {
+        __glvndWinsysVendorDispatchDestroy(vendor->dynDispatch);
+        vendor->dynDispatch = NULL;
+    }
 
     if (vendor->dlhandle != NULL) {
         dlclose(vendor->dlhandle);
@@ -501,7 +471,10 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             }
 
             /* Initialize the dynamic dispatch table */
-            LKDHASH_INIT(vendor->dynDispatchHash);
+            vendor->dynDispatch = __glvndWinsysVendorDispatchCreate();
+            if (vendor->dynDispatch == NULL) {
+                goto fail;
+            }
 
             success = (*glxMainProc)(GLX_VENDOR_ABI_VERSION,
                                       &glxExportsTable,

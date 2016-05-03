@@ -33,6 +33,7 @@
 #include "libglxabipriv.h"
 #include "GLdispatch.h"
 #include "lkdhash.h"
+#include "winsys_dispatch.h"
 
 #define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
 
@@ -45,7 +46,7 @@ struct __GLXvendorInfoRec {
     void *dlhandle; //< shared library handle
 
     /// dynamic GLX dispatch table
-    DEFINE_LKDHASH(struct __GLXdispatchFuncHashRec, dynDispatchHash);
+    __GLVNDwinsysVendorDispatch *dynDispatch;
 
     __GLdispatchTable *glDispatch; //< GL dispatch table
 
