@@ -1835,9 +1835,9 @@ PUBLIC __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
 
 PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
 {
-    __glXThreadInitialize();
-
     __GLXextFuncPtr addr = NULL;
+
+    __glXThreadInitialize();
 
     /*
      * Easy case: First check if we already know this address from
@@ -1849,20 +1849,14 @@ PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
         return addr;
     }
 
-    /*
-     * If that doesn't work, try requesting a dispatch function
-     * from one of the loaded vendor libraries.
-     */
-    addr = __glXGetGLXDispatchAddress(procName);
-    if (addr) {
-        goto done;
+    if (procName[0] == 'g' && procName[1] == 'l' && procName[2] == 'X') {
+        // This looks like a GLX function, so try to find a GLX dispatch stub.
+        addr = __glXGetGLXDispatchAddress(procName);
+    } else {
+        addr = __glDispatchGetProcAddress((const char *) procName);
     }
 
-    /* If that doesn't work, then try to generate a stub function. */
-    addr = __glXGenerateGLXEntrypoint(procName);
-
     /* Store the resulting proc address. */
-done:
     if (addr) {
         cacheProcAddress(procName, addr);
     }
@@ -2067,6 +2061,8 @@ void _init(void)
     __glvndPthreadFuncs.mutexattr_settype(&mutexAttribs, PTHREAD_MUTEX_RECURSIVE);
     __glvndPthreadFuncs.mutex_init(&glxContextHashLock, &mutexAttribs);
     __glvndPthreadFuncs.mutexattr_destroy(&mutexAttribs);
+
+    __glXMappingInit();
 
     {
         /*

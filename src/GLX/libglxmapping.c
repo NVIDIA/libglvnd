@@ -45,6 +45,7 @@
 #include "utils_misc.h"
 #include "glvnd_genentry.h"
 #include "trace.h"
+#include "winsys_dispatch.h"
 
 #include "lkdhash.h"
 
@@ -69,26 +70,11 @@
 
 #define GLX_EXTENSION_NAME "GLX"
 
-/*
- * Hash table containing a mapping from dispatch table index entries to
- * entry point names. This is used in  __glXFetchDispatchEntry() to query
- * the appropriate vendor in the case where the entry hasn't been seen before
- * by this vendor.
+/*!
+ * This lock is used to protect access to the list of GLX dispatch stubs.
+ * The list itself is defined and implemented in winsys_dispatch.c.
  */
-typedef struct __GLXdispatchIndexHashRec {
-    int index;
-    GLubyte *procName;
-    UT_hash_handle hh;
-} __GLXdispatchIndexHash;
-
-static DEFINE_INITIALIZED_LKDHASH(__GLXdispatchIndexHash, __glXDispatchIndexHash);
-
-/*
- * Monotonically-increasing number describing both the virtual "size" of the
- * dynamic dispatch table and the next unused index. Must be accessed holding
- * the __glXDispatchIndexHash lock.
- */
-static int __glXNextUnusedHashIndex;
+static glvnd_rwlock_t dispatchIndexLock = GLVND_RWLOCK_INITIALIZER;
 
 typedef struct __GLXdispatchFuncHashRec {
     int index;
@@ -130,6 +116,9 @@ struct __GLXvendorXIDMappingHashRec {
     UT_hash_handle hh;
 };
 
+// TODO: We could collect the unassigned GLX stubs into a linked list here
+// instead of duplicating the names and scanning the whole array in
+// glvnd_genentry.
 static glvnd_mutex_t glxGenEntrypointMutex = GLVND_MUTEX_INITIALIZER;
 
 static __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor, int index);
@@ -155,87 +144,23 @@ static const __GLXapiExports glxExportsTable = {
     .vendorFromDrawable = __glXVendorFromDrawable,
 };
 
-static GLboolean AllocDispatchIndex(__GLXvendorInfo *vendor,
-                                    const GLubyte *procName)
-{
-    __GLXdispatchIndexHash *pEntry = malloc(sizeof(*pEntry));
-    if (!pEntry) {
-        return GL_FALSE;
-    }
-
-    pEntry->procName = (GLubyte *)strdup((const char *)procName);
-    if (!pEntry->procName) {
-        free(pEntry);
-        return GL_FALSE;
-    }
-
-    LKDHASH_WRLOCK(__glXDispatchIndexHash);
-    pEntry->index = __glXNextUnusedHashIndex++;
-
-    // Notify the vendor this is the index which should be used
-    vendor->glxvc->setDispatchIndex(procName, pEntry->index);
-
-    HASH_ADD_INT(_LH(__glXDispatchIndexHash),
-                 index, pEntry);
-    LKDHASH_UNLOCK(__glXDispatchIndexHash);
-
-    return GL_TRUE;
-}
-
-/**
- * Looks up a dispatch function from a vendor library.
- *
- * If the vendor library provides a dispatch function, then it will allocate a
- * dispatch index for it.
- *
- * If the vendor library exports it as a normal OpenGL function, then it will
- * return a dispatch function from libGLdispatch.
- *
- * This function is used from __glXGetGLXDispatchAddress and as the callback to
- * glvndUpdateEntrypoints.
- */
-static GLVNDentrypointStub __glXFindVendorDispatchAddress(const char *procName, __GLXvendorInfo *vendor)
-{
-    __GLXextFuncPtr addr = NULL;
-
-    addr = vendor->glxvc->getDispatchAddress((const GLubyte *) procName);
-    if (addr != NULL) {
-        // Allocate the new dispatch index.
-        if (!AllocDispatchIndex(vendor, (const GLubyte *) procName)) {
-            addr = NULL;
-        }
-        return addr;
-    }
-
-    // If we didn't find a GLX dispatch function, then check for a normal
-    // OpenGL function. This should handle any case where a GL extension
-    // function starts with "glX".
-    addr = vendor->glxvc->getProcAddress((const GLubyte *) procName);
-    if (addr != NULL) {
-        addr = __glDispatchGetProcAddress(procName);
-    }
-    return addr;
-}
-
 /*!
- * Callback function used when freeing the dispatch index hash table.
- */
-static void CleanupDispatchIndexEntry(void *unused, __GLXdispatchIndexHash *pEntry)
-{
-    assert(pEntry);
-    free(pEntry->procName);
-}
-
-/*!
+ * Looks for a GLX dispatch function.
+ *
  * This function queries each loaded vendor to determine if there is
  * a vendor-implemented dispatch function. The dispatch function
  * uses the vendor <-> API library ABI to determine the screen given
  * the parameters of the function and dispatch to the correct vendor's
  * implementation.
+ *
+ * If no vendor provides a dispatch function, then instead we'll generate a
+ * dispatch stub. We'll plug a real dispatch function into that stub later.
  */
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
 {
+    int index;
     __GLXextFuncPtr addr = NULL;
+    Bool isGLX;
     __GLXvendorNameHash *pEntry, *tmp;
 
     /*
@@ -255,46 +180,104 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
      * __GLX_VENDOR_LIBRARY_NAME.
      */
 
-    // Look through the vendors that we've already loaded, and see if any of
-    // them support the function.
+    // First, check if we've already found a dispatch stub. Note that this
+    // generally shouldn't happen, because we cache the results of
+    // glXGetProcAddress.
+    __glvndPthreadFuncs.rwlock_rdlock(&dispatchIndexLock);
+    index = __glvndWinsysDispatchFindIndex((const char *) procName);
+    if (index >= 0) {
+        addr = (__GLXextFuncPtr) __glvndWinsysDispatchGetDispatch(index);
+    }
+    __glvndPthreadFuncs.rwlock_unlock(&dispatchIndexLock);
+
+    if (addr != NULL) {
+        return addr;
+    }
+
     LKDHASH_RDLOCK(__glXVendorNameHash);
+    __glvndPthreadFuncs.rwlock_wrlock(&dispatchIndexLock);
+
+    // Check again to see if another thread already added this function.
+    index = __glvndWinsysDispatchFindIndex((const char *) procName);
+    if (index >= 0) {
+        addr = (__GLXextFuncPtr) __glvndWinsysDispatchGetDispatch(index);
+
+        __glvndPthreadFuncs.rwlock_unlock(&dispatchIndexLock);
+        LKDHASH_UNLOCK(__glXVendorNameHash);
+        return addr;
+    }
+
+    // First, look for a GLX dispatch function from any vendor.
     HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
-        addr = __glXFindVendorDispatchAddress((const char *)procName, &pEntry->vendor);
-        if (addr) {
+        addr = pEntry->vendor.glxvc->getDispatchAddress((const GLubyte *) procName);
+        if (addr != NULL) {
             break;
         }
     }
+
+    if (addr != NULL) {
+        isGLX = True;
+    } else {
+        // Look to see if any vendor provides an implementation function. If
+        // it does, then that means this is really a GL function that happens
+        // to start with "glX".
+        HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
+            if (addr != NULL) {
+                break;
+            }
+        }
+
+        if (addr != NULL) {
+            // This is a GL function, so get a dispatch stub from
+            // libGLdispatch.
+            addr = __glDispatchGetProcAddress((const char *) procName);
+            isGLX = False;
+        } else {
+            // None of the vendor libraries provide the function in either
+            // form. That probably means it's a GLX extension function from a
+            // vendor that hasn't been loaded yet. Generate a GLX entrypoint
+            // stub. We'll plug in the real GLX dispatch function if and when
+            // we load a vendor library that supports it.
+            __glvndPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
+            addr = (__GLXextFuncPtr) glvndGenerateEntrypoint((const char *) procName);
+            __glvndPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
+            isGLX = True;
+        }
+    }
+
+    if (addr != NULL && isGLX) {
+        index = __glvndWinsysDispatchAllocIndex((const char *) procName, addr);
+        if (index >= 0) {
+            HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
+                pEntry->vendor.glxvc->setDispatchIndex(procName, index);
+            }
+        } else {
+            addr = NULL;
+        }
+    }
+
+    __glvndPthreadFuncs.rwlock_unlock(&dispatchIndexLock);
     LKDHASH_UNLOCK(__glXVendorNameHash);
 
     return addr;
 }
 
-/*!
- * Generates an entrypoint for a GLX function. The resulting function will
- * jump to a dispatch function, which we can plug in when we load the vendor
- * library later on.
- *
- * Note that this should still work even if the function turns out to be an
- * OpenGL function, not GLX. In that case, we'll plug in the dispatch function
- * from libGLdispatch instead.
- */
-__GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName)
+static GLVNDentrypointStub GLXEntrypointUpdateCallback(const char *procName, void *param)
 {
+    __GLXvendorInfo *vendor = (__GLXvendorInfo *) vendor;
     __GLXextFuncPtr addr = NULL;
-    /*
-     * For GLX functions, try to generate an entrypoint. We'll plug in
-     * a dispatch function for it if and when we load a vendor library
-     * that supports it.
-     */
-    if (procName[0] == 'g' && procName[1] == 'l' && procName[2] == 'X') {
-        __glvndPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
-        addr = (__GLXextFuncPtr) glvndGenerateEntrypoint((const char *) procName);
-        __glvndPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
-    } else {
-        /* For GL functions, request a dispatch stub from libGLdispatch. */
-        addr = __glDispatchGetProcAddress((const char *)procName);
+
+    addr = vendor->glxvc->getDispatchAddress((const GLubyte *) procName);
+    if (addr == NULL) {
+        // If we didn't find a GLX dispatch function, then check for a normal
+        // OpenGL function. This should handle any case where a GL extension
+        // function starts with "glX".
+        addr = vendor->glxvc->getProcAddress((const GLubyte *) procName);
+        if (addr != NULL) {
+            addr = __glDispatchGetProcAddress(procName);
+        }
     }
-    return addr;
+    return (GLVNDentrypointStub) addr;
 }
 
 __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
@@ -302,7 +285,7 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
 {
     __GLXextFuncPtr addr = NULL;
     __GLXdispatchFuncHash *pEntry;
-    GLubyte *procName = NULL;
+    const GLubyte *procName = NULL;
 
     LKDHASH_RDLOCK(vendor->dynDispatchHash);
 
@@ -321,13 +304,9 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
         // Not seen before by this vendor: query the vendor for the right
         // address to use.
 
-        __GLXdispatchIndexHash *pdiEntry;
-
-        // First retrieve the procname of this index
-        LKDHASH_RDLOCK(__glXDispatchIndexHash);
-        HASH_FIND_INT(_LH(__glXDispatchIndexHash), &index, pdiEntry);
-        procName = pdiEntry->procName;
-        LKDHASH_UNLOCK(__glXDispatchIndexHash);
+        __glvndPthreadFuncs.rwlock_wrlock(&dispatchIndexLock);
+        procName = (const GLubyte *) __glvndWinsysDispatchGetName(index);
+        __glvndPthreadFuncs.rwlock_unlock(&dispatchIndexLock);
 
         // This should have a valid entry point associated with it.
         assert(procName);
@@ -456,6 +435,7 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
     __GLXvendorNameHash *pEntry = NULL;
     Bool locked = False;
     size_t vendorNameLen;
+    int i;
 
     // We'll use the vendor name to construct a DSO name, so make sure it
     // doesn't contain any '/' characters.
@@ -560,10 +540,16 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             // Look up the dispatch functions for any GLX extensions that we
             // generated entrypoints for.
             __glvndPthreadFuncs.mutex_lock(&glxGenEntrypointMutex);
-            glvndUpdateEntrypoints(
-                    (GLVNDentrypointUpdateCallback) __glXFindVendorDispatchAddress,
-                    vendor);
+            glvndUpdateEntrypoints(GLXEntrypointUpdateCallback, vendor);
             __glvndPthreadFuncs.mutex_unlock(&glxGenEntrypointMutex);
+
+            // Tell the vendor the index of all of the GLX dispatch stubs.
+            __glvndPthreadFuncs.rwlock_wrlock(&dispatchIndexLock);
+            for (i=0; i<__glvndWinsysDispatchGetCount(); i++) {
+                const char *procName = __glvndWinsysDispatchGetName(i);
+                vendor->glxvc->setDispatchIndex((const GLubyte *) procName, i);
+            }
+            __glvndPthreadFuncs.rwlock_unlock(&dispatchIndexLock);
         } else {
             /* Some other thread added a vendor */
             LKDHASH_UNLOCK(__glXVendorNameHash);
@@ -1052,6 +1038,11 @@ __GLXvendorInfo *__glXVendorFromDrawable(Display *dpy, GLXDrawable drawable)
     return vendor;
 }
 
+void __glXMappingInit(void)
+{
+    __glvndWinsysDispatchInit();
+}
+
 /*!
  * This handles freeing all mapping state during library teardown
  * or resetting locks on fork recovery.
@@ -1069,7 +1060,7 @@ void __glXMappingTeardown(Bool doReset)
          * tries using pointers/XIDs that were created in the parent).  Just
          * reset the corresponding locks.
          */
-        __glvndPthreadFuncs.rwlock_init(&__glXDispatchIndexHash.lock, NULL);
+        __glvndPthreadFuncs.rwlock_init(&dispatchIndexLock, NULL);
         __glvndPthreadFuncs.rwlock_init(&fbconfigHashtable.lock, NULL);
         __glvndPthreadFuncs.rwlock_init(&__glXVendorNameHash.lock, NULL);
         __glvndPthreadFuncs.rwlock_init(&__glXDisplayInfoHash.lock, NULL);
@@ -1080,13 +1071,7 @@ void __glXMappingTeardown(Bool doReset)
         }
     } else {
         /* Tear down all hashtables used in this file */
-        LKDHASH_TEARDOWN(__GLXdispatchIndexHash,
-                         __glXDispatchIndexHash, CleanupDispatchIndexEntry,
-                         NULL, False);
-
-        LKDHASH_WRLOCK(__glXDispatchIndexHash);
-        __glXNextUnusedHashIndex = 0;
-        LKDHASH_UNLOCK(__glXDispatchIndexHash);
+        __glvndWinsysDispatchCleanup();
 
         LKDHASH_TEARDOWN(__GLXvendorConfigMappingHash,
                          fbconfigHashtable, NULL, NULL, False);

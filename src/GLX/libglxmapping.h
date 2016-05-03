@@ -108,7 +108,6 @@ void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable);
 __GLXvendorInfo *__glXVendorFromDrawable(Display *dpy, GLXDrawable drawable);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
-__GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName);
 
 /*!
  * Looks up the vendor by name or screen number. This has the side effect of
@@ -128,6 +127,8 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy);
  * closed.
  */
 void __glXDisplayClosed(__GLXdisplayInfo *dpyInfo);
+
+void __glXMappingInit(void);
 
 /*
  * Close the vendor library and perform any relevant teardown. This should
