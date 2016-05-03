@@ -1040,7 +1040,17 @@ __GLXvendorInfo *__glXVendorFromDrawable(Display *dpy, GLXDrawable drawable)
 
 void __glXMappingInit(void)
 {
+    int i;
+
     __glvndWinsysDispatchInit();
+
+    // Add all of the GLX dispatch stubs that are defined in libGLX itself.
+    for (i=0; LOCAL_GLX_DISPATCH_FUNCTIONS[i].name != NULL; i++) {
+        // TODO: Is there any way to recover from a malloc failure here?
+        __glvndWinsysDispatchAllocIndex(
+                LOCAL_GLX_DISPATCH_FUNCTIONS[i].name,
+                LOCAL_GLX_DISPATCH_FUNCTIONS[i].addr);
+    }
 }
 
 /*!
