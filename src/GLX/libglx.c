@@ -1717,11 +1717,6 @@ typedef struct {
 
 static DEFINE_INITIALIZED_LKDHASH(__GLXprocAddressHash, __glXProcAddressHash);
 
-static void CleanupProcAddressEntry(void *unused, __GLXprocAddressHash *pEntry)
-{
-    free(pEntry->procName);
-}
-
 /*
  * This function is called externally by the libGL wrapper library to
  * retrieve libGLX entrypoints.
@@ -1746,51 +1741,27 @@ static __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
     return NULL;
 }
 
-PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
-        __GLXextFuncPtr *ptr, glvnd_mutex_t *mutex)
-{
-    __GLXextFuncPtr func;
-
-    if (mutex != NULL) {
-        __glvndPthreadFuncs.mutex_lock(mutex);
-    }
-
-    func = *ptr;
-    if (func == NULL) {
-        func = glXGetProcAddress((const GLubyte *) name);
-        *ptr = func;
-    }
-
-    if (mutex != NULL) {
-        __glvndPthreadFuncs.mutex_unlock(mutex);
-    }
-    return func;
-}
-
-
 static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
 {
-    __GLXprocAddressHash *pEntry = malloc(sizeof(*pEntry));
-
-    if (!pEntry) {
-        assert(pEntry);
-        return;
-    }
-
-    pEntry->procName = (GLubyte *)strdup((const char *)procName);
-
-    if (pEntry->procName == NULL) {
-        assert(pEntry->procName);
-        free(pEntry);
-        return;
-    }
-
-    pEntry->addr = addr;
+    size_t nameLen = strlen((const char *) procName);
+    __GLXprocAddressHash *pEntry;
 
     LKDHASH_WRLOCK(__glXProcAddressHash);
-    HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
-                    strlen((const char*)pEntry->procName),
-                    pEntry);
+
+    HASH_FIND(hh, _LH(__glXProcAddressHash), procName,
+              nameLen, pEntry);
+    if (pEntry == NULL) {
+        pEntry = malloc(sizeof(*pEntry) + nameLen + 1);
+        if (pEntry != NULL) {
+            pEntry->procName = (GLubyte *) (pEntry + 1);
+            memcpy(pEntry->procName, procName, nameLen + 1);
+            pEntry->addr = addr;
+            HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
+                            nameLen, pEntry);
+        }
+    } else {
+        assert(pEntry->addr == addr);
+    }
     LKDHASH_UNLOCK(__glXProcAddressHash);
 }
 
@@ -1830,6 +1801,27 @@ PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
     }
 
     return addr;
+}
+
+PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
+        __GLXextFuncPtr *ptr, glvnd_mutex_t *mutex)
+{
+    __GLXextFuncPtr func;
+
+    if (mutex != NULL) {
+        __glvndPthreadFuncs.mutex_lock(mutex);
+    }
+
+    func = *ptr;
+    if (func == NULL) {
+        func = glXGetProcAddress((const GLubyte *) name);
+        *ptr = func;
+    }
+
+    if (mutex != NULL) {
+        __glvndPthreadFuncs.mutex_unlock(mutex);
+    }
+    return func;
 }
 
 int AtomicIncrement(int volatile *val)
@@ -1980,8 +1972,7 @@ static void __glXAPITeardown(Bool doReset)
         __glvndPthreadFuncs.mutex_init(&currentThreadStateListMutex, NULL);
     } else {
         LKDHASH_TEARDOWN(__GLXprocAddressHash,
-                         __glXProcAddressHash, CleanupProcAddressEntry,
-                         NULL, False);
+                         __glXProcAddressHash, NULL, NULL, False);
     }
 }
 
