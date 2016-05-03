@@ -300,41 +300,42 @@ __GLXextFuncPtr __glXFetchDispatchEntry(__GLXvendorInfo *vendor,
 
     LKDHASH_UNLOCK(vendor->dynDispatchHash);
 
-    if (!pEntry) {
-        // Not seen before by this vendor: query the vendor for the right
-        // address to use.
+    if (addr != NULL) {
+        return addr;
+    }
 
-        __glvndPthreadFuncs.rwlock_wrlock(&dispatchIndexLock);
-        procName = (const GLubyte *) __glvndWinsysDispatchGetName(index);
-        __glvndPthreadFuncs.rwlock_unlock(&dispatchIndexLock);
+    // Not seen before by this vendor: query the vendor for the right
+    // address to use.
 
-        // This should have a valid entry point associated with it.
+    __glvndPthreadFuncs.rwlock_rdlock(&dispatchIndexLock);
+    procName = (const GLubyte *) __glvndWinsysDispatchGetName(index);
+    __glvndPthreadFuncs.rwlock_unlock(&dispatchIndexLock);
+
+    // This should have a valid entry point associated with it.
+    if (procName == NULL) {
         assert(procName);
+        return NULL;
+    }
 
-        if (procName) {
-            // Get the real address
-            addr = vendor->glxvc->getProcAddress(procName);
-        }
+    // Get the real address
+    addr = vendor->glxvc->getProcAddress(procName);
+    if (addr == NULL) {
+        return NULL;
+    }
 
-        LKDHASH_WRLOCK(vendor->dynDispatchHash);
-        HASH_FIND_INT(_LH(vendor->dynDispatchHash), &index, pEntry);
-        if (!pEntry) {
-            pEntry = malloc(sizeof(*pEntry));
-            if (!pEntry) {
-                // Uh-oh!
-                assert(pEntry);
-                LKDHASH_UNLOCK(vendor->dynDispatchHash);
-                return NULL;
-            }
+    LKDHASH_WRLOCK(vendor->dynDispatchHash);
+    HASH_FIND_INT(_LH(vendor->dynDispatchHash), &index, pEntry);
+    if (!pEntry) {
+        // If this malloc fails, then it's not fatal. It just means we'll
+        // have to query the vendor library again next time.
+        pEntry = malloc(sizeof(*pEntry));
+        if (pEntry != NULL) {
             pEntry->index = index;
             pEntry->addr = addr;
-
             HASH_ADD_INT(_LH(vendor->dynDispatchHash), index, pEntry);
-        } else {
-            addr = pEntry->addr;
         }
-        LKDHASH_UNLOCK(vendor->dynDispatchHash);
     }
+    LKDHASH_UNLOCK(vendor->dynDispatchHash);
 
     return addr;
 }
