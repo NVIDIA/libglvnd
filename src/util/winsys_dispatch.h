@@ -59,4 +59,40 @@ void *__glvndWinsysDispatchGetDispatch(int index);
  */
 int __glvndWinsysDispatchGetCount(void);
 
+
+/*!
+ * A dispatch table to keep track of the window-system functions from a vendor
+ * library.
+ */
+typedef struct __GLVNDwinsysVendorDispatchRec __GLVNDwinsysVendorDispatch;
+
+/*!
+ * Creates an empty dispatch table.
+ */
+__GLVNDwinsysVendorDispatch *__glvndWinsysVendorDispatchCreate(void);
+
+/*!
+ * Frees a dispatch table.
+ */
+void __glvndWinsysVendorDispatchDestroy(__GLVNDwinsysVendorDispatch *table);
+
+/*!
+ * Adds a function to a dispatch table.
+ *
+ * \param table The dispatch table.
+ * \param index The index of the function to add.
+ * \param func The pointer to the vendor library's function.
+ */
+int __glvndWinsysVendorDispatchAddFunc(__GLVNDwinsysVendorDispatch *table, int index, void *func);
+
+/*!
+ * Looks up a function from a dispatch table.
+ *
+ * \param table The dispatch table.
+ * \param index The index of the function to look up.
+ * \return The function pointer, or \c NULL if the function is not in the
+ * table.
+ */
+void *__glvndWinsysVendorDispatchLookupFunc(__GLVNDwinsysVendorDispatch *table, int index);
+
 #endif // WINSYS_DISPATCH_H
