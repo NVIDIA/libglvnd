@@ -89,11 +89,7 @@ typedef struct __GLXdisplayInfoRec {
  * the three types of dispatch tables (see libglxabi.h for an explanation of
  * these types).
  */
-const __GLXdispatchTableStatic * __glXGetStaticDispatch(Display *dpy,
-                                                        const int screen);
-__GLXvendorInfo *__glXGetDynDispatch(Display *dpy,
-                                               const int screen);
-__GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen);
+__GLXvendorInfo *__glXGetDynDispatch(Display *dpy, const int screen);
 
 /*!
  * Various functions to manage mappings used to determine the screen

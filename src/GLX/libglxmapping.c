@@ -39,7 +39,6 @@
 
 #include "libglxcurrent.h"
 #include "libglxmapping.h"
-#include "libglxnoop.h"
 #include "libglxthread.h"
 #include "libglxstring.h"
 #include "libglxproto.h"
@@ -657,29 +656,6 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
                (vendor != NULL ? vendor->name : "NULL"), screen);
 
     return vendor;
-}
-
-const __GLXdispatchTableStatic *__glXGetStaticDispatch(Display *dpy, const int screen)
-{
-    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
-
-    if (vendor) {
-        return &vendor->staticDispatch;
-    } else {
-        return __glXDispatchNoopPtr;
-    }
-}
-
-__GLdispatchTable *__glXGetGLDispatch(Display *dpy, const int screen)
-{
-    __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
-
-    if (vendor) {
-        assert(vendor->glDispatch);
-        return vendor->glDispatch;
-    } else {
-        return NULL;
-    }
 }
 
 __GLXvendorInfo *__glXGetDynDispatch(Display *dpy, const int screen)

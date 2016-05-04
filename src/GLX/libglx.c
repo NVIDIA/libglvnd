@@ -203,11 +203,12 @@ static __GLXvendorInfo *CommonDispatchFBConfig(Display *dpy, GLXFBConfig config,
 
 PUBLIC XVisualInfo* glXChooseVisual(Display *dpy, int screen, int *attrib_list)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-
-    return pDispatch->chooseVisual(dpy, screen, attrib_list);
+    __GLXvendorInfo *vendor = __glXGetDynDispatch(dpy, screen);
+    if (vendor != NULL) {
+        return vendor->staticDispatch.chooseVisual(dpy, screen, attrib_list);
+    } else {
+        return NULL;
+    }
 }
 
 
@@ -231,11 +232,7 @@ PUBLIC void glXCopyContext(Display *dpy, GLXContext src, GLXContext dst,
 PUBLIC GLXContext glXCreateContext(Display *dpy, XVisualInfo *vis,
                             GLXContext share_list, Bool direct)
 {
-    __GLXvendorInfo *vendor;
-
-    __glXThreadInitialize();
-
-    vendor = __glXLookupVendorByScreen(dpy, vis->screen);
+    __GLXvendorInfo *vendor = __glXGetDynDispatch(dpy, vis->screen);
     if (vendor != NULL) {
         GLXContext context = vendor->staticDispatch.createContext(dpy, vis, share_list, direct);
         if (__glXAddVendorContextMapping(dpy, context, vendor) != 0) {
@@ -452,11 +449,7 @@ static void glXFreeContextEXT(Display *dpy, GLXContext context)
 
 PUBLIC GLXPixmap glXCreateGLXPixmap(Display *dpy, XVisualInfo *vis, Pixmap pixmap)
 {
-    __GLXvendorInfo *vendor;
-
-    __glXThreadInitialize();
-
-    vendor = __glXLookupVendorByScreen(dpy, vis->screen);
+    __GLXvendorInfo *vendor = __glXGetDynDispatch(dpy, vis->screen);
     if (vendor != NULL) {
         GLXPixmap pmap = vendor->staticDispatch.createGLXPixmap(dpy, vis, pixmap);
         if (__glXAddVendorDrawableMapping(dpy, pmap, vendor) != 0) {
@@ -483,17 +476,20 @@ PUBLIC void glXDestroyGLXPixmap(Display *dpy, GLXPixmap pix)
 
 PUBLIC int glXGetConfig(Display *dpy, XVisualInfo *vis, int attrib, int *value)
 {
-    __glXThreadInitialize();
+    __GLXvendorInfo *vendor;
 
-    const __GLXdispatchTableStatic *pDispatch;
+    __glXThreadInitialize();
 
     if (!dpy || !vis || !value) {
         return GLX_BAD_VALUE;
     }
 
-    pDispatch = __glXGetStaticDispatch(dpy, vis->screen);
-
-    return pDispatch->getConfig(dpy, vis, attrib, value);
+    vendor = __glXLookupVendorByScreen(dpy, vis->screen);
+    if (vendor != NULL) {
+        return vendor->staticDispatch.getConfig(dpy, vis, attrib, value);
+    } else {
+        return GLX_BAD_VALUE;
+    }
 }
 
 PUBLIC GLXContext glXGetCurrentContext(void)
@@ -1161,31 +1157,28 @@ PUBLIC void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 
 PUBLIC void glXUseXFont(Font font, int first, int count, int list_base)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetCurrentDispatch();
-
-    pDispatch->useXFont(font, first, count, list_base);
+    __GLXvendorInfo *vendor = __glXGetCurrentDynDispatch();
+    if (vendor != NULL) {
+        vendor->staticDispatch.useXFont(font, first, count, list_base);
+    }
 }
 
 
 PUBLIC void glXWaitGL(void)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetCurrentDispatch();
-
-    pDispatch->waitGL();
+    __GLXvendorInfo *vendor = __glXGetCurrentDynDispatch();
+    if (vendor != NULL) {
+        vendor->staticDispatch.waitGL();
+    }
 }
 
 
 PUBLIC void glXWaitX(void)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetCurrentDispatch();
-
-    pDispatch->waitX();
+    __GLXvendorInfo *vendor = __glXGetCurrentDynDispatch();
+    if (vendor != NULL) {
+        vendor->staticDispatch.waitX();
+    }
 }
 
 /**
@@ -1208,8 +1201,13 @@ static const char **GetVendorClientStrings(Display *dpy, int name)
     }
 
     for (screen = 0; screen < num_screens; screen++) {
-        const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-        result[screen] = pDispatch->getClientString(dpy, name);
+        __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, screen);
+        if (vendor != NULL) {
+            result[screen] = vendor->staticDispatch.getClientString(dpy, name);
+        } else {
+            result[screen] = NULL;
+        }
+
         if (result[screen] == NULL) {
             free(result);
             return NULL;
@@ -1374,9 +1372,12 @@ PUBLIC const char *glXGetClientString(Display *dpy, int name)
     if (num_screens == 1) {
         // There's only one screen, so we don't have to mess around with
         // merging the strings from multiple vendors.
-
-        const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, 0);
-        return pDispatch->getClientString(dpy, name);
+        __GLXvendorInfo *vendor = __glXLookupVendorByScreen(dpy, 0);
+        if (vendor != NULL) {
+            return vendor->staticDispatch.getClientString(dpy, name);
+        } else {
+            return NULL;
+        }
     }
 
     if (name != GLX_VENDOR && name != GLX_VERSION && name != GLX_EXTENSIONS) {
@@ -1435,31 +1436,29 @@ done:
 
 PUBLIC const char *glXQueryServerString(Display *dpy, int screen, int name)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-
-    return pDispatch->queryServerString(dpy, screen, name);
+    __GLXvendorInfo *vendor = __glXGetDynDispatch(dpy, screen);
+    if (vendor != NULL) {
+        return vendor->staticDispatch.queryServerString(dpy, screen, name);
+    } else {
+        return NULL;
+    }
 }
 
 
 PUBLIC const char *glXQueryExtensionsString(Display *dpy, int screen)
 {
-    __glXThreadInitialize();
-
-    const __GLXdispatchTableStatic *pDispatch = __glXGetStaticDispatch(dpy, screen);
-
-    return pDispatch->queryExtensionsString(dpy, screen);
+    __GLXvendorInfo *vendor = __glXGetDynDispatch(dpy, screen);
+    if (vendor != NULL) {
+        return vendor->staticDispatch.queryExtensionsString(dpy, screen);
+    } else {
+        return NULL;
+    }
 }
 
 PUBLIC GLXFBConfig *glXChooseFBConfig(Display *dpy, int screen,
                                       const int *attrib_list, int *nelements)
 {
-    __GLXvendorInfo *vendor;
-
-    __glXThreadInitialize();
-
-    vendor = __glXLookupVendorByScreen(dpy, screen);
+    __GLXvendorInfo *vendor = __glXGetDynDispatch(dpy, screen);
     if (vendor != NULL) {
         GLXFBConfig *fbconfigs =
             vendor->staticDispatch.chooseFBConfig(dpy, screen, attrib_list, nelements);
@@ -1580,11 +1579,7 @@ PUBLIC int glXGetFBConfigAttrib(Display *dpy, GLXFBConfig config,
 
 PUBLIC GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
 {
-    __GLXvendorInfo *vendor;
-
-    __glXThreadInitialize();
-
-    vendor = __glXLookupVendorByScreen(dpy, screen);
+    __GLXvendorInfo *vendor = __glXGetDynDispatch(dpy, screen);
     if (vendor != NULL) {
         GLXFBConfig *fbconfigs = vendor->staticDispatch.getFBConfigs(dpy, screen, nelements);
         if (fbconfigs != NULL) {

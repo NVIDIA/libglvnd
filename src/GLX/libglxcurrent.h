@@ -35,7 +35,6 @@
 #include "libglxthread.h"
 #include "libglxabipriv.h"
 #include "libglxmapping.h"
-#include "libglxnoop.h"
 #include "GLdispatch.h"
 #include "lkdhash.h"
 #include "glvnd_list.h"
@@ -79,20 +78,6 @@ static inline __GLXThreadState *__glXGetCurrentThreadState(void)
         return NULL;
     } else {
         return (__GLXThreadState *)(glas);
-    }
-}
-
-/*!
- * This gets the current GLX static dispatch table, which is stored in the
- * thread state.
- */
-static inline const __GLXdispatchTableStatic *__glXGetCurrentDispatch(void)
-{
-    __GLXThreadState *threadState = __glXGetCurrentThreadState();
-    if (likely(threadState)) {
-        return &threadState->currentVendor->staticDispatch;
-    } else {
-        return __glXDispatchNoopPtr;
     }
 }
 
