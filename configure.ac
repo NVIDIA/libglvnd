@@ -10,13 +10,13 @@ AC_CONFIG_AUX_DIR([bin])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
 
+dnl Add an --enable-debug option
+AX_CHECK_ENABLE_DEBUG(no, DEBUG)
+
 AC_USE_SYSTEM_EXTENSIONS
 
 AM_INIT_AUTOMAKE([1.11 foreign silent-rules])
 AM_SILENT_RULES([yes])
-
-dnl Add an --enable-debug option
-AX_CHECK_ENABLE_DEBUG(no, DEBUG)
 
 dnl Checks for programs.
 AC_PROG_CXX
@@ -94,9 +94,6 @@ fi
 dnl
 dnl mapi top-relative paths: defined here so mapi can be used elsewhere
 dnl
-
-AC_SUBST([MAPI_PREFIX], [src/GLdispatch/vnd-glapi/mapi])
-AC_SUBST([MAPI_MESA_PREFIX], [src/GLdispatch/mesa])
 
 dnl Checks for libraries.
 AX_PTHREAD()
@@ -242,7 +239,6 @@ AC_CONFIG_FILES([Makefile
                  src/GLdispatch/Makefile
                  src/GLdispatch/vnd-glapi/Makefile
                  src/util/Makefile
-                 src/util/trace/Makefile
                  tests/Makefile
                  tests/GLX_dummy/Makefile])
 AC_OUTPUT

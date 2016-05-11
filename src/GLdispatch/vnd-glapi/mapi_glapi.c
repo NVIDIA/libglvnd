@@ -27,7 +27,7 @@
  */
 
 #include <string.h>
-#include "glapi/glapi.h"
+#include "glapi.h"
 #include "u_current.h"
 #include "table.h" /* for MAPI_TABLE_NUM_SLOTS */
 #include "stub.h"

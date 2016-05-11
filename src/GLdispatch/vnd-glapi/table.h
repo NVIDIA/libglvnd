@@ -25,47 +25,48 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef _STUB_H_
-#define _STUB_H_
+#ifndef _TABLE_H_
+#define _TABLE_H_
 
+#include "u_compiler.h"
 #include "entry.h"
-#include "glapi/glapi.h"
+#include "glapi.h"
 
-struct mapi_stub;
+#define MAPI_TMP_TABLE
+#include "mapi_tmp.h"
 
-#if !defined(STATIC_DISPATCH_ONLY)
+#define MAPI_TABLE_NUM_SLOTS (MAPI_TABLE_NUM_STATIC + MAPI_TABLE_NUM_DYNAMIC)
+#define MAPI_TABLE_SIZE (MAPI_TABLE_NUM_SLOTS * sizeof(mapi_func))
 
-/**
- * Frees any memory that was allocated for any dynamic stub functions.
- *
- * This should only be called when the library is unloaded, since any generated
- * functions won't work after this.
- */
-void stub_cleanup_dynamic(void);
-
-const struct mapi_stub *
-stub_find_public(const char *name);
-
-struct mapi_stub *
-stub_find_dynamic(const char *name, int generate);
-
-const struct mapi_stub *
-stub_find_by_slot(int slot);
-
-const char *
-stub_get_name(const struct mapi_stub *stub);
-
-int
-stub_get_slot(const struct mapi_stub *stub);
-
-mapi_func
-stub_get_addr(const struct mapi_stub *stub);
-#endif // !defined(STATIC_DISPATCH_ONLY)
+extern const mapi_func table_noop_array[];
 
 /**
- * Returns the \c __GLdispatchStubPatchCallbacks struct that should be used for
- * patching the entrypoints, or \c NULL if patching is not supported.
+ * Get the no-op dispatch table.
  */
-const __GLdispatchStubPatchCallbacks *stub_get_patch_callbacks(void);
+static INLINE const struct _glapi_table *
+table_get_noop(void)
+{
+   return (const struct _glapi_table *) table_noop_array;
+}
 
-#endif /* _STUB_H_ */
+/**
+ * Set the function of a slot.
+ */
+static INLINE void
+table_set_func(struct _glapi_table *tbl, int slot, mapi_func func)
+{
+   mapi_func *funcs = (mapi_func *) tbl;
+   funcs[slot] = func;
+}
+
+/**
+ * Return the function of a slot.
+ */
+static INLINE mapi_func
+table_get_func(const struct _glapi_table *tbl, int slot)
+{
+   const mapi_func *funcs = (const mapi_func *) tbl;
+   return funcs[slot];
+}
+
+#endif /* _TABLE_H_ */

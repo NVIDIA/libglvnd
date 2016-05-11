@@ -35,7 +35,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "glapi/glapi.h"
+#include "glapi.h"
 #include "u_macros.h"
 #include "u_current.h"
 #include "utils_misc.h"
