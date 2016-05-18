@@ -33,6 +33,7 @@
 #include "libglxabipriv.h"
 #include "GLdispatch.h"
 #include "lkdhash.h"
+#include "winsys_dispatch.h"
 
 #define GLX_CLIENT_STRING_LAST_ATTRIB GLX_EXTENSIONS
 
@@ -45,7 +46,7 @@ struct __GLXvendorInfoRec {
     void *dlhandle; //< shared library handle
 
     /// dynamic GLX dispatch table
-    DEFINE_LKDHASH(struct __GLXdispatchFuncHashRec, dynDispatchHash);
+    __GLVNDwinsysVendorDispatch *dynDispatch;
 
     __GLdispatchTable *glDispatch; //< GL dispatch table
 
@@ -84,6 +85,17 @@ typedef struct __GLXdisplayInfoRec {
     Bool libglvndExtensionSupported;
 } __GLXdisplayInfo;
 
+typedef struct __GLXlocalDispatchFunctionRec {
+    const char *name;
+    __GLXextFuncPtr addr;
+} __GLXlocalDispatchFunction;
+
+/*!
+ * A NULL-termianted list of GLX dispatch functions that are implemented in
+ * libGLX instead of in any vendor library.
+ */
+extern const __GLXlocalDispatchFunction LOCAL_GLX_DISPATCH_FUNCTIONS[];
+
 /*!
  * Accessor functions used to retrieve the "current" dispatch table for each of
  * the three types of dispatch tables (see libglxabi.h for an explanation of
@@ -108,7 +120,6 @@ void __glXRemoveVendorDrawableMapping(Display *dpy, GLXDrawable drawable);
 __GLXvendorInfo *__glXVendorFromDrawable(Display *dpy, GLXDrawable drawable);
 
 __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName);
-__GLXextFuncPtr __glXGenerateGLXEntrypoint(const GLubyte *procName);
 
 /*!
  * Looks up the vendor by name or screen number. This has the side effect of
@@ -128,6 +139,8 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy);
  * closed.
  */
 void __glXDisplayClosed(__GLXdisplayInfo *dpyInfo);
+
+void __glXMappingInit(void);
 
 /*
  * Close the vendor library and perform any relevant teardown. This should

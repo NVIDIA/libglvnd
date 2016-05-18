@@ -61,6 +61,7 @@ libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_pthread.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_genentry.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libutils_misc.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libapp_error_check.la
+libGLX_la_LIBADD += $(UTIL_DIR)/libwinsys_dispatch.la
 
 libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)
 

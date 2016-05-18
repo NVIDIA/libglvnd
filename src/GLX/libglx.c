@@ -1658,29 +1658,10 @@ PUBLIC void glXSelectEvent(Display *dpy, GLXDrawable draw, unsigned long event_m
     }
 }
 
-typedef struct {
-    GLubyte *procName;
-    __GLXextFuncPtr addr;
-    UT_hash_handle hh;
-} __GLXprocAddressHash;
-
-static DEFINE_INITIALIZED_LKDHASH(__GLXprocAddressHash, __glXProcAddressHash);
-
-#define LOCAL_FUNC_TABLE_ENTRY(func) \
-    { (GLubyte *)#func, (__GLXextFuncPtr)(func) },
-
-/*
- * This helper function initializes the __GLXprocAddressHash with the
- * dispatch functions implemented above.
- */
-void cacheInitializeOnce(void)
+const __GLXlocalDispatchFunction LOCAL_GLX_DISPATCH_FUNCTIONS[] =
 {
-    size_t i;
-    __GLXprocAddressHash *pEntry;
-    const struct {
-        const GLubyte *procName;
-        __GLXextFuncPtr addr;
-    } localFuncTable[] = {
+#define LOCAL_FUNC_TABLE_ENTRY(func) \
+    { #func, (__GLXextFuncPtr)(func) },
         LOCAL_FUNC_TABLE_ENTRY(glXChooseFBConfig)
         LOCAL_FUNC_TABLE_ENTRY(glXChooseVisual)
         LOCAL_FUNC_TABLE_ENTRY(glXCopyContext)
@@ -1724,32 +1705,17 @@ void cacheInitializeOnce(void)
 
         LOCAL_FUNC_TABLE_ENTRY(glXImportContextEXT)
         LOCAL_FUNC_TABLE_ENTRY(glXFreeContextEXT)
-    };
+#undef LOCAL_FUNC_TABLE_ENTRY
+    { NULL, NULL }
+};
 
-    LKDHASH_WRLOCK(__glXProcAddressHash);
+typedef struct {
+    GLubyte *procName;
+    __GLXextFuncPtr addr;
+    UT_hash_handle hh;
+} __GLXprocAddressHash;
 
-    // Initialize the hash table with our locally-exported functions
-
-    for (i = 0; i < ARRAY_LEN(localFuncTable); i++) {
-        pEntry = malloc(sizeof(*pEntry));
-        if (!pEntry) {
-            assert(pEntry);
-            break;
-        }
-        pEntry->procName =
-            (GLubyte *)strdup((const char *)localFuncTable[i].procName);
-        pEntry->addr = localFuncTable[i].addr;
-        HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
-                        strlen((const char *)pEntry->procName), pEntry);
-    }
-    LKDHASH_UNLOCK(__glXProcAddressHash);
-
-}
-
-static void CleanupProcAddressEntry(void *unused, __GLXprocAddressHash *pEntry)
-{
-    free(pEntry->procName);
-}
+static DEFINE_INITIALIZED_LKDHASH(__GLXprocAddressHash, __glXProcAddressHash);
 
 /*
  * This function is called externally by the libGL wrapper library to
@@ -1761,10 +1727,7 @@ static __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
      * If this is the first time GetProcAddress has been called,
      * initialize the hash table with locally-exported functions.
      */
-    static glvnd_once_t cacheInitializeOnceControl = GLVND_ONCE_INIT;
     __GLXprocAddressHash *pEntry = NULL;
-
-    __glvndPthreadFuncs.once(&cacheInitializeOnceControl, cacheInitializeOnce);
 
     LKDHASH_RDLOCK(__glXProcAddressHash);
     HASH_FIND(hh, _LH(__glXProcAddressHash), procName,
@@ -1776,6 +1739,68 @@ static __GLXextFuncPtr __glXGetCachedProcAddress(const GLubyte *procName)
     }
 
     return NULL;
+}
+
+static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
+{
+    size_t nameLen = strlen((const char *) procName);
+    __GLXprocAddressHash *pEntry;
+
+    LKDHASH_WRLOCK(__glXProcAddressHash);
+
+    HASH_FIND(hh, _LH(__glXProcAddressHash), procName,
+              nameLen, pEntry);
+    if (pEntry == NULL) {
+        pEntry = malloc(sizeof(*pEntry) + nameLen + 1);
+        if (pEntry != NULL) {
+            pEntry->procName = (GLubyte *) (pEntry + 1);
+            memcpy(pEntry->procName, procName, nameLen + 1);
+            pEntry->addr = addr;
+            HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
+                            nameLen, pEntry);
+        }
+    } else {
+        assert(pEntry->addr == addr);
+    }
+    LKDHASH_UNLOCK(__glXProcAddressHash);
+}
+
+PUBLIC __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
+{
+    __glXThreadInitialize();
+
+    return glXGetProcAddress(procName);
+}
+
+PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
+{
+    __GLXextFuncPtr addr = NULL;
+
+    __glXThreadInitialize();
+
+    /*
+     * Easy case: First check if we already know this address from
+     * a previous GetProcAddress() call or by virtue of being a function
+     * exported by libGLX.
+     */
+    addr = __glXGetCachedProcAddress(procName);
+    if (addr) {
+        return addr;
+    }
+
+    if (procName[0] == 'g' && procName[1] == 'l' && procName[2] == 'X') {
+        // This looks like a GLX function, so try to find a GLX dispatch stub.
+        addr = __glXGetGLXDispatchAddress(procName);
+    } else {
+        addr = __glDispatchGetProcAddress((const char *) procName);
+    }
+
+    /* Store the resulting proc address. */
+    if (addr) {
+        cacheProcAddress(procName, addr);
+    }
+
+    return addr;
 }
 
 PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
@@ -1797,77 +1822,6 @@ PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
         __glvndPthreadFuncs.mutex_unlock(mutex);
     }
     return func;
-}
-
-
-static void cacheProcAddress(const GLubyte *procName, __GLXextFuncPtr addr)
-{
-    __GLXprocAddressHash *pEntry = malloc(sizeof(*pEntry));
-
-    if (!pEntry) {
-        assert(pEntry);
-        return;
-    }
-
-    pEntry->procName = (GLubyte *)strdup((const char *)procName);
-
-    if (pEntry->procName == NULL) {
-        assert(pEntry->procName);
-        free(pEntry);
-        return;
-    }
-
-    pEntry->addr = addr;
-
-    LKDHASH_WRLOCK(__glXProcAddressHash);
-    HASH_ADD_KEYPTR(hh, _LH(__glXProcAddressHash), pEntry->procName,
-                    strlen((const char*)pEntry->procName),
-                    pEntry);
-    LKDHASH_UNLOCK(__glXProcAddressHash);
-}
-
-PUBLIC __GLXextFuncPtr glXGetProcAddressARB(const GLubyte *procName)
-{
-    __glXThreadInitialize();
-
-    return glXGetProcAddress(procName);
-}
-
-PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
-{
-    __glXThreadInitialize();
-
-    __GLXextFuncPtr addr = NULL;
-
-    /*
-     * Easy case: First check if we already know this address from
-     * a previous GetProcAddress() call or by virtue of being a function
-     * exported by libGLX.
-     */
-    addr = __glXGetCachedProcAddress(procName);
-    if (addr) {
-        return addr;
-    }
-
-    /*
-     * If that doesn't work, try requesting a dispatch function
-     * from one of the loaded vendor libraries.
-     */
-    addr = __glXGetGLXDispatchAddress(procName);
-    if (addr) {
-        goto done;
-    }
-
-    /* If that doesn't work, then try to generate a stub function. */
-    addr = __glXGenerateGLXEntrypoint(procName);
-
-    /* Store the resulting proc address. */
-done:
-    if (addr) {
-        cacheProcAddress(procName, addr);
-    }
-
-    return addr;
 }
 
 int AtomicIncrement(int volatile *val)
@@ -2018,8 +1972,7 @@ static void __glXAPITeardown(Bool doReset)
         __glvndPthreadFuncs.mutex_init(&currentThreadStateListMutex, NULL);
     } else {
         LKDHASH_TEARDOWN(__GLXprocAddressHash,
-                         __glXProcAddressHash, CleanupProcAddressEntry,
-                         NULL, False);
+                         __glXProcAddressHash, NULL, NULL, False);
     }
 }
 
@@ -2067,6 +2020,8 @@ void _init(void)
     __glvndPthreadFuncs.mutexattr_settype(&mutexAttribs, PTHREAD_MUTEX_RECURSIVE);
     __glvndPthreadFuncs.mutex_init(&glxContextHashLock, &mutexAttribs);
     __glvndPthreadFuncs.mutexattr_destroy(&mutexAttribs);
+
+    __glXMappingInit();
 
     {
         /*
