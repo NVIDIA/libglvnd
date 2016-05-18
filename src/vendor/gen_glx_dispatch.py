@@ -291,14 +291,15 @@ def generateSource(functions):
             text += generateGuardEnd(func, glxFunc)
 
     text += "\n"
-    text += "const char * const __GLX_DISPATCH_FUNC_NAMES[__GLX_DISPATCH_COUNT] = {\n"
+    text += "const char * const __GLX_DISPATCH_FUNC_NAMES[__GLX_DISPATCH_COUNT + 1] = {\n"
     for (func, glxFunc) in functions:
         text += generateGuardBegin(func, glxFunc)
         text += '    "' + func.name + '",\n'
         text += generateGuardEnd(func, glxFunc)
+    text += "    NULL,\n"
     text += "};\n"
 
-    text += "const __GLXextFuncPtr __GLX_DISPATCH_FUNCS[__GLX_DISPATCH_COUNT] = {\n"
+    text += "const __GLXextFuncPtr __GLX_DISPATCH_FUNCS[__GLX_DISPATCH_COUNT + 1] = {\n"
     for (func, glxFunc) in functions:
         text += generateGuardBegin(func, glxFunc)
         if (glxFunc["method"] != "none"):
@@ -306,6 +307,7 @@ def generateSource(functions):
         else:
             text += "    NULL, // " + func.name + "\n"
         text += generateGuardEnd(func, glxFunc)
+    text += "    NULL,\n"
     text += "};\n"
 
     return text

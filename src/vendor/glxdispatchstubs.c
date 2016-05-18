@@ -36,18 +36,29 @@
 #include "g_glxdispatchstubs.h"
 
 const __GLXapiExports *__glXDispatchApiExports = NULL;
-int __glXDispatchFuncIndices[__GLX_DISPATCH_COUNT];
+int __glXDispatchFuncIndices[__GLX_DISPATCH_COUNT + 1];
 const int __GLX_DISPATCH_FUNCTION_COUNT = __GLX_DISPATCH_COUNT;
 
 static int FindProcIndex(const GLubyte *name)
 {
-    int i;
-    for (i=0; i<__GLX_DISPATCH_COUNT; i++) {
-        if (strcmp(__GLX_DISPATCH_FUNC_NAMES[i], (const char *) name) == 0) {
-            return i;
-        }
+    unsigned first = 0;
+    unsigned last = __GLX_DISPATCH_COUNT - 1;
+
+    while (first <= last) {
+        unsigned middle = (first + last) / 2;
+        int comp = strcmp((const char *) name,
+                          __GLX_DISPATCH_FUNC_NAMES[middle]);
+
+        if (comp > 0)
+            first = middle + 1;
+        else if (comp < 0)
+            last = middle - 1;
+        else
+            return middle;
     }
-    return -1;
+
+    /* Just point to the dummy entry at the end of the respective table */
+    return __GLX_DISPATCH_COUNT;
 }
 
 void __glxInitDispatchStubs(const __GLXapiExports *exportsTable)
@@ -62,19 +73,13 @@ void __glxInitDispatchStubs(const __GLXapiExports *exportsTable)
 void __glxSetDispatchIndex(const GLubyte *name, int dispatchIndex)
 {
     int index = FindProcIndex(name);
-    if (index >= 0) {
-        __glXDispatchFuncIndices[index] = dispatchIndex;
-    }
+    __glXDispatchFuncIndices[index] = dispatchIndex;
 }
 
 void *__glxDispatchFindDispatchFunction(const GLubyte *name)
 {
     int index = FindProcIndex(name);
-    if (index >= 0) {
-        return __GLX_DISPATCH_FUNCS[index];
-    } else {
-        return NULL;
-    }
+    return __GLX_DISPATCH_FUNCS[index];
 }
 
 __GLXvendorInfo *__glxDispatchVendorByDrawable(Display *dpy, GLXDrawable draw,
