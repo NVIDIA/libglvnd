@@ -91,12 +91,6 @@ typedef struct __GLXlocalDispatchFunctionRec {
 } __GLXlocalDispatchFunction;
 
 /*!
- * A NULL-termianted list of GLX dispatch functions that are implemented in
- * libGLX instead of in any vendor library.
- */
-extern const __GLXlocalDispatchFunction LOCAL_GLX_DISPATCH_FUNCTIONS[];
-
-/*!
  * Accessor functions used to retrieve the "current" dispatch table for each of
  * the three types of dispatch tables (see libglxabi.h for an explanation of
  * these types).

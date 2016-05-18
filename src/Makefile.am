@@ -1,4 +1,5 @@
 SUBDIRS = util \
+	vendor \
 	GLdispatch \
 	GLX \
 	OpenGL \

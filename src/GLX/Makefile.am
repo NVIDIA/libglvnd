@@ -34,17 +34,21 @@ noinst_HEADERS = \
 	libglxthread.h \
 	libglxproto.h
 
+EXTRA_DIST = libglx_function_list.py
+
 lib_LTLIBRARIES = libGLX.la
 
 UTIL_DIR = ../util
 UTHASH_DIR = ../util/uthash/src
 GL_DISPATCH_DIR = ../GLdispatch
+VENDOR_DIR = ../vendor
 
 # Warning settings
 # Include paths
 libGLX_la_CFLAGS =  -I$(srcdir)/$(UTHASH_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(UTIL_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(GL_DISPATCH_DIR)
+libGLX_la_CFLAGS += -I$(srcdir)/$(VENDOR_DIR)
 libGLX_la_CFLAGS += -I$(top_srcdir)/include
 libGLX_la_CFLAGS += $(GLPROTO_CFLAGS)
 
@@ -62,6 +66,7 @@ libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_genentry.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libutils_misc.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libapp_error_check.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libwinsys_dispatch.la
+libGLX_la_LIBADD += $(VENDOR_DIR)/libglxdispatchstubs.la
 
 libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)
 

@@ -46,6 +46,7 @@
 #include "glvnd_genentry.h"
 #include "trace.h"
 #include "winsys_dispatch.h"
+#include "glxdispatchstubs.h"
 
 #include "lkdhash.h"
 
@@ -226,6 +227,7 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
             HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
                 pEntry->vendor.glxvc->setDispatchIndex(procName, index);
             }
+            __glxSetDispatchIndex(procName, index);
         } else {
             addr = NULL;
         }
@@ -994,13 +996,19 @@ void __glXMappingInit(void)
     int i;
 
     __glvndWinsysDispatchInit();
+    __glxInitDispatchStubs(&glxExportsTable);
 
     // Add all of the GLX dispatch stubs that are defined in libGLX itself.
-    for (i=0; LOCAL_GLX_DISPATCH_FUNCTIONS[i].name != NULL; i++) {
-        // TODO: Is there any way to recover from a malloc failure here?
-        __glvndWinsysDispatchAllocIndex(
-                LOCAL_GLX_DISPATCH_FUNCTIONS[i].name,
-                LOCAL_GLX_DISPATCH_FUNCTIONS[i].addr);
+    for (i=0; i<__GLX_DISPATCH_FUNCTION_COUNT; i++) {
+        if (__GLX_DISPATCH_FUNCS[i] != NULL) {
+            int index = __glvndWinsysDispatchAllocIndex(
+                    __GLX_DISPATCH_FUNC_NAMES[i], __GLX_DISPATCH_FUNCS[i]);
+            if (index < 0) {
+                fprintf(stderr, "Can't allocate memory for core GLX dispatch functions\n");
+                abort();
+            }
+            __glxSetDispatchIndex((const GLubyte *) __GLX_DISPATCH_FUNC_NAMES[i], index);
+        }
     }
 }
 
