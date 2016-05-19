@@ -381,7 +381,8 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
 }
 
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(
-        __GLgetProcAddressCallback getProcAddress, void *param)
+        int vendorID,
+        __GLdispatchGetProcAddressCallback getProcAddress, void *param)
 {
     __GLdispatchTable *dispatch;
 
@@ -395,6 +396,7 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(
         return NULL;
     }
 
+    dispatch->vendorID = vendorID;
     dispatch->generation = 0;
     dispatch->currentThreads = 0;
     dispatch->table = NULL;
@@ -423,8 +425,23 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch)
     UnlockDispatch();
 }
 
+PUBLIC void __glDispatchDestroyVendorTables(int vendorID)
+{
+    __GLdispatchTable *dispatch, *tmp;
+
+    LockDispatch();
+    glvnd_list_for_each_entry_safe(dispatch, tmp, &currentDispatchList, entry) {
+        if (dispatch->vendorID == vendorID) {
+            dispatch->getProcAddress = NULL;
+            dispatch->getProcAddressParam = NULL;
+            DispatchCheckDelete(dispatch);
+        }
+    }
+    UnlockDispatch();
+}
+
 static struct _glapi_table
-*CreateGLAPITable(__GLgetProcAddressCallback getProcAddress, void *param)
+*CreateGLAPITable(__GLdispatchGetProcAddressCallback getProcAddress, void *param)
 {
     size_t entries = _glapi_get_dispatch_table_size();
     struct _glapi_table *table = (struct _glapi_table *)
@@ -731,6 +748,11 @@ PUBLIC void __glDispatchSetDispatch(__GLdispatchTable *dispatch)
     threadState = __glDispatchGetCurrentThreadState();
     if (threadState == NULL) {
         assert(threadState != NULL);
+        return;
+    }
+
+    if (dispatch != NULL && dispatch->vendorID != threadState->priv->vendorID) {
+        assert(dispatch->vendorID == threadState->priv->vendorID);
         return;
     }
 

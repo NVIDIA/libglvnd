@@ -119,9 +119,6 @@ static inline uint32_t GLX_VENDOR_ABI_GET_MINOR_VERSION(uint32_t version)
  */
 typedef struct __GLXvendorInfoRec __GLXvendorInfo;
 
-typedef struct __GLXdispatchTableRec __GLXdispatchTable;
-typedef void * (* __GLXdispatchGetProcAddress) (const char *procName, void *param);
-
 /****************************************************************************
  * API library exports                                                      *
  ****************************************************************************/
@@ -242,9 +239,9 @@ typedef struct __GLXapiExportsRec {
      * \param param A parameter to pass to \p callback.
      * \return An opaque dispatch table handle, or \c NULL on error.
      */
-    __GLXdispatchTable * (* createGLDispatchTable) (
+    __GLdispatchTable * (* createGLDispatchTable) (
             __GLXvendorInfo *vendor,
-            __GLXdispatchGetProcAddress callback,
+            __GLdispatchGetProcAddressCallback callback,
             void *param);
 
     /*!
@@ -252,7 +249,7 @@ typedef struct __GLXapiExportsRec {
      *
      * \param dispatch A dispatch table handle.
      */
-    void (* destroyGLDispatchTable) (__GLXdispatchTable *dispatch);
+    void (* destroyGLDispatchTable) (__GLdispatchTable *dispatch);
 
     /*!
      * Sets the current dispatch table.
@@ -265,7 +262,7 @@ typedef struct __GLXapiExportsRec {
      *
      * \param dispatch A dispatch table handle.
      */
-    void (* setGLDispatchTable) (__GLXdispatchTable *dispatch);
+    void (* setGLDispatchTable) (__GLdispatchTable *dispatch);
 } __GLXapiExports;
 
 /*****************************************************************************
@@ -450,7 +447,7 @@ typedef struct __GLXapiImportsRec {
      * either \c X_GLXMakeCurrent or \c X_GLXMakeContextCurrent.
      * \return The dispatch table to use, or \c NULL on error.
      */
-    __GLXdispatchTable * (* makeContextCurrent) (Display *dpy,
+    __GLdispatchTable * (* makeContextCurrent) (Display *dpy,
             GLXDrawable draw, GLXDrawable read, GLXContext ctx, char opcode);
 
 } __GLXapiImports;

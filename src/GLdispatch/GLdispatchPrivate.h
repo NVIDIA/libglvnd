@@ -41,6 +41,9 @@
  * and updating dispatch tables.
  */
 struct __GLdispatchTableRec {
+    /*! The vendor that created this dispatch table. */
+    int vendorID;
+
     /*! Number of threads this dispatch is current on */
     int currentThreads;
 
@@ -48,7 +51,7 @@ struct __GLdispatchTableRec {
     int generation;
 
     /*! Saved vendor library callbacks */
-    __GLgetProcAddressCallback getProcAddress;
+    __GLdispatchGetProcAddressCallback getProcAddress;
     void *getProcAddressParam;
 
     /*! The real dispatch table */

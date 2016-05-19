@@ -130,8 +130,8 @@ static const __GLXapiExports glxExportsTable = {
     .vendorFromDrawable = __glXVendorFromDrawable,
 
     .createGLDispatchTable = __glXCreateGLDispatchTable,
-    .destroyGLDispatchTable = __glXDestroyGLDispatchTable,
-    .setGLDispatchTable = __glXSetGLDispatchTable,
+    .destroyGLDispatchTable = __glDispatchDestroyTable,
+    .setGLDispatchTable = __glDispatchSetDispatch,
 };
 
 /*!
@@ -311,10 +311,9 @@ static void CleanupVendorNameEntry(void *unused,
                                    __GLXvendorNameHash *pEntry)
 {
     __GLXvendorInfo *vendor = &pEntry->vendor;
-    if (vendor->glDispatch != NULL) {
-        __glDispatchDestroyTable(vendor->glDispatch);
-        vendor->glDispatch = NULL;
-    }
+    __glDispatchDestroyVendorTables(vendor->vendorID);
+
+    vendor->glDispatch = NULL;
 
     if (vendor->dynDispatch != NULL) {
         __glvndWinsysVendorDispatchDestroy(vendor->dynDispatch);
@@ -474,9 +473,9 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
             if (vendor->glxvc->makeContextCurrent == NULL) {
                 vendor->glDispatch = (__GLdispatchTable *)
                     __glDispatchCreateTable(
-                        VendorGetProcAddressCallback,
-                        vendor
-                    );
+                            vendor->vendorID,
+                            VendorGetProcAddressCallback,
+                            vendor);
                 if (!vendor->glDispatch) {
                     goto fail;
                 }

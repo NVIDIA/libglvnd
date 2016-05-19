@@ -17,3 +17,4 @@ __glDispatchReset
 __glDispatchUnregisterStubCallbacks
 __glDispatchSetDispatch
 __glDispatchGetCurrentDispatch
+__glDispatchDestroyVendorTables

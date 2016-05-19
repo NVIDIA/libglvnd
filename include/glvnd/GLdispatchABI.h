@@ -113,6 +113,13 @@ enum {
 typedef GLboolean (*DispatchPatchLookupStubOffset)(const char *funcName,
         void **writePtr, const void **execPtr);
 
+/*!
+ * This opaque structure describes the GL dispatch table.
+ */
+typedef struct __GLdispatchTableRec __GLdispatchTable;
+
+typedef void *(*__GLdispatchGetProcAddressCallback)(const char *procName, void *param);
+
 #if defined(__cplusplus)
 }
 #endif

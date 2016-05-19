@@ -58,7 +58,7 @@
  *
  * \see __glDispatchGetABIVersion
  */
-#define GLDISPATCH_ABI_VERSION 1
+#define GLDISPATCH_ABI_VERSION 2
 
 /* Namespaces for thread state */
 enum {
@@ -66,14 +66,7 @@ enum {
     GLDISPATCH_API_EGL
 };
 
-/*!
- * This opaque structure describes the core GL dispatch table.
- */
-typedef struct __GLdispatchTableRec __GLdispatchTable;
-
 typedef void (*__GLdispatchProc)(void);
-
-typedef void *(*__GLgetProcAddressCallback)(const char *procName, void *param);
 
 /**
  * An opaque structure used for internal thread state data.
@@ -266,7 +259,8 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName);
  * \param[in] param A pointer to pass to \p getProcAddress.
  */
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(
-    __GLgetProcAddressCallback getProcAddress,
+    int vendorID,
+    __GLdispatchGetProcAddressCallback getProcAddress,
     void *param
 );
 
@@ -274,6 +268,8 @@ PUBLIC __GLdispatchTable *__glDispatchCreateTable(
  * Destroy a dispatch table in GLdispatch.
  */
 PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch);
+
+PUBLIC void __glDispatchDestroyVendorTables(int vendorID);
 
 /*!
  * This makes the given thread state current, and assigns this thread state the
