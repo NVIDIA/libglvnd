@@ -311,7 +311,10 @@ static void CleanupVendorNameEntry(void *unused,
                                    __GLXvendorNameHash *pEntry)
 {
     __GLXvendorInfo *vendor = &pEntry->vendor;
-    __glDispatchDestroyVendorTables(vendor->vendorID);
+    if (vendor->vendorID >= 0) {
+        __glDispatchDestroyVendorTables(vendor->vendorID);
+        vendor->vendorID = -1;
+    }
 
     vendor->glDispatch = NULL;
 
@@ -425,6 +428,7 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 
             vendor->glxvc = &pEntry->imports;
             vendor->name = (char *) (pEntry + 1);
+            vendor->vendorID = -1;
             memcpy(vendor->name, vendorName, vendorNameLen + 1);
 
             filename = ConstructVendorLibraryFilename(vendorName);
