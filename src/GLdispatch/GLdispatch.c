@@ -573,6 +573,17 @@ static int PatchEntrypoints(
         if (stubCurrentPatchCb->releasePatch != NULL) {
             stubCurrentPatchCb->releasePatch();
         }
+
+        // Restore the stubs to the default implementation.
+        glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
+            if (stub->isPatched) {
+                stub->callbacks.restoreFuncs();
+                stub->isPatched = GL_FALSE;
+            }
+        }
+
+        stubCurrentPatchCb = NULL;
+        stubOwnerVendorID = 0;
     }
 
     if (patchCb) {
@@ -609,17 +620,6 @@ static int PatchEntrypoints(
             stubCurrentPatchCb = NULL;
             stubOwnerVendorID = 0;
         }
-    } else {
-        // Restore the stubs to the default implementation
-        glvnd_list_for_each_entry(stub, &dispatchStubList, entry) {
-            if (stub->isPatched) {
-                stub->callbacks.restoreFuncs();
-                stub->isPatched = GL_FALSE;
-            }
-        }
-
-        stubCurrentPatchCb = NULL;
-        stubOwnerVendorID = 0;
     }
 
     return 1;
@@ -695,8 +695,10 @@ static void LoseCurrentInternal(__GLdispatchThreadState *curThreadState,
         GLboolean threadDestroyed)
 {
     LockDispatch();
-    // Try to restore the libglvnd default stubs, if possible.
-    PatchEntrypoints(NULL, 0);
+    // Note that we don't try to restore the default stubs here. Chances are,
+    // the next MakeCurrent will be from the same vendor, and if we leave them
+    // patched, then we won't have to go through the overhead of patching them
+    // again.
 
     if (curThreadState) {
         numCurrentContexts--;
