@@ -70,6 +70,9 @@ if test "x$enable_asm" = xyes; then
     armv7l)
         asm_arch=armv7l
         ;;
+    aarch64)
+        asm_arch=aarch64
+        ;;
     esac
 
     case "$asm_arch" in
@@ -84,6 +87,10 @@ if test "x$enable_asm" = xyes; then
     armv7l)
         DEFINES="$DEFINES -DUSE_ARMV7_ASM"
         AC_MSG_RESULT([yes, armv7l])
+        ;;
+    aarch64)
+        DEFINES="$DEFINES -DUSE_AARCH64_ASM"
+        AC_MSG_RESULT([yes, aarch64])
         ;;
     *)
         AC_MSG_RESULT([no, platform not supported])
@@ -153,6 +160,11 @@ xarmv7l)
     gldispatch_entry_type=armv7_tsd
     gldispatch_use_tls=no
     ;;
+xaarch64)
+    # For aarch64, only the TSD stubs have been implemented yet.
+    gldispatch_entry_type=aarch64_tsd
+    gldispatch_use_tls=no
+    ;;
 *)
     # The C stubs will work with either TLS or TSD.
     gldispatch_entry_type=pure_c
@@ -170,6 +182,7 @@ AM_CONDITIONAL([GLDISPATCH_TYPE_X86_TSD], [test "x$gldispatch_entry_type" = "xx8
 AM_CONDITIONAL([GLDISPATCH_TYPE_X86_64_TLS], [test "x$gldispatch_entry_type" = "xx86_64_tls"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_X86_64_TSD], [test "x$gldispatch_entry_type" = "xx86_64_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_ARMV7_TSD], [test "x$gldispatch_entry_type" = "xarmv7_tsd"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_AARCH64_TSD], [test "x$gldispatch_entry_type" = "xaarch64_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_PURE_C], [test "x$gldispatch_entry_type" = "xpure_c"])
 
 

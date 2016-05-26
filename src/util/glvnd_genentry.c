@@ -39,7 +39,8 @@
 
 #define USE_ASM (defined(USE_X86_ASM) ||    \
                  defined(USE_X86_64_ASM) || \
-                 defined(USE_ARMV7_ASM))
+                 defined(USE_ARMV7_ASM) ||  \
+                 defined(USE_AARCH64_ASM))
 
 #if defined(__GNUC__) && USE_ASM
 
@@ -47,7 +48,7 @@
 #define GENERATED_ENTRYPOINT_MAX 4096
 
 /// The size of each generated entrypoint.
-static const int STUB_ENTRY_SIZE = 16;
+static const int STUB_ENTRY_SIZE = 32;
 
 #if defined(USE_X86_ASM)
 /// A template used to generate an entrypoint.
@@ -86,6 +87,23 @@ static const uint16_t STUB_TEMPLATE[] =
 };
 
 static const int DISPATCH_FUNC_OFFSET = 8;
+
+#elif defined(USE_AARCH64_ASM)
+
+static const uint32_t STUB_TEMPLATE[] =
+{
+    // ldr x16, 1f
+    0x58000070,
+    // br x16
+    0xd61f0200,
+    // nop
+    0xd503201f,
+    // Offset that needs to be patched
+    // 1:
+    0x00000000, 0x00000000,
+};
+
+static const int DISPATCH_FUNC_OFFSET = 12;
 
 #else
 #error "Can't happen -- not implemented"
@@ -259,6 +277,12 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
 
     // Make sure the base address has the Thumb mode bit
     assert((uintptr_t)entry->entrypointExec & (uintptr_t)0x1);
+
+    // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
+    __builtin___clear_cache((char *)entry->entrypointExec - 1,
+                            (char *)entry->entrypointExec - 1 + sizeof(STUB_TEMPLATE));
+#elif defined(USE_AARCH64_ASM)
+    *((uintptr_t *)(code + DISPATCH_FUNC_OFFSET)) = (uintptr_t)dispatch;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
     __builtin___clear_cache((char *)entry->entrypointExec - 1,

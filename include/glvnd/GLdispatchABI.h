@@ -82,7 +82,12 @@ enum {
     /*!
      * Used for stubs on ARMv7, using the normal ARM instruction set.
      */
-    __GLDISPATCH_STUB_ARMV7_ARM
+    __GLDISPATCH_STUB_ARMV7_ARM,
+
+    /*!
+     * Used for stubs on ARMv8/aarch64.
+     */
+    __GLDISPATCH_STUB_AARCH64,
 };
 
 /*!
