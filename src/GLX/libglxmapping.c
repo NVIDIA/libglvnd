@@ -238,7 +238,7 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
 
 static GLVNDentrypointStub GLXEntrypointUpdateCallback(const char *procName, void *param)
 {
-    __GLXvendorInfo *vendor = (__GLXvendorInfo *) vendor;
+    __GLXvendorInfo *vendor = (__GLXvendorInfo *) param;
     __GLXextFuncPtr addr = NULL;
 
     addr = vendor->glxvc->getDispatchAddress((const GLubyte *) procName);
@@ -489,7 +489,6 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
 
             HASH_ADD_KEYPTR(hh, _LH(__glXVendorNameHash), vendor->name,
                             strlen(vendor->name), pEntry);
-            LKDHASH_UNLOCK(__glXVendorNameHash);
 
             // Look up the dispatch functions for any GLX extensions that we
             // generated entrypoints for.
@@ -501,10 +500,8 @@ __GLXvendorInfo *__glXLookupVendorByName(const char *vendorName)
                 const char *procName = __glvndWinsysDispatchGetName(i);
                 vendor->glxvc->setDispatchIndex((const GLubyte *) procName, i);
             }
-        } else {
-            /* Some other thread added a vendor */
-            LKDHASH_UNLOCK(__glXVendorNameHash);
         }
+        LKDHASH_UNLOCK(__glXVendorNameHash);
     }
 
     return &pEntry->vendor;
