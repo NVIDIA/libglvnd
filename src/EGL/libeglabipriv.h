@@ -95,6 +95,11 @@ typedef struct __EGLdispatchTableStaticRec {
 
     // Extension functions that libEGL cares about.
     EGLBoolean (* queryDevicesEXT) (EGLint max_devices, EGLDeviceEXT *devices, EGLint *num_devices);
+
+
+    EGLint (* debugMessageControlKHR) (EGLDEBUGPROCKHR callback, const EGLAttrib *attrib_list);
+    EGLBoolean (* queryDebugKHR) (EGLint attribute, EGLAttrib* value);
+    EGLint (* labelObjectKHR) (EGLDisplay display, EGLenum objectType, EGLObjectKHR object, EGLLabelKHR label);
 } __EGLdispatchTableStatic;
 
 #endif

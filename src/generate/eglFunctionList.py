@@ -140,6 +140,11 @@ EGL_FUNCTIONS = (
     # EGL_EXT_device_enumeration
     _eglExt("eglQueryDevicesEXT",                   "custom"),
 
+    # EGL_KHR_debug
+    _eglExt("eglDebugMessageControlKHR",            "custom"),
+    _eglExt("eglQueryDebugKHR",                     "custom"),
+    _eglExt("eglLabelObjectKHR",                    "custom"),
+
     # TODO: Most of these extensions should be provided by the vendor
     # libraries, not by libEGL. They're here now to make testing everything
     # else easier.

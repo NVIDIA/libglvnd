@@ -69,7 +69,6 @@ EGLSurface __eglGetCurrentSurface(EGLint readDraw)
         } else if (readDraw == EGL_READ) {
             return state->currentRead;
         } else {
-            __eglSetError(EGL_BAD_PARAMETER);
             return EGL_NO_SURFACE;
         }
     } else {

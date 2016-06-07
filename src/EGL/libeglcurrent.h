@@ -76,6 +76,8 @@ typedef struct __EGLThreadAPIStateRec {
      */
     EGLenum currentClientApi;
 
+    EGLLabelKHR label;
+
     struct glvnd_list entry;
 } __EGLThreadAPIState;
 

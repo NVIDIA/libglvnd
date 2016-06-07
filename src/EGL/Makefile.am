@@ -33,7 +33,8 @@ noinst_HEADERS = egldispatchstubs.h \
 	libeglabipriv.h \
 	libeglcurrent.h \
 	libeglmapping.h \
-	libeglvendor.h
+	libeglvendor.h \
+	libeglerror.h
 
 lib_LTLIBRARIES = libEGL.la
 
@@ -68,7 +69,8 @@ libEGL_la_SOURCES = \
 	libegl.c \
 	libeglcurrent.c \
 	libeglmapping.c \
-	libeglvendor.c
+	libeglvendor.c \
+	libeglerror.c
 
 # The generated EGL dispatch stubs are build independantly of the rest of the
 # EGL library. Use a convenience library here to make it easier to move them

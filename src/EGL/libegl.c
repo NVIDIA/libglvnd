@@ -39,6 +39,7 @@
 #include "libeglabipriv.h"
 #include "libeglmapping.h"
 #include "libeglcurrent.h"
+#include "libeglerror.h"
 #include "utils_misc.h"
 #include "trace.h"
 #include "egldispatchstubs.h"
@@ -76,7 +77,9 @@ static const char *SUPPORTED_CLIENT_EXTENSIONS =
  */
 static const char *ALWAYS_SUPPORTED_CLIENT_EXTENSIONS =
     "EGL_KHR_client_get_all_proc_addresses"
-    " EGL_EXT_client_extensions";
+    " EGL_EXT_client_extensions"
+    " EGL_KHR_debug"
+    ;
 
 static const char *GLVND_EGL_VERSION_STRING = "1.5 libglvnd";
 
@@ -134,7 +137,8 @@ static EGLDisplay GetPlatformDisplayCommon(EGLenum platform,
     vendorList = __eglLoadVendors();
     if (glvnd_list_is_empty(vendorList)) {
         // If there are no vendor libraries, then no platforms are supported.
-        __eglSetError(EGL_BAD_PARAMETER);
+        __eglReportError(EGL_BAD_PARAMETER, funcName, __eglGetThreadLabel(),
+                "No EGL drivers found.");
         return EGL_NO_DISPLAY;
     }
 
@@ -145,7 +149,8 @@ static EGLDisplay GetPlatformDisplayCommon(EGLenum platform,
 
         __EGLvendorInfo *vendor = __eglGetVendorFromDevice(dev);
         if (vendor == NULL) {
-            __eglSetError(EGL_BAD_DEVICE_EXT);
+            __eglReportError(EGL_BAD_PARAMETER, funcName, __eglGetThreadLabel(),
+                    "Invalid EGLDevice handle %p", dev);
             return EGL_NO_DISPLAY;
         }
 
@@ -156,7 +161,8 @@ static EGLDisplay GetPlatformDisplayCommon(EGLenum platform,
 
         dpyInfo = __eglAddDisplay(dpy, vendor);
         if (dpyInfo == NULL) {
-            __eglSetError(EGL_BAD_ALLOC);
+            __eglReportCritical(EGL_BAD_ALLOC, funcName, __eglGetThreadLabel(),
+                    "Can't allocate display");
             return EGL_NO_DISPLAY;
         }
     }
@@ -165,6 +171,11 @@ static EGLDisplay GetPlatformDisplayCommon(EGLenum platform,
     // same arguments, then the same vendor library should return the same
     // EGLDisplay handle. In that case, __eglAddDisplay will return the same
     // __EGLdisplayInfo structure for both threads.
+
+    // TODO: How should this deal with EGL_KHR_debug messages? We don't want
+    // one vendor library to report an error only for another vendor to
+    // succeed. Maybe just require vendors to only use WARN or INFO level
+    // messages, and then report an error later on based on the error code?
     if (dpyInfo == NULL) {
         __EGLvendorInfo *vendor;
         glvnd_list_for_each_entry(vendor, vendorList, entry) {
@@ -178,7 +189,7 @@ static EGLDisplay GetPlatformDisplayCommon(EGLenum platform,
                     anyVendorSuccess = EGL_TRUE;
                 } else if (errorCode == EGL_SUCCESS) {
                     errorCode = vendorError;
-                }
+               }
             }
         }
     }
@@ -196,7 +207,8 @@ static EGLDisplay GetPlatformDisplayCommon(EGLenum platform,
         } else {
             // Every vendor library returned an error code, so return one of
             // them to the application.
-            __eglSetError(errorCode);
+            __eglReportError(errorCode, funcName, __eglGetThreadLabel(),
+                    "Could not create EGLDisplay");
         }
         return EGL_NO_DISPLAY;
     }
@@ -256,7 +268,8 @@ PUBLIC EGLDisplay EGLAPIENTRY eglGetPlatformDisplay(EGLenum platform, void *nati
     __eglEntrypointCommon();
 
     if (platform == EGL_NONE) {
-        __eglSetError(EGL_BAD_PARAMETER);
+        __eglReportError(EGL_BAD_PARAMETER, "eglGetPlatformDisplay", __eglGetThreadLabel(),
+                "platform may not be EGL_NONE.");
         return EGL_NO_DISPLAY;
     }
 
@@ -268,7 +281,8 @@ EGLDisplay EGLAPIENTRY eglGetPlatformDisplayEXT(EGLenum platform, void *native_d
     __eglEntrypointCommon();
 
     if (platform == EGL_NONE) {
-        __eglSetError(EGL_BAD_PARAMETER);
+        __eglReportError(EGL_BAD_PARAMETER, "eglGetPlatformDisplayEXT", __eglGetThreadLabel(),
+                "platform may not be EGL_NONE.");
         return EGL_NO_DISPLAY;
     }
 
@@ -287,7 +301,8 @@ EGLDisplay EGLAPIENTRY eglGetPlatformDisplayEXT(EGLenum platform, void *native_d
         count++;
         attribs = malloc(count * sizeof(EGLAttrib));
         if (attribs == NULL) {
-            __eglSetError(EGL_BAD_ALLOC);
+            __eglReportCritical(EGL_BAD_ALLOC, "eglGetPlatformDisplayEXT",
+                    __eglGetThreadLabel(), NULL);
             return EGL_NO_DISPLAY;
         }
 
@@ -329,7 +344,8 @@ PUBLIC EGLBoolean EGLAPIENTRY eglBindAPI(EGLenum api)
         }
     }
     if (!supported) {
-        __eglSetError(EGL_BAD_PARAMETER);
+        __eglReportError(EGL_BAD_PARAMETER, "eglBindAPI", __eglGetThreadLabel(),
+                "Unsupported rendering API 0x%04x", api);
         return EGL_FALSE;
     }
 
@@ -366,6 +382,10 @@ PUBLIC EGLContext EGLAPIENTRY eglGetCurrentContext(void)
 PUBLIC EGLSurface EGLAPIENTRY eglGetCurrentSurface(EGLint readdraw)
 {
     __eglEntrypointCommon();
+    if (readdraw != EGL_DRAW && readdraw != EGL_READ) {
+        __eglReportError(EGL_BAD_PARAMETER, "eglGetCurrentSurface", __eglGetThreadLabel(),
+                "Invalid enum 0x%04x\n", readdraw);
+    }
     return __eglGetCurrentSurface(readdraw);
 }
 
@@ -488,7 +508,8 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
     __eglEntrypointCommon();
 
     if (context == EGL_NO_CONTEXT && (draw != EGL_NO_SURFACE || read != EGL_NO_SURFACE)) {
-        __eglSetError(EGL_BAD_MATCH);
+        __eglReportError(EGL_BAD_MATCH, "eglMakeCurrent", NULL,
+                "Got an EGLSurface but no EGLContext");
         return EGL_FALSE;
     }
 
@@ -498,7 +519,8 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
             // Another API (probably GLX) already has a current context. Just
             // return failure.
             // TODO: What error should this generate?
-            __eglSetError(EGL_BAD_ACCESS);
+            __eglReportError(EGL_BAD_ACCESS, "eglMakeCurrent", NULL,
+                    "Another window API already has a current context");
             return EGL_FALSE;
         }
 
@@ -854,13 +876,15 @@ PUBLIC const char *EGLAPIENTRY eglQueryString(EGLDisplay dpy, EGLint name)
         } else if (name == EGL_VERSION) {
             return GLVND_EGL_VERSION_STRING;
         } else {
-            __eglSetError(EGL_BAD_DISPLAY);
+            __eglReportError(EGL_BAD_DISPLAY, "eglQueryString", NULL,
+                    "Invalid enum 0x%04x without a display", name);
             return NULL;
         }
     } else {
         __EGLdisplayInfo *dpyInfo = __eglLookupDisplay(dpy);
         if (dpyInfo == NULL) {
-            __eglSetError(EGL_BAD_DISPLAY);
+            __eglReportError(EGL_BAD_DISPLAY, "eglQueryString", NULL,
+                    "Invalid display %p", dpy);
             return NULL;
         }
         __eglSetLastVendor(dpyInfo->vendor);
@@ -874,7 +898,8 @@ EGLBoolean EGLAPIENTRY eglQueryDevicesEXT(EGLint max_devices,
     __eglEntrypointCommon();
 
     if (num_devices == NULL || (max_devices <= 0 && devices != NULL)) {
-        __eglSetError(EGL_BAD_PARAMETER);
+        __eglReportError(EGL_BAD_PARAMETER, "eglQueryDevicesEXT", NULL,
+                "Missing num_devices pointer");
         return EGL_FALSE;
     }
 

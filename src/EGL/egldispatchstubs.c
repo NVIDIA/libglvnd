@@ -3,6 +3,10 @@
 
 #include <string.h>
 
+// This is needed only for __eglDebugReport. Vendor libraries will typically
+// want to replace this with whatever error reporting function they use.
+#include "libeglerror.h"
+
 static const __EGLapiExports *exports;
 
 const int __EGL_DISPATCH_FUNC_COUNT = __EGL_DISPATCH_COUNT;
@@ -51,28 +55,30 @@ __eglMustCastToProperFunctionPointerType __eglDispatchFindDispatchFunction(const
     return __EGL_DISPATCH_FUNCS[index];
 }
 
-static __eglMustCastToProperFunctionPointerType FetchVendorFunc(__EGLvendorInfo *vendor, int index, EGLint errorCode)
+static __eglMustCastToProperFunctionPointerType FetchVendorFunc(__EGLvendorInfo *vendor,
+        int index, EGLint errorCode)
 {
-    if (vendor != NULL) {
-        __eglMustCastToProperFunctionPointerType func =
-            exports->fetchDispatchEntry(vendor, __EGL_DISPATCH_FUNC_INDICES[index]);
-        if (func == NULL) {
-            // TODO: What error should we set in this case?
-            exports->setEGLError(errorCode);
-            return NULL;
-        }
+    __eglMustCastToProperFunctionPointerType func = NULL;
 
-        if (!exports->setLastVendor(vendor)) {
-            // Don't bother trying to set an error code. If setLastVendor
-            // failed, then setEGLError would also fail.
-            return NULL;
+    if (vendor != NULL) {
+        func = exports->fetchDispatchEntry(vendor, __EGL_DISPATCH_FUNC_INDICES[index]);
+    }
+    if (func == NULL) {
+        if (errorCode != EGL_SUCCESS) {
+            __eglReportError(errorCode, __EGL_DISPATCH_FUNC_NAMES[index], NULL, NULL);
         }
-        return func;
-    } else {
-        // Set whatever error code we're supposed to set.
-        exports->setEGLError(errorCode);
         return NULL;
     }
+
+    if (!exports->setLastVendor(vendor)) {
+        // Don't bother trying to set an error code. If setLastVendor
+        // failed, then setEGLError would also fail.
+        __eglReportError(EGL_BAD_ALLOC, __EGL_DISPATCH_FUNC_NAMES[index], NULL,
+                "Could not initialize thread state");
+        return NULL;
+    }
+
+    return func;
 }
 
 __eglMustCastToProperFunctionPointerType __eglDispatchFetchByCurrent(int index)
