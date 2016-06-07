@@ -33,6 +33,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 /*
  * Various macros which may prove useful in various places
@@ -61,6 +62,12 @@
  * A local implementation of asprintf(3), for systems that don't support it.
  */
 int glvnd_asprintf(char **strp, const char *fmt, ...);
+
+/*!
+ * A local implementation of vasprintf(3), for systems that don't support it.
+ */
+int glvnd_vasprintf(char **strp, const char *fmt, va_list args);
+
 /**
  * Allocates executable memory.
  *

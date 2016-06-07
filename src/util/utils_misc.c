@@ -68,6 +68,17 @@ static int AllocExecPagesAnonymous(size_t size, void **writePtr, void **execPtr)
 
 int glvnd_asprintf(char **strp, const char *fmt, ...)
 {
+    va_list args;
+    int ret;
+
+    va_start(args, fmt);
+    ret = glvnd_vasprintf(strp, fmt, args);
+    va_end(args);
+    return ret;
+}
+
+int glvnd_vasprintf(char **strp, const char *fmt, va_list args)
+{
     static const int GLVND_ASPRINTF_BUF_LEN = 256;
     char *str = NULL;
     int ret = -1;
@@ -82,7 +93,7 @@ int glvnd_asprintf(char **strp, const char *fmt, ...)
                 break;
             }
 
-            va_start(ap, fmt);
+            va_copy(ap, args);
             len = vsnprintf(str, current_len, fmt, ap);
             va_end(ap);
 
