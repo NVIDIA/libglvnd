@@ -15,10 +15,10 @@ future this library may support EGL and OpenGL ES as well.
 Building the library
 ----------------------
 
-libglvnd build-depends on xorg-server, libx11, glproto and libxext.
+libglvnd build-depends on libx11, glproto and libxext.
 On Debian and derivatives, run:
 
-    sudo apt-get install xserver-xorg-dev libxext-dev libx11-dev x11proto-gl-dev
+    sudo apt-get install libxext-dev libx11-dev x11proto-gl-dev
 
 Run `./autogen.sh`, then run `./configure` and `make`.
 
@@ -29,41 +29,40 @@ Code overview
 The code in the src/ directory is organized as follows:
 
 - GLX/ contains code for libGLX, the GLX window-system API library.
-- GLdispatch/ contains code for libGLdispatch, which is really just a thin
-  wrapper around Mesa's glapi that tries to hide most of the complexity of
-  managing dispatch tables. Its interface is defined in GLdispatch.h. This
-  implements the guts of the core GL API libraries.
-- EGL/ and GLESv{1,2}/ are placeholders for now. GLESv{1,2}/ implement
-  static GL entrypoints which use the context defined in libGLdispatch, while
-  EGL/ will contain libEGL, which may be implemented similarly to libGLX.
-- GL/ and OpenGL/ respectively contain code to generate libGL and libOpenGL,
-  which are both merely wrapper libraries for libGLX and libGLdispatch.
-  Ideally, these could be implemented via ELF symbol filtering, but in practice
-  they need to be implemented manually.  See the Issues section for details on
-  why this is the case.
-- util/ contains generic utility code, and arch/ contains architecture-specific
-  defines.
+- GLdispatch/ contains code for libGLdispatch, which is responsible for
+  dispatching OpenGL functions to the correct vendor library. Its interface is
+  defined in GLdispatch.h. This implements the guts of the core GL API
+  libraries. Most of the dispatch code is based on Mesa's glapi.
+- EGL/ is a placeholder for now. It will contain libEGL, which may be
+  implemented similarly to libGLX.
+- OpenGL/, GLESv1/, and GLESv2/ contain code to generate libOpenGL.so,
+  libGLESv1\_CM.so, and libGLESv2.so, respectively. All three are merely
+  wrapper libraries for libGLdispatch. Ideally, these could be implemented via
+  ELF symbol filtering, but in practice they need to be implemented manually.
+  See the Issues section for details on why this is the case.
+- GL/ contains code for libGL. This is a wrapper around libGLdispatch and
+  libGLX.
+- util/ contains generic utility code.
+
+In addition, libglvnd uses a GLX extension,
+[GLX\_EXT\_libglvnd](https://www.opengl.org/registry/specs/EXT/glx_libglvnd.txt),
+to determine which vendor library to use for a screen or XID.
 
 There are a few good starting points for familiarizing oneself with the code:
 
 - Look at the vendor-library to GLX ABI defined in `libglxabi.h`.
 - Follow the flow of `glXGetProcAddress() -> __glDispatchGetProcAddress() ->
-  __glapi_get_proc_address()` to see how the dispatch table is updated as new GL
+  _glapi_get_proc_address()` to see how the dispatch table is updated as new GL
   stubs are generated, and how GLX looks for vendor-library-implemented
   dispatchers for GLX extension functions.
 - Follow the flow of `glXMakeContextCurrent() -> __glDispatchMakeCurrent() ->
   _glapi_set_current()` to see how the current dispatch table and state is
   updated by the API library.
 - Look at `libglxmapping.c:__glXLookupVendorBy{Name,Screen}()` to see how
-  vendor library names are queried. At the same time, look at
-  x11glvnd{client,server}.c to see how the "x11glvnd" extension which
-  retrieves the appropriate mappings is implemented.
+  vendor library names are queried.
 
 The tests/ directory contains several unit tests which verify that dispatching
 to different vendors actually works. Run `make check` to run these unit tests.
-Note some of the unit tests require a special X server configuration and
-are skipped by default.  To include these tests (and X server
-initialization/teardown), run `make check DO_X11_TESTS=1`.
 
 Architecture
 ------------
@@ -78,16 +77,16 @@ See the diagram below:
           │     │                                  │
           │     └─────┬───────────────────┬────────┘
           │           │                   │
-          │     ┌─────▾─────┐             │                    ┌──────────────┐
-          │     │           │             │                    │              │
-          │     │ libOpenGL │             │                    │              │
-          │     │           │             │                    │  X server    │
-          │     └─────┬─────┘             │                    │              │
-          │        DT_FILTER              │                    │              │
-          │     ┌─────▾──────────┐ ┌──────▾────────┐           │ ┌──────────┐ │
-          │     │                │ │               │           └─│x11glvnd  │─┘
-          │     │ [mapi/glapi]   ◂─▸               │             │extension │
-          │     │ libGLdispatch  │ │   libGLX      ├─────────────▸──────────┘
+          │     ┌─────▾─────┐             │                    ┌──────────────────────┐
+          │     │           │             │                    │                      │
+          │     │ libOpenGL │             │                    │                      │
+          │     │           │             │                    │  X server            │
+          │     └─────┬─────┘             │                    │                      │
+          │        DT_FILTER              │                    │                      │
+          │     ┌─────▾──────────┐ ┌──────▾────────┐           │ ┌──────────────────┐ │
+          │     │                │ │               │           └─│GLX_EXT_libglvnd  │─┘
+          │     │ [mapi/glapi]   ◂─▸               │             │extension         │
+          │     │ libGLdispatch  │ │   libGLX      ├─────────────▸──────────────────┘
           │     │                │ │               ◂──────────┬─────────────────┐
           │     └───────▴────────┘ └──────▴────────┘          │                 │
           │         DT_FILTER         DT_FILTER             ┌─▾─────────┐   ┌───▾────────┐
@@ -108,9 +107,9 @@ In this diagram,
 libGLX manages loading GLX vendor libraries and dispatching GLX core and
 extension functions to the right vendor.
 
-x11glvnd is a simple X extension which allows libGLX to determine the number of
-the screen belonging to an arbitrary drawable XID, and also the GL vendor to use
-for a given screen.
+GLX\_EXT\_libglvnd is a simple GLX extension which allows libGLX to determine
+the number of the screen belonging to an arbitrary drawable XID, and also the
+GL vendor to use for a given screen.
 
 libGLdispatch implements core GL dispatching and TLS. It acts as a thin wrapper
 around glapi which provides some higher-level functionality for managing
@@ -120,17 +119,19 @@ linked into libGLX, since current dispatch tables will eventually be shared
 between GLX and EGL, similarly to how glapi operates when Mesa is compiled with
 the --shared-glapi option.
 
-libOpenGL is a wrapper library to libGLdispatch which exposes OpenGL 4.x core and
-compatibility entry points. Eventually, there will be a libGLESv{1,2} which will
-also be wrapper libraries to libGLdispatch that expose GLES entry points.
+libOpenGL is a wrapper library to libGLdispatch which exposes OpenGL 4.5 core and
+compatibility entry points.
 
-libGL is a wrapper library on libGLdispatch and libGLX which is provided for
+libGLESv{1,2} are wrapper libraries to libGLdispatch which expose OpenGL ES
+entrypoints.
+
+libGL is a wrapper library to libGLdispatch and libGLX which is provided for
 backwards-compatibility with applications which link against the old ABI.
 
-NOTE: Logically, libGL should be a wrapper library to libOpenGL rather than
-libGLdispatch, as libGLdispatch is an implementation detail of libglvnd.
-However, we have this current arrangement for performance reasons since ELF
-symbol filtering is disabled by default (see Issues).
+Note that since all OpenGL functions are dispatched through the same table in
+libGLdispatch, it doesn't matter which library is used to find the entrypoint.
+The same OpenGL function in libGL, libOpenGL, libGLES, and the function pointer
+returned by glXGetProcAddress are all interchangeable.
 
 ### GLX dispatching ###
 
@@ -150,7 +151,7 @@ map GLX API calls to the right vendor, we use the following strategy:
   * Use the Display connection to query the X server for the GLX
     vendor of that X screen.
 
-  * Load the correspending `libGLX_VENDOR.so`.
+  * Load the corresponding `libGLX_VENDOR.so`.
 
   * Read the vendor's GLX dispatch table from the `libGLX_VENDOR.so`.
 
@@ -158,33 +159,24 @@ map GLX API calls to the right vendor, we use the following strategy:
     use in subsequent dispatching.
 
 * Some GLX entry points imply an X screen by a GLX object they
-  specify.  Such GLX objects are:
+  specify. Such GLX objects are:
 
-    GLXContext  (an opaque pointer)
-    GLXFBConfig (an opaque pointer)
-    GLXPixmap   (an XID)
-    GLXDrawable (an XID)
-    GLXWindow   (an XID)
-    GLXPbuffer  (an XID)
+  * GLXContext  (an opaque pointer)
+  * GLXFBConfig (an opaque pointer)
+  * GLXPixmap   (an XID)
+  * GLXDrawable (an XID)
+  * GLXWindow   (an XID)
+  * GLXPbuffer  (an XID)
 
   To map from object to screen, record the corresponding screen when
-  the object is created.  This means the current process needs to see
-  a GLX call to create the object.  In the case of the opaque
+  the object is created. This means the current process needs to see
+  a GLX call to create the object. In the case of the opaque
   pointers, this is reasonable, since the pointer is only meaningful
-  within the current process.  But XIDs could be created by another
-  process.  See the Issues section below.
+  within the current process.
 
-* To minimize code complexity from error checking, define a noop GLX
-  dispatch table.  This is returned by `__glXGet{,Current}Dispatch()` in
-  case no other dispatch table can be found.
-
-* Similarly, `__glXScreenFrom{Context,FBConfig,Drawable}()` may fail to
-  find a screen matching the specified GLX object.  In this case, the
-  returned screen number is -1, but the caller should just pass the
-  screen number through to `__glXGetDispatch()` or
-  `__glX{Add,Remove}Screen{Context,FBConfig,Drawable}Mapping()`.  Those
-  functions are expected to deal gracefully with the invalid screen
-  number.
+  XIDs, however, can be created by another process, so libGLX may not know in
+  advance which screen they belong to. To deal with that, libGLX queries the
+  server using the GLX extension GLX\_EXT\_libglvnd.
 
 Issues
 ------
@@ -208,10 +200,10 @@ Issues
   mapping? How would this be implemented? Should we add new API calls to "GLX
   Next"?
 
-  * Note that the (drawable -> screen -> vendor) mapping is an internal detail
-	of libGLX. The ABI provided to the vendor library exposes a mapping from
-	drawables to (screen, vendor) pairs. The interface does not make any
-	assumptions about how screens and vendors correspond to each other.
+  * Note that the (drawable -> screen -> vendor) mapping mainly exists in the
+    GLX_EXT_libglvnd extension. libGLX itself keeps a simple
+    (drawable -> vendor) mapping, and exposes that mapping to the vendor
+    libraries.
 
 * Along the same lines, would it be useful to include a
   "glXGetProcAddressFromVendor()" or "glXGetProcAddressFromScreen()" entrypoint
@@ -238,32 +230,18 @@ Issues
 
 * How should forking be handled?
 
-* Should we map XIDs directly to vendors, rather than to screens?
-
-* The current libGLX implementation stores the mapping between screen and all
-  objects of the same type in one hash table.  I.e., all pointer types
-  (GLXContext and GLXFBConfig) in one table, and all XID types (GLXDrawable,
-  GLXPixmap, GLXWindow, and GLXPbuffer) in another table.  Should there instead
-  be more finer-grained hash tables?  There probably couldn't be finer-grained
-  tables for XIDs, because GLXDrawable is used interchangeably with the other
-  XID-based types.
-
-* The issue above applies to XIDs in the x11glvnd extension as well: we
-  currently don't make any distinction between window, GLX pixmap, GLX window, or
-  GLX pbuffer XIDs.
+* The current libGLX implementation stores all GLXContext and GLXFBConfig
+  handles in global hashtables, which means that GLXContext and GLXFBConfig
+  handles must be unique between vendors. That is, two vendor libraries must
+  not come up with the same handle value for a GLXContext or GLXFBConfig. To
+  that end, GLXContext and GLXFBConfig handles must be pointers to memory
+  addresses that the vendor library somehow controls. The values are otherwise
+  opaque.
 
 * Querying an XID <=> screen mapping without somehow "locking" the XID is
   inherently racy, since a different process may destroy the drawable, and X
   may recycle the XID, after the mapping is saved client-side. Is there a mechanism
   we could use to notify the API library when a mapping is no longer valid?
-
-* Currently the library does not attempt to clean up allocations and
-  unload vendor libraries if the application unloads it. This will need to be
-  implemented eventually for the library to be usable in a production
-  environment. What will the sequencing of this look like? Should we also hook
-  into XCloseDisplay()?
-
-* Should x11glvnd be an extension on top of GLX 1.4, or a "GLX Next" feature?
 
 References
 ----------
