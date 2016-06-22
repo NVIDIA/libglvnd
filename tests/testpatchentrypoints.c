@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 {
     struct window_info wi;
     Display *dpy = XOpenDisplay(NULL);
-    int sawVertex3fv1, sawVertex3fv2, *pSawVertex3fv;
+    int sawVertex3fv1, *pSawVertex3fv;
     int i;
     int ret = 1;
     GLXContext ctx = None;
@@ -65,25 +65,12 @@ int main(int argc, char **argv)
         goto fail;
     }
 
-    // Read again. The NOP stubs should be restored by libglvnd
-    for (i = 0; i < NUM_VERTEX3FV_CALLS; i++) {
-        glVertex3fv(NULL);
-    }
-
-    sawVertex3fv2 = *pSawVertex3fv;
-
     dlclose(vendorHandle);
     pSawVertex3fv = NULL;
 
     if (sawVertex3fv1 != NUM_VERTEX3FV_CALLS) {
         printError("sawVertex3fv1 mismatch: expected %d, got %d\n",
                    NUM_VERTEX3FV_CALLS, sawVertex3fv1);
-        goto fail;
-    }
-
-    if (sawVertex3fv2 != sawVertex3fv1) {
-        printError("sawVertex3fv2 mismatch: expected %d, got %d\n",
-                   NUM_VERTEX3FV_CALLS, sawVertex3fv2);
         goto fail;
     }
 
