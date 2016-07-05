@@ -77,7 +77,7 @@ __eglMustCastToProperFunctionPointerType __eglGetEGLDispatchAddress(const char *
 
     // Check each vendor library for a dispatch stub.
     glvnd_list_for_each_entry(vendor, vendorList, entry) {
-        addr = vendor->eglvc.getEGLDispatchAddress(procName);
+        addr = vendor->eglvc.getDispatchAddress(procName);
         if (addr != NULL) {
             break;
         }
@@ -122,7 +122,7 @@ __eglMustCastToProperFunctionPointerType __eglFetchDispatchEntry(
     }
 
     // Get the real address.
-    addr = vendor->eglvc.getEGLProcAddress(procName);
+    addr = vendor->eglvc.getProcAddress(procName);
     if (addr != NULL) {
         // Record the address in the vendor's hashtable. Note that if this
         // fails, it's not fatal. It just means we'll have to call

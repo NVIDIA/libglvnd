@@ -191,7 +191,7 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
 
 #define LOADENTRYPOINT(ptr, name) do { \
     *((__eglMustCastToProperFunctionPointerType *) &vendor->staticDispatch.ptr) = \
-        vendor->eglvc.getEGLProcAddress(name); \
+        vendor->eglvc.getProcAddress(name); \
     if (vendor->staticDispatch.ptr == NULL) { return GL_FALSE; } \
     } while(0)
 
@@ -218,7 +218,6 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
     LOADENTRYPOINT(releaseTexImage,               "eglReleaseTexImage"               );
     LOADENTRYPOINT(surfaceAttrib,                 "eglSurfaceAttrib"                 );
     LOADENTRYPOINT(swapInterval,                  "eglSwapInterval"                  );
-    LOADENTRYPOINT(bindAPI,                       "eglBindAPI"                       );
     LOADENTRYPOINT(createPbufferFromClientBuffer, "eglCreatePbufferFromClientBuffer" );
     LOADENTRYPOINT(releaseThread,                 "eglReleaseThread"                 );
     LOADENTRYPOINT(waitClient,                    "eglWaitClient"                    );
@@ -228,7 +227,8 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
     // The remaining functions here are optional.
 #define LOADENTRYPOINT(ptr, name) \
     *((__eglMustCastToProperFunctionPointerType *) &vendor->staticDispatch.ptr) = \
-        vendor->eglvc.getEGLProcAddress(name);
+        vendor->eglvc.getProcAddress(name);
+    LOADENTRYPOINT(bindAPI,                       "eglBindAPI"                       );
     LOADENTRYPOINT(createSync,                    "eglCreateSync"                    );
     LOADENTRYPOINT(destroySync,                   "eglDestroySync"                   );
     LOADENTRYPOINT(clientWaitSync,                "eglClientWaitSync"                );
@@ -251,7 +251,7 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
 static void *VendorGetProcAddressCallback(const char *procName, void *param)
 {
     __EGLvendorInfo *vendor = (__EGLvendorInfo *) param;
-    return vendor->eglvc.getClientApiProcAddress(EGL_OPENGL_API, procName);
+    return vendor->eglvc.getProcAddress(procName);
 }
 
 static __EGLvendorInfo *LoadVendorFromConfigFile(const char *filename)
@@ -372,9 +372,8 @@ static __EGLvendorInfo *LoadVendor(const char *filename)
     // Make sure all the required functions are there.
     if (vendor->eglvc.getPlatformDisplay == NULL
             || vendor->eglvc.getSupportsAPI == NULL
-            || vendor->eglvc.getEGLProcAddress == NULL
-            || vendor->eglvc.getClientApiProcAddress == NULL
-            || vendor->eglvc.getEGLDispatchAddress == NULL
+            || vendor->eglvc.getProcAddress == NULL
+            || vendor->eglvc.getDispatchAddress == NULL
             || vendor->eglvc.setDispatchIndex == NULL) {
         goto fail;
     }

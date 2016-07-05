@@ -61,17 +61,17 @@ extern "C" {
 /*
  * Rendering API handling:
  *
- * libEGL currently only supports OpenGL and OpenGL ES, but not OpenVG.
+ * libEGL only supports OpenGL and OpenGL ES, not OpenVG. If OpenVG or any
+ * other API is added, then the major version number will be incremented.
  *
- * libEGL itself will keep track of the current rendering API. Vendor libraries
- * must query the current API from libEGL using the getCurrentApi callback.
+ * When the application calls eglBindAPI, libEGL will forward the call to every
+ * vendor library. In addition, a vendor library can query the current API from
+ * libEGL using the getCurrentApi callback.
  *
- * EGL functions are dispatched to vendor libraries regardless of the current
- * API. If a vendor does not support the current API, then it must return an
- * appropriate error code.
- *
- * libEGL does not call into the vendor library when the current API changes.
- * As such, the vendor's implementation of eglBindAPI is never called.
+ * Vendor libraries are not required to support both GL and GLES, but they must
+ * be able to deal with either one as the current rendering API. If a vendor
+ * doesn't support the current API, then it should return an error from
+ * eglCreateContext.
  */
 
 /*!
@@ -271,30 +271,13 @@ typedef struct __EGLapiImportsRec {
      */
 
     /*!
-     * This retrieves the pointer to the real EGL function.
+     * This retrieves the pointer to the real EGL or core GL function.
      *
      * \param procName The name of the function.
      * \return A pointer to a function, or \c NULL if the vendor does not
      * support the function.
      */
-    __eglMustCastToProperFunctionPointerType (* getEGLProcAddress) (const char *procName);
-
-    /*!
-     * Returns a pointer to a client API (OpenGL or OpenVG) function.
-     *
-     * The vendor library must return NULL if \c procName is an EGL function,
-     * or if it doesn't match \p api. libEGL will use the result of this
-     * function to determine which client API a function belongs to.
-     *
-     * Also note that \p api will be EGL_OPENGL_API for OpenGL and OpenGLES
-     * functions.
-     *
-     * \param api The API to look up.
-     * \param procName The name of the function.
-     * \return A pointer to a function, or \c NULL if the vendor does not
-     * support the function.
-     */
-    __eglMustCastToProperFunctionPointerType (* getClientApiProcAddress) (EGLint api, const char *procName);
+    __eglMustCastToProperFunctionPointerType (* getProcAddress) (const char *procName);
 
     /*!
      * This retrieves vendor-neutral functions which use the
@@ -310,7 +293,7 @@ typedef struct __EGLapiImportsRec {
      * \return A pointer to a function, or \c NULL if the vendor does not
      * support the function or \p procName is not a EGL display function.
      */
-    __eglMustCastToProperFunctionPointerType (*getEGLDispatchAddress) (const char *procName);
+    __eglMustCastToProperFunctionPointerType (*getDispatchAddress) (const char *procName);
 
     /*!
      * This notifies the vendor library which dispatch table index is

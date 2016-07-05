@@ -358,6 +358,11 @@ PUBLIC EGLBoolean EGLAPIENTRY eglBindAPI(EGLenum api)
         return EGL_FALSE;
     }
     state->currentClientApi = api;
+    glvnd_list_for_each_entry(vendor, vendorList, entry) {
+        if (vendor->staticDispatch.bindAPI != NULL) {
+            vendor->staticDispatch.bindAPI(api);
+        }
+    }
     return EGL_TRUE;
 }
 
