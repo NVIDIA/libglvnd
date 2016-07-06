@@ -34,6 +34,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 #include "glvnd_pthread.h"
 #include "libeglabipriv.h"
@@ -108,16 +109,81 @@ void __eglEntrypointCommon(void)
     __eglSetError(EGL_SUCCESS);
 }
 
+static EGLBoolean _eglPointerIsDereferencable(void *p)
+{
+#if defined(HAVE_MINCORE)
+    uintptr_t addr = (uintptr_t) p;
+    unsigned char unused;
+    const long page_size = getpagesize();
+
+    if (p == NULL) {
+        return EGL_FALSE;
+    }
+
+    /* align addr to page_size */
+    addr &= ~(page_size - 1);
+
+    /*
+     * mincore() returns 0 on success, and -1 on failure.  The last parameter
+     * is a vector of bytes with one entry for each page queried.  mincore
+     * returns page residency information in the first bit of each byte in the
+     * vector.
+     *
+     * Residency doesn't actually matter when determining whether a pointer is
+     * dereferenceable, so the output vector can be ignored.  What matters is
+     * whether mincore succeeds.  It will fail with ENOMEM if the range
+     * [addr, addr + length) is not mapped into the process, so all that needs
+     * to be checked there is whether the mincore call succeeds or not, as it
+     * can only succeed on dereferenceable memory ranges.
+     */
+    return (mincore((void *) addr, page_size, &unused) >= 0);
+#else
+    return EGL_FALSE;
+#endif
+}
+
+static EGLBoolean IsWaylandDisplay(void *native_display)
+{
+    void *first_pointer = *(void **) native_display;
+    void *waylandClientHandle = NULL;
+    void *waylandClientSymbol = NULL;
+
+    waylandClientHandle = dlopen("libwayland-client.so.0", RTLD_LOCAL | RTLD_LAZY
+#if defined(HAVE_RTLD_NOLOAD)
+            | RTLD_NOLOAD
+#endif
+            );
+    if (waylandClientHandle == NULL) {
+        return EGL_FALSE;
+    }
+
+    waylandClientSymbol = dlsym(waylandClientHandle, "wl_display_interface");
+    dlclose(waylandClientHandle);
+
+    return (waylandClientSymbol != NULL && waylandClientSymbol == first_pointer);
+}
+
 /*!
  * This is a helper function for eglGetDisplay to try to guess the platform
  * type to use.
  */
 static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
 {
-    // TODO: Try to guess the platform based on display_id. Mesa has some code
-    // that would probably work here. In the meantime, just make a guess based
-    // on environment.
+    // First, see if this is a valid EGLDisplayEXT handle.
+    if (__eglGetVendorFromDevice((EGLDeviceEXT) display_id)) {
+        return EGL_PLATFORM_DEVICE_EXT;
+    }
 
+    // If display_id is a dereferenceable pointer, then see if it looks like
+    // a Wayland display.
+    if (_eglPointerIsDereferencable(display_id)) {
+        if (IsWaylandDisplay(display_id)) {
+            return EGL_PLATFORM_WAYLAND_KHR;
+        }
+    }
+
+    // If there's a DISPLAY environment variable, then assume it's an X11
+    // display.
     if (getenv("DISPLAY") != NULL) {
         return EGL_PLATFORM_X11_KHR;
     }

@@ -228,6 +228,23 @@ AS_IF([test "x$HAVE_SYNC_INTRINSICS" = "xyes"],
       [AC_DEFINE([HAVE_SYNC_INTRINSICS], 1,
       [Define to 1 if the compiler supports __sync intrinsic functions.])])
 
+AC_CHECK_FUNC(mincore, [AC_DEFINE([HAVE_MINCORE], [1],
+    [Define to 1 if mincore is available.])])
+
+AC_MSG_CHECKING([for RTLD_NOLOAD])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+#include <dlfcn.h>
+void foo(void)
+{
+    (void) RTLD_NOLOAD;
+}
+])],
+[HAVE_RTLD_NOLOAD=yes],[HAVE_RTLD_NOLOAD=no])
+AC_MSG_RESULT($HAVE_RTLD_NOLOAD)
+AS_IF([test "x$HAVE_RTLD_NOLOAD" = "xyes"],
+      [AC_DEFINE([HAVE_RTLD_NOLOAD], 1,
+      [Define to 1 if the compiler supports RTLD_NOLOAD.])])
+
 # See if the linker supports the --no-undefined flag.
 AX_CHECK_LINK_FLAG([-Xlinker --no-undefined],
       [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], ["-Xlinker --no-undefined"])],
