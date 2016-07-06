@@ -368,6 +368,10 @@ __EGLvendorInfo *__eglGetVendorFromDevice(EGLDeviceEXT dev)
     __eglInitDeviceList();
 
     HASH_FIND_PTR(__eglDeviceHash, &dev, devInfo);
-    return devInfo->vendor;
+    if (devInfo != NULL) {
+        return devInfo->vendor;
+    } else {
+        return NULL;
+    }
 }
 
