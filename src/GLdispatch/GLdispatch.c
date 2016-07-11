@@ -786,12 +786,6 @@ void __glDispatchFini(void)
         /* This frees the dispatchStubList */
         UnregisterAllStubCallbacks();
 
-        /* 
-         * Before we get here, client libraries should
-         * have cleared out the current dispatch list.
-         */
-        assert(glvnd_list_is_empty(&currentDispatchList));
-
         /*
          * Clear out the getProcAddress lists.
          */
