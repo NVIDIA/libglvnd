@@ -1950,14 +1950,6 @@ static void __glXAPITeardown(Bool doReset)
     __GLXThreadState *threadState, *threadStateTemp;
     __GLXcontextInfo *currContext, *currContextTemp;
 
-    __glvndPthreadFuncs.mutex_lock(&glxContextHashLock);
-    HASH_ITER(hh, glxContextHash, currContext, currContextTemp) {
-        FreeContextInfo(currContext);
-    }
-
-    assert(glxContextHash == NULL);
-    __glvndPthreadFuncs.mutex_unlock(&glxContextHashLock);
-
     glvnd_list_for_each_entry_safe(threadState, threadStateTemp, &currentThreadStateList, entry) {
         glvnd_list_del(&threadState->entry);
         free(threadState);
@@ -1970,9 +1962,29 @@ static void __glXAPITeardown(Bool doReset)
          */
         __glvndPthreadFuncs.rwlock_init(&__glXProcAddressHash.lock, NULL);
         __glvndPthreadFuncs.mutex_init(&currentThreadStateListMutex, NULL);
+
+        HASH_ITER(hh, glxContextHash, currContext, currContextTemp) {
+            currContext->currentCount = 0;
+            CheckContextDeleted(currContext);
+        }
     } else {
         LKDHASH_TEARDOWN(__GLXprocAddressHash,
                          __glXProcAddressHash, NULL, NULL, False);
+
+        /*
+         * It's possible that another thread could be blocked in a
+         * glXMakeCurrent call here, especially if an Xlib I/O error occurred.
+         * In that case, the other thead will be holding the context hash lock,
+         * so we'd deadlock if we tried to wait for it here. Instead, clean up
+         * if the lock is available, but don't try to wait if it isn't.
+         */
+        if (__glvndPthreadFuncs.mutex_trylock(&glxContextHashLock) == 0) {
+            HASH_ITER(hh, glxContextHash, currContext, currContextTemp) {
+                FreeContextInfo(currContext);
+            }
+            assert(glxContextHash == NULL);
+            __glvndPthreadFuncs.mutex_unlock(&glxContextHashLock);
+        }
     }
 }
 
