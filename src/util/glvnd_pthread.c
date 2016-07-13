@@ -57,6 +57,7 @@ typedef struct GLVNDPthreadRealFuncsRec {
     int (*mutex_init)(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
     int (*mutex_destroy)(pthread_mutex_t *mutex);
     int (*mutex_lock)(pthread_mutex_t *mutex);
+    int (*mutex_trylock)(pthread_mutex_t *mutex);
     int (*mutex_unlock)(pthread_mutex_t *mutex);
 
     int (* mutexattr_init) (pthread_mutexattr_t *attr);
@@ -68,6 +69,8 @@ typedef struct GLVNDPthreadRealFuncsRec {
     int (*rwlock_destroy)(pthread_rwlock_t *rwlock);
     int (*rwlock_rdlock)(pthread_rwlock_t *rwlock);
     int (*rwlock_wrlock)(pthread_rwlock_t *rwlock);
+    int (*rwlock_tryrdlock)(pthread_rwlock_t *rwlock);
+    int (*rwlock_trywrlock)(pthread_rwlock_t *rwlock);
     int (*rwlock_unlock)(pthread_rwlock_t *rwlock);
 #endif
 
@@ -163,6 +166,11 @@ static int st_mutex_lock(glvnd_mutex_t *mutex)
     return 0;
 }
 
+static int st_mutex_trylock(glvnd_mutex_t *mutex)
+{
+    return 0;
+}
+
 static int st_mutex_unlock(glvnd_mutex_t *mutex)
 {
     return 0;
@@ -199,6 +207,16 @@ static int st_rwlock_rdlock(glvnd_rwlock_t *rwlock)
 }
 
 static int st_rwlock_wrlock(glvnd_rwlock_t *rwlock)
+{
+    return 0;
+}
+
+static int st_rwlock_tryrdlock(glvnd_rwlock_t *rwlock)
+{
+    return 0;
+}
+
+static int st_rwlock_trywrlock(glvnd_rwlock_t *rwlock)
 {
     return 0;
 }
@@ -299,6 +317,11 @@ static int mt_mutex_lock(glvnd_mutex_t *mutex)
     return pthreadRealFuncs.mutex_lock(mutex);
 }
 
+static int mt_mutex_trylock(glvnd_mutex_t *mutex)
+{
+    return pthreadRealFuncs.mutex_trylock(mutex);
+}
+
 static int mt_mutex_unlock(glvnd_mutex_t *mutex)
 {
     return pthreadRealFuncs.mutex_unlock(mutex);
@@ -355,6 +378,24 @@ static int mt_rwlock_wrlock(glvnd_rwlock_t *rwlock)
 #endif
 }
 
+static int mt_rwlock_tryrdlock(glvnd_rwlock_t *rwlock)
+{
+#if defined(HAVE_PTHREAD_RWLOCK_T)
+    return pthreadRealFuncs.rwlock_tryrdlock(rwlock);
+#else
+    return pthreadRealFuncs.mutex_trylock(rwlock);
+#endif
+}
+
+static int mt_rwlock_trywrlock(glvnd_rwlock_t *rwlock)
+{
+#if defined(HAVE_PTHREAD_RWLOCK_T)
+    return pthreadRealFuncs.rwlock_trywrlock(rwlock);
+#else
+    return pthreadRealFuncs.mutex_trylock(rwlock);
+#endif
+}
+
 static int mt_rwlock_unlock(glvnd_rwlock_t *rwlock)
 {
 #if defined(HAVE_PTHREAD_RWLOCK_T)
@@ -406,6 +447,7 @@ void glvndSetupPthreads(void)
     GET_MT_FUNC(funcs, dlhandle, mutex_init);
     GET_MT_FUNC(funcs, dlhandle, mutex_destroy);
     GET_MT_FUNC(funcs, dlhandle, mutex_lock);
+    GET_MT_FUNC(funcs, dlhandle, mutex_trylock);
     GET_MT_FUNC(funcs, dlhandle, mutex_unlock);
     GET_MT_FUNC(funcs, dlhandle, mutexattr_init);
     GET_MT_FUNC(funcs, dlhandle, mutexattr_destroy);
@@ -416,6 +458,8 @@ void glvndSetupPthreads(void)
     GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_destroy);
     GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_rdlock);
     GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_wrlock);
+    GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_tryrdlock);
+    GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_trywrlock);
     GET_MT_RWLOCK_FUNC(funcs, dlhandle, rwlock_unlock);
 
     GET_MT_FUNC(funcs, dlhandle, once);
@@ -441,6 +485,7 @@ fail:
     GET_ST_FUNC(funcs, mutex_init);
     GET_ST_FUNC(funcs, mutex_destroy);
     GET_ST_FUNC(funcs, mutex_lock);
+    GET_ST_FUNC(funcs, mutex_trylock);
     GET_ST_FUNC(funcs, mutex_unlock);
 
     GET_ST_FUNC(funcs, mutexattr_init);
@@ -451,6 +496,8 @@ fail:
     GET_ST_FUNC(funcs, rwlock_destroy);
     GET_ST_FUNC(funcs, rwlock_rdlock);
     GET_ST_FUNC(funcs, rwlock_wrlock);
+    GET_ST_FUNC(funcs, rwlock_tryrdlock);
+    GET_ST_FUNC(funcs, rwlock_trywrlock);
     GET_ST_FUNC(funcs, rwlock_unlock);
 
     GET_ST_FUNC(funcs, once);
