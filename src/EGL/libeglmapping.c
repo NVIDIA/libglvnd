@@ -264,23 +264,12 @@ void __eglMappingTeardown(EGLBoolean doReset)
 
 static EGLBoolean AddVendorDevices(__EGLvendorInfo *vendor)
 {
-    // HACK: This should check EGL_EXT_device_enumeration
-    static const char EXTENSION_NAME[] = "EGL_EXT_device_base";
-    const char *extensions;
     EGLDeviceEXT *devices = NULL;
     EGLint count = 0;
     __EGLdeviceInfo *newDevList;
     EGLint i, j;
 
-    if (vendor->staticDispatch.queryDevicesEXT == NULL) {
-        return EGL_TRUE;
-    }
-
-    extensions = vendor->staticDispatch.queryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
-    if (extensions == NULL) {
-        return EGL_TRUE;
-    }
-    if (!IsTokenInString(extensions, EXTENSION_NAME, sizeof(EXTENSION_NAME) - 1, " ")) {
+    if (!vendor->supportsDevice) {
         return EGL_TRUE;
     }
 

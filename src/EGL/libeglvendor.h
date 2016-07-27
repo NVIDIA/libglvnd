@@ -29,6 +29,11 @@ struct __EGLvendorInfoRec {
     EGLBoolean supportsGL;
     EGLBoolean supportsGLES;
 
+    EGLBoolean supportsDevice;
+    EGLBoolean supportsPlatformDevice;
+    EGLBoolean supportsPlatformX11;
+    EGLBoolean supportsPlatformWayland;
+
     struct glvnd_list entry;
 };
 

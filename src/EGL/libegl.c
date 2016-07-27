@@ -169,14 +169,27 @@ static EGLBoolean IsWaylandDisplay(void *native_display)
  */
 static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
 {
+    EGLBoolean waylandSupported;
+    struct glvnd_list *vendorList = __eglLoadVendors();
+    __EGLvendorInfo *vendor;
+
     // First, see if this is a valid EGLDisplayEXT handle.
     if (__eglGetVendorFromDevice((EGLDeviceEXT) display_id)) {
         return EGL_PLATFORM_DEVICE_EXT;
     }
 
+    // Check if any vendor supports EGL_KHR_platform_wayland.
+    waylandSupported = EGL_FALSE;
+    glvnd_list_for_each_entry(vendor, vendorList, entry) {
+        if (vendor->supportsPlatformWayland) {
+            waylandSupported = EGL_TRUE;
+            break;
+        }
+    }
+
     // If display_id is a dereferenceable pointer, then see if it looks like
     // a Wayland display.
-    if (_eglPointerIsDereferencable(display_id)) {
+    if (waylandSupported && _eglPointerIsDereferencable(display_id)) {
         if (IsWaylandDisplay(display_id)) {
             return EGL_PLATFORM_WAYLAND_KHR;
         }

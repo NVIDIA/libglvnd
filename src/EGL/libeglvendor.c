@@ -333,6 +333,67 @@ done:
     return root;
 }
 
+static void CheckVendorExtensionString(__EGLvendorInfo *vendor, const char *str)
+{
+    static const char NAME_DEVICE_BASE[] = "EGL_EXT_device_base";
+    static const char NAME_DEVICE_ENUM[] = "EGL_EXT_device_enumeration";
+    static const char NAME_PLATFORM_DEVICE[] = "EGL_EXT_platform_device";
+    static const char NAME_EXT_PLATFORM_WAYLAND[] = "EGL_EXT_platform_wayland";
+    static const char NAME_KHR_PLATFORM_WAYLAND[] = "EGL_KHR_platform_wayland";
+    static const char NAME_EXT_PLATFORM_X11[] = "EGL_EXT_platform_x11";
+    static const char NAME_KHR_PLATFORM_X11[] = "EGL_KHR_platform_x11";
+
+    if (str == NULL || str[0] == '\x00') {
+        return;
+    }
+
+    if (!vendor->supportsDevice) {
+        if (IsTokenInString(str, NAME_DEVICE_BASE, sizeof(NAME_DEVICE_BASE) - 1, " ")
+                || IsTokenInString(str, NAME_DEVICE_ENUM, sizeof(NAME_DEVICE_ENUM) - 1, " ")) {
+            vendor->supportsDevice = EGL_TRUE;
+        }
+    }
+
+    if (!vendor->supportsPlatformDevice) {
+        if (IsTokenInString(str, NAME_PLATFORM_DEVICE, sizeof(NAME_PLATFORM_DEVICE) - 1, " ")) {
+            vendor->supportsPlatformDevice = EGL_TRUE;
+        }
+    }
+
+    if (!vendor->supportsPlatformWayland) {
+        if (IsTokenInString(str, NAME_EXT_PLATFORM_WAYLAND, sizeof(NAME_EXT_PLATFORM_WAYLAND) - 1, " ")
+                || IsTokenInString(str, NAME_KHR_PLATFORM_WAYLAND, sizeof(NAME_KHR_PLATFORM_WAYLAND) - 1, " ")) {
+            vendor->supportsPlatformWayland = EGL_TRUE;
+        }
+    }
+
+    if (!vendor->supportsPlatformX11) {
+        if (IsTokenInString(str, NAME_EXT_PLATFORM_X11, sizeof(NAME_EXT_PLATFORM_X11) - 1, " ")
+                || IsTokenInString(str, NAME_KHR_PLATFORM_X11, sizeof(NAME_KHR_PLATFORM_X11) - 1, " ")) {
+            vendor->supportsPlatformX11 = EGL_TRUE;
+        }
+    }
+}
+
+static void CheckVendorExtensions(__EGLvendorInfo *vendor)
+{
+    CheckVendorExtensionString(vendor,
+            vendor->staticDispatch.queryString(EGL_NO_DISPLAY, EGL_EXTENSIONS));
+
+    if (vendor->eglvc.getVendorString != NULL) {
+        CheckVendorExtensionString(vendor,
+                vendor->eglvc.getVendorString(__EGL_VENDOR_STRING_PLATFORM_EXTENSIONS));
+    }
+
+    if (vendor->staticDispatch.queryDevicesEXT == NULL) {
+        vendor->supportsDevice = EGL_FALSE;
+    }
+
+    if (!vendor->supportsDevice) {
+        vendor->supportsPlatformDevice = EGL_FALSE;
+    }
+}
+
 static __EGLvendorInfo *LoadVendor(const char *filename)
 {
     __PFNEGLMAINPROC eglMainProc;
@@ -405,6 +466,8 @@ static __EGLvendorInfo *LoadVendor(const char *filename)
     if (!vendor->glDispatch) {
         goto fail;
     }
+
+    CheckVendorExtensions(vendor);
 
     // Create and initialize the EGL dispatch table.
     // This is called before trying to look up any vendor-supplied EGL dispatch
