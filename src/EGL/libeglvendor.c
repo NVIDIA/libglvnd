@@ -22,6 +22,9 @@
 #define DEFAULT_EGL_VENDOR_CONFIG_DIRS "/etc/glvnd/egl_vendor.d:/usr/share/glvnd/egl_vendor.d"
 #endif
 
+#define FILE_FORMAT_VERSION_MAJOR 1
+#define FILE_FORMAT_VERSION_MINOR 0
+
 static void LoadVendors(void);
 static void TeardownVendor(__EGLvendorInfo *vendor);
 static __EGLvendorInfo *LoadVendor(const char *filename);
@@ -254,6 +257,36 @@ static void *VendorGetProcAddressCallback(const char *procName, void *param)
     return vendor->eglvc.getProcAddress(procName);
 }
 
+static EGLBoolean CheckFormatVersion(const char *versionStr)
+{
+    int major, minor, rev;
+    int len;
+
+    major = minor = rev = -1;
+    len = sscanf(versionStr, "%d.%d.%d", &major, &minor, &rev);
+    if (len < 1) {
+        return EGL_FALSE;
+    }
+    if (len < 2) {
+        minor = 0;
+    }
+    if (len < 3) {
+        rev = 0;
+    }
+    if (major != FILE_FORMAT_VERSION_MAJOR) {
+        return EGL_FALSE;
+    }
+
+    // The minor version number will be incremented if we ever add an optional
+    // value to the JSON format that libEGL has to pay attention to. That is,
+    // an older vendor library will still work, but a vendor library with a
+    // newer format than this library understands should fail.
+    if (minor > FILE_FORMAT_VERSION_MINOR) {
+        return EGL_FALSE;
+    }
+    return EGL_TRUE;
+}
+
 static __EGLvendorInfo *LoadVendorFromConfigFile(const char *filename)
 {
     __EGLvendorInfo *vendor = NULL;
@@ -271,7 +304,9 @@ static __EGLvendorInfo *LoadVendorFromConfigFile(const char *filename)
     if (node == NULL || node->type != cJSON_String) {
         goto done;
     }
-    // TODO: Check the file_format_version string
+    if (!CheckFormatVersion(node->valuestring)) {
+        goto done;
+    }
 
     icdNode = cJSON_GetObjectItem(root, "ICD");
     if (icdNode == NULL || icdNode->type != cJSON_Object) {
