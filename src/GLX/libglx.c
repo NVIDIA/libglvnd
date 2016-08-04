@@ -966,6 +966,13 @@ static Bool CommonMakeCurrent(Display *dpy, GLXDrawable draw,
     __glvndPthreadFuncs.mutex_lock(&glxContextHashLock);
 
     if (context != NULL) {
+        // Look up the new display. This will ensure that we keep track of it
+        // and get a callback when it's closed.
+        if (__glXLookupDisplay(dpy) == NULL) {
+            __glvndPthreadFuncs.mutex_unlock(&glxContextHashLock);
+            return False;
+        }
+
         HASH_FIND_PTR(glxContextHash, &context, newCtxInfo);
         if (newCtxInfo == NULL) {
             __glvndPthreadFuncs.mutex_unlock(&glxContextHashLock);
