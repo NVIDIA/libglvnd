@@ -64,10 +64,10 @@ void __eglDebugReport(EGLenum error, const char *command, EGLint type,
 EGLLabelKHR __eglGetThreadLabel(void);
 
 #define __eglReportCritical(error, command, objLabel, ...) \
-    __eglDebugReport(error, command, EGL_DEBUG_MSG_ERROR_KHR, objLabel, __VA_ARGS__)
+    __eglDebugReport(error, command, EGL_DEBUG_MSG_CRITICAL_KHR, objLabel, __VA_ARGS__)
 
 #define __eglReportError(error, command, objLabel, ...) \
-    __eglDebugReport(error, command, EGL_DEBUG_MSG_CRITICAL_KHR, objLabel, __VA_ARGS__)
+    __eglDebugReport(error, command, EGL_DEBUG_MSG_ERROR_KHR, objLabel, __VA_ARGS__)
 
 #define __eglReportWarn(command, objLabel, ...) \
     __eglDebugReport(EGL_SUCCESS, command, EGL_DEBUG_MSG_WARN_KHR, objLabel, __VA_ARGS__)

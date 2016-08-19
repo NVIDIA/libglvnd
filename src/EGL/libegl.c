@@ -405,7 +405,9 @@ PUBLIC EGLBoolean EGLAPIENTRY eglBindAPI(EGLenum api)
 
     // We only support GL and GLES right now.
     if (api != EGL_OPENGL_API && api != EGL_OPENGL_ES_API) {
-        return EGL_BAD_PARAMETER;
+        __eglReportError(EGL_BAD_PARAMETER, "eglBindAPI", __eglGetThreadLabel(),
+                "Unsupported rendering API 0x%04x", api);
+        return EGL_FALSE;
     }
 
     if (api == eglQueryAPI()) {
@@ -642,6 +644,8 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
     if (context != EGL_NO_CONTEXT) {
         newDpy = __eglLookupDisplay(dpy);
         if (newDpy == NULL) {
+            __eglReportError(EGL_BAD_DISPLAY, "eglMakeCurrent", NULL,
+                    "Invalid display %p", dpy);
             return EGL_FALSE;
         }
         newVendor = newDpy->vendor;

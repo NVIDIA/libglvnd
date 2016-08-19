@@ -64,39 +64,39 @@ static inline unsigned int DebugBitFromType(EGLenum type)
 EGLint eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback,
         const EGLAttrib *attrib_list)
 {
+    unsigned int newEnabled = debugTypeEnabled;
     struct glvnd_list *vendorList;
     __EGLvendorInfo *vendor;
+    int i;
 
     __eglEntrypointCommon();
+
+    // Parse the attribute list. Note that if (callback != NULL), then we'll
+    // check for errors even though we otherwise ignore it.
+    if (attrib_list != NULL) {
+        for (i = 0; attrib_list[i] != EGL_NONE; i += 2) {
+            if (attrib_list[i] >= EGL_DEBUG_MSG_CRITICAL_KHR &&
+                    attrib_list[i] <= EGL_DEBUG_MSG_INFO_KHR) {
+                if (attrib_list[i + 1]) {
+                    newEnabled |= DebugBitFromType(attrib_list[i]);
+                } else {
+                    newEnabled &= ~DebugBitFromType(attrib_list[i]);
+                }
+            } else {
+                // On error, set the last error code, call the current
+                // debug callback, and return the error code.
+                __eglReportError(EGL_BAD_ATTRIBUTE, "eglDebugMessageControlKHR", NULL,
+                        "Invalid attribute 0x%04lx", (unsigned long) attrib_list[i]);
+                return EGL_BAD_ATTRIBUTE;
+            }
+        }
+    }
 
     __glvndPthreadFuncs.rwlock_wrlock(&debugLock);
 
     if (callback != NULL) {
-        if (attrib_list != NULL) {
-            unsigned int newEnabled = debugTypeEnabled;
-            int i;
-
-            for (i = 0; attrib_list[i] != EGL_NONE; i += 2) {
-                if (attrib_list[i] >= EGL_DEBUG_MSG_CRITICAL_KHR &&
-                        attrib_list[i] <= EGL_DEBUG_MSG_INFO_KHR) {
-                    if (attrib_list[i + 1]) {
-                        newEnabled |= DebugBitFromType(attrib_list[i]);
-                    } else {
-                        newEnabled &= ~DebugBitFromType(attrib_list[i]);
-                    }
-                } else {
-                    // On error, set the last error code, call the current
-                    // debug callback, and return the error code.
-                    __glvndPthreadFuncs.rwlock_unlock(&debugLock);
-                    __eglReportError(EGL_BAD_ATTRIBUTE, "eglDebugMessageControlKHR", NULL,
-                            "Invalid attribute 0x%04lx", (unsigned long) attrib_list[i]);
-                    return EGL_BAD_ATTRIBUTE;
-                }
-            }
-
-            debugCallback = callback;
-            debugTypeEnabled = newEnabled;
-        }
+        debugCallback = callback;
+        debugTypeEnabled = newEnabled;
     } else {
         debugCallback = NULL;
         debugTypeEnabled = __EGL_DEBUG_BIT_CRITICAL | __EGL_DEBUG_BIT_ERROR;
@@ -186,6 +186,7 @@ EGLint eglLabelObjectKHR(
                         "eglLabelObjectKHR is not supported by vendor library. Thread label may not be reported correctly.");
             }
         }
+        return EGL_SUCCESS;
     } else {
         __EGLdisplayInfo *dpyInfo = __eglLookupDisplay(display);
         if (dpyInfo == NULL) {
@@ -203,13 +204,14 @@ EGLint eglLabelObjectKHR(
         }
 
         if (dpyInfo->vendor->staticDispatch.labelObjectKHR != NULL) {
-            dpyInfo->vendor->staticDispatch.labelObjectKHR(display, objectType, object, label);
+            __eglSetLastVendor(dpyInfo->vendor);
+            return dpyInfo->vendor->staticDispatch.labelObjectKHR(display, objectType, object, label);
         } else {
-            __eglReportWarn("eglLabelObjectKHR", NULL,
+            __eglReportError(EGL_BAD_PARAMETER, "eglLabelObjectKHR", NULL,
                     "eglLabelObjectKHR is not supported by vendor library. Object label may not be reported correctly.");
+            return EGL_BAD_PARAMETER;
         }
     }
-    return EGL_SUCCESS;
 }
 
 EGLLabelKHR __eglGetThreadLabel(void)
