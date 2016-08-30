@@ -277,7 +277,7 @@ typedef struct __EGLapiImportsRec {
      * \return A pointer to a function, or \c NULL if the vendor does not
      * support the function.
      */
-    __eglMustCastToProperFunctionPointerType (* getProcAddress) (const char *procName);
+    void * (* getProcAddress) (const char *procName);
 
     /*!
      * This retrieves vendor-neutral functions which use the
@@ -293,7 +293,7 @@ typedef struct __EGLapiImportsRec {
      * \return A pointer to a function, or \c NULL if the vendor does not
      * support the function or \p procName is not a EGL display function.
      */
-    __eglMustCastToProperFunctionPointerType (*getDispatchAddress) (const char *procName);
+    void * (*getDispatchAddress) (const char *procName);
 
     /*!
      * This notifies the vendor library which dispatch table index is

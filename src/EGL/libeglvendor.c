@@ -193,8 +193,7 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
     // normal EGL dispatch functions, instead of having to special-case them.
 
 #define LOADENTRYPOINT(ptr, name) do { \
-    *((__eglMustCastToProperFunctionPointerType *) &vendor->staticDispatch.ptr) = \
-        vendor->eglvc.getProcAddress(name); \
+    vendor->staticDispatch.ptr = vendor->eglvc.getProcAddress(name); \
     if (vendor->staticDispatch.ptr == NULL) { return GL_FALSE; } \
     } while(0)
 
@@ -229,8 +228,8 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
 
     // The remaining functions here are optional.
 #define LOADENTRYPOINT(ptr, name) \
-    *((__eglMustCastToProperFunctionPointerType *) &vendor->staticDispatch.ptr) = \
-        vendor->eglvc.getProcAddress(name);
+    vendor->staticDispatch.ptr = vendor->eglvc.getProcAddress(name);
+
     LOADENTRYPOINT(bindAPI,                       "eglBindAPI"                       );
     LOADENTRYPOINT(createSync,                    "eglCreateSync"                    );
     LOADENTRYPOINT(destroySync,                   "eglDestroySync"                   );
