@@ -4,7 +4,8 @@ noinst_HEADERS = \
 	glvnd_pthread.h \
 	app_error_check.h \
 	winsys_dispatch.h \
-	trace.h
+	trace.h \
+	cJSON.h
 
 EXTRA_DIST = uthash cJSON
 
