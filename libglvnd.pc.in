@@ -1,5 +1,7 @@
 prefix=@prefix@
 includedir=@includedir@
+datarootdir=@datarootdir@
+datadir=@datadir@
 
 Name: libglvnd
 Description: Vendor-neutral OpenGL dispatch library vendor interface

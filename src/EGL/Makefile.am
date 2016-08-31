@@ -49,6 +49,9 @@ libEGL_la_CFLAGS += -I$(srcdir)/$(UTIL_DIR)
 libEGL_la_CFLAGS += -I$(srcdir)/$(GL_DISPATCH_DIR)
 libEGL_la_CFLAGS += -I$(top_srcdir)/include
 
+libEGL_la_CFLAGS += \
+	-DDEFAULT_EGL_VENDOR_CONFIG_DIRS=\"@sysconfdir@/glvnd/egl_vendor.d:@datadir@/glvnd/egl_vendor.d\"
+
 # Required library flags
 libEGL_la_CFLAGS += $(PTHREAD_CFLAGS)
 

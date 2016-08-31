@@ -18,10 +18,6 @@
 #include "cJSON.h"
 #include "egldispatchstubs.h"
 
-#if !defined(DEFAULT_EGL_VENDOR_CONFIG_DIRS)
-#define DEFAULT_EGL_VENDOR_CONFIG_DIRS "/etc/glvnd/egl_vendor.d:/usr/share/glvnd/egl_vendor.d"
-#endif
-
 #define FILE_FORMAT_VERSION_MAJOR 1
 #define FILE_FORMAT_VERSION_MINOR 0
 

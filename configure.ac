@@ -108,16 +108,6 @@ AC_C_TYPEOF
 dnl Checks for library functions.
 AC_FUNC_STRNLEN
 
-AC_ARG_WITH([egl-vendor-dirs],
-    [AS_HELP_STRING([--with-egl-vendor-dirs],
-        [specify default EGL vendor config directories])],
-    [egl_vendor_dirs="$withval"],
-    [egl_vendor_dirs=])
-AS_IF([test "x$egl_vendor_dirs" = xyes], [egl_vendor_dirs=])
-AS_IF([test "x$egl_vendor_dirs" != "x"],
-      [AC_DEFINE_UNQUOTED([DEFAULT_EGL_VENDOR_CONFIG_DIRS], ["$egl_vendor_dirs"],
-      [The default directories to search for EGL vendor config files.])])
-
 dnl TLS detection
 AC_ARG_ENABLE([tls],
     [AS_HELP_STRING([--disable-tls],
