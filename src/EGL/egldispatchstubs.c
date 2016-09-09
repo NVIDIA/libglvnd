@@ -108,6 +108,6 @@ __eglMustCastToProperFunctionPointerType __eglDispatchFetchByDevice(EGLDeviceEXT
 
     exports->threadInit();
     vendor = exports->getVendorFromDevice(dev);
-    return FetchVendorFunc(vendor, index, EGL_BAD_DISPLAY);
+    return FetchVendorFunc(vendor, index, EGL_BAD_DEVICE_EXT);
 }
 

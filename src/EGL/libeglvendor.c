@@ -107,7 +107,7 @@ void LoadVendorsFromConfigDir(const char *dirName)
     // Check if dirName ends with a "/" character. If it doesn't, then we need
     // to add one when we construct the full file paths below.
     dirnameLen = strlen(dirName);
-    if (dirName > 0 && dirName[dirnameLen - 1] != '/') {
+    if (dirnameLen > 0 && dirName[dirnameLen - 1] != '/') {
         pathSep = "/";
     } else {
         pathSep = "";
