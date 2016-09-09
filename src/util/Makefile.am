@@ -4,9 +4,10 @@ noinst_HEADERS = \
 	glvnd_pthread.h \
 	app_error_check.h \
 	winsys_dispatch.h \
-	trace.h
+	trace.h \
+	cJSON.h
 
-EXTRA_DIST = uthash
+EXTRA_DIST = uthash cJSON
 
 noinst_LTLIBRARIES =
 AM_CPPFLAGS = -I$(top_srcdir)/include
@@ -31,3 +32,6 @@ noinst_LTLIBRARIES += libwinsys_dispatch.la
 libwinsys_dispatch_la_SOURCES = winsys_dispatch.c
 libwinsys_dispatch_la_CFLAGS = -I$(top_srcdir)/src/util/uthash/src
 
+noinst_LTLIBRARIES += libcJSON.la
+libcJSON_la_SOURCES = cJSON.c
+libcJSON_la_CFLAGS = -Wno-misleading-indentation

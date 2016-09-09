@@ -1,5 +1,6 @@
 SUBDIRS = util \
 	GLdispatch \
+	EGL \
 	GLX \
 	OpenGL \
 	GLESv1 \
