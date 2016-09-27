@@ -25,19 +25,28 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#include <string.h>
-#include <assert.h>
-#include "u_macros.h"
-#include "utils_misc.h"
+#include "entry.h"
+#include "entry_common.h"
 
-#define ENTRY_STUB_ALIGN 32
+#include <assert.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <string.h>
+
+#include "utils_misc.h"
+#include "u_macros.h"
+#include "glapi.h"
+#include "glvnd/GLdispatchABI.h"
+
+#define ENTRY_STUB_ALIGN 16
 #define ENTRY_STUB_SIZE ENTRY_STUB_ALIGN
 #define ENTRY_STUB_ALIGN_DIRECTIVE ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n"
 
-__asm__(".section wtext, \"awx\", @progbits");
-
-__asm__(ENTRY_STUB_ALIGN_DIRECTIVE
-        "x86_entry_start:");
+__asm__(".section wtext,\"ax\",@progbits\n");
+__asm__(".balign 4096\n"
+       ".globl public_entry_start\n"
+       ".hidden public_entry_start\n"
+        "public_entry_start:");
 
 #define STUB_ASM_ENTRY(func)     \
    ".globl " func "\n"           \
@@ -51,8 +60,12 @@ __asm__(ENTRY_STUB_ALIGN_DIRECTIVE
    "jmp *(4 * " slot ")(%eax)"
 
 #define MAPI_TMP_STUB_ASM_GCC
-#define MAPI_TMP_TABLE
 #include "mapi_tmp.h"
+
+__asm__(".balign 4096\n"
+       ".globl public_entry_end\n"
+       ".hidden public_entry_end\n"
+        "public_entry_end:");
 
 __asm__(".text\n");
 
@@ -62,80 +75,29 @@ __asm__("x86_current_tls:\n\t"
         "1:\n\t"
         "popl %eax\n\t"
     "addl $_GLOBAL_OFFSET_TABLE_+[.-1b], %eax\n\t"
-    "movl " ENTRY_CURRENT_TABLE "@GOTNTPOFF(%eax), %eax\n\t"
+    "movl _glapi_tls_Current@GOTNTPOFF(%eax), %eax\n\t"
     "ret");
 
-
-#include "u_execmem.h"
-
-extern unsigned long
+extern uint32_t
 x86_current_tls();
 
-static char x86_entry_start[];
-
-const int entry_type = ENTRY_X86_TLS;
+const int entry_type = __GLDISPATCH_STUB_X86;
 const int entry_stub_size = ENTRY_STUB_SIZE;
+
+static const unsigned char ENTRY_TEMPLATE[] =
+{
+    0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, /* movl %gs:0x0, %eax */
+    0xff, 0xa0, 0x34, 0x12, 0x00, 0x00, /* jmp *0x1234(%eax) */
+};
+static const int TEMPLATE_OFFSET_TLS_OFFSET = 2;
+static const int TEMPLATE_OFFSET_SLOT = 8;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    unsigned int *p;
-    unsigned long tls_addr;
-    char tmpl[] = {
-        0x65, 0xa1, 0x0, 0x0, 0x0, 0x0, // movl %gs:0x0,%eax
-        0xff, 0x20,                     // jmp *(%eax)
-        0x90, 0x90, 0x90, 0x90,         // nop's
-        0x90
-    };
+    char *writeEntry = u_execmem_get_writable(entry);
 
-    STATIC_ASSERT(sizeof(mapi_func) == 4);
-    STATIC_ASSERT(ENTRY_STUB_SIZE >= sizeof(tmpl));
-
-    tls_addr = x86_current_tls();
-
-    p = (unsigned int *)&tmpl[2];
-    *p = (unsigned int)tls_addr;
-
-    p = (unsigned int *)&tmpl[8];
-    *p = (unsigned int)(4 * slot);
-
-    memcpy(entry, tmpl, sizeof(tmpl));
+    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+    *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_TLS_OFFSET)) = x86_current_tls();
+    *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT)) = (uint32_t) (slot * sizeof(mapi_func));
 }
-
-void
-entry_init_public(void)
-{
-    int slot;
-
-    // Patch the stubs with a more optimal code sequence
-    for (slot = 0; slot < MAPI_TABLE_NUM_STATIC; slot++)
-       entry_generate_default_code((char *) entry_get_public(slot), slot);
-}
-
-mapi_func
-entry_get_public(int slot)
-{
-   return (mapi_func) (x86_entry_start + slot * ENTRY_STUB_SIZE);
-}
-
-#if !defined(STATIC_DISPATCH_ONLY)
-void
-entry_patch(mapi_func entry, int slot)
-{
-    entry_generate_default_code((char *)entry, slot);
-}
-
-mapi_func
-entry_generate(int slot)
-{
-   void *code;
-
-   code = u_execmem_alloc(ENTRY_STUB_SIZE);
-   if (!code)
-      return NULL;
-
-   entry_generate_default_code(code, slot);
-
-   return (mapi_func) code;
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)
 
