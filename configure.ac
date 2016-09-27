@@ -140,18 +140,13 @@ AC_MSG_RESULT($HAVE_INIT_TLS)
 
 AC_MSG_CHECKING([for entrypoint stub type])
 case "x$asm_arch" in
-xx86)
-    # The x86 TLS stubs don't work, so use the TSD stubs instead.
-    gldispatch_entry_type=x86_tsd
-    gldispatch_use_tls=no
-    ;;
-xx86_64)
-    # For x86-64, both the TLS and TSD stubs work.
+xx86 | xx86_64)
+    # For x86 and x86-64, both the TLS and TSD stubs work.
     if test "x$HAVE_INIT_TLS" = "xyes" ; then
-        gldispatch_entry_type=x86_64_tls
+        gldispatch_entry_type=${asm_arch}_tls
         gldispatch_use_tls=yes
     else
-        gldispatch_entry_type=x86_64_tsd
+        gldispatch_entry_type=${asm_arch}_tsd
         gldispatch_use_tls=no
     fi
     ;;
