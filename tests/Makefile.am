@@ -26,7 +26,7 @@
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
 SUBDIRS = \
-	GLX_dummy
+	dummy
 
 noinst_HEADERS = test_utils.h
 

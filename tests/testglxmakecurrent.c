@@ -44,7 +44,7 @@
 #include "glvnd_pthread.h"
 
 // For glMakeCurrentTestResults()
-#include "GLX_dummy/GLX_dummy.h"
+#include "dummy/GLX_dummy.h"
 
 enum
 {
