@@ -31,6 +31,7 @@ SUBDIRS = \
 noinst_HEADERS = test_utils.h
 
 TESTS_ENVIRONMENT = \
+	TOP_SRCDIR=$(top_srcdir) \
 	TOP_BUILDDIR=$(top_builddir) \
 	ABS_TOP_BUILDDIR=$(abs_top_builddir)
 
@@ -44,17 +45,11 @@ TESTS = \
 	testglxmcoldlink.sh \
 	testglxgetclientstr.sh \
 	testglxqueryversion.sh \
-	testglxnscrthreads.sh \
 	testpatchentrypoints.sh \
 	fini_test_env.sh
 
-# TODO: These tests depend on the x11glvnd server extension, which isn't used
-# anymore. They need to be rewritten to use the GLX_EXT_libglvnd extension
-# instead.
-#TESTS += testx11glvndproto.sh
-#TESTS += testglxnscreens.sh
-
-EXTRA_DIST = $(TESTS)
+EXTRA_DIST = $(TESTS) \
+	glxenv.sh
 
 check_PROGRAMS = \
 	testglxgetprocaddress \
@@ -63,22 +58,6 @@ check_PROGRAMS = \
 	testglxgetclientstr \
 	testglxqueryversion \
 	testpatchentrypoints
-
-#check_PROGRAMS += testx11glvndproto
-#check_PROGRAMS += testglxnscreens
-#
-#testglxnscreens_SOURCES = \
-#	$(top_srcdir)/src/util/glvnd_pthread.c \
-#	testglxnscreens.c \
-#	test_utils.c
-#
-#testglxnscreens_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR) $(AM_CFLAGS)
-#
-#testglxnscreens_LDADD = -lX11
-#testglxnscreens_LDADD += $(top_builddir)/src/GLX/libGLX.la
-#testglxnscreens_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-#testglxnscreens_LDADD += $(top_builddir)/src/util/libtrace.la
-#testglxnscreens_LDADD += -lX11 -ldl $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
 
@@ -96,9 +75,6 @@ testglxmakecurrent_oldlink_LDADD = -lX11 -ldl
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libtrace.la
-
-#testx11glvndproto_CFLAGS = -I$(top_srcdir)/$(X11GLVND_DIR)
-#testx11glvndproto_LDADD = -lX11 $(top_builddir)/$(X11GLVND_DIR)/libx11glvnd_client.la
 
 # Disable annoying "unused" errors
 AM_CFLAGS =                                  \
