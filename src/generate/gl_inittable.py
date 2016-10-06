@@ -152,7 +152,7 @@ _glapi_init_table_from_callback(struct _glapi_table *table,
 {
 """.lstrip("\n"))
 
-    for i in xrange(functionCount):
+    for i in range(functionCount):
         print("    _glapi_init_table_from_callback_%d(table, entries, get_proc_addr, param);" % (i,))
 
     print("")

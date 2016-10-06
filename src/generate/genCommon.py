@@ -71,7 +71,7 @@ def getFunctionsFromRoots(roots):
     # Assign a slot number to each function. This isn't strictly necessary,
     # since you can just look at the index in the list, but it makes it easier
     # to include the slot when formatting output.
-    for i in xrange(len(functions)):
+    for i in range(len(functions)):
         functions[i] = functions[i]._replace(slot=i)
 
     return functions
