@@ -63,7 +63,7 @@ __eglMustCastToProperFunctionPointerType __eglGetEGLDispatchAddress(const char *
 {
     struct glvnd_list *vendorList = __eglLoadVendors();
     __EGLvendorInfo *vendor;
-    __eglMustCastToProperFunctionPointerType addr;
+    __eglMustCastToProperFunctionPointerType addr = NULL;
     int index;
 
     __glvndPthreadFuncs.mutex_lock(&dispatchIndexMutex);
