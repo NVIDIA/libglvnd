@@ -42,6 +42,7 @@
 #include "utils_misc.h"
 #include "trace.h"
 #include "compiler.h"
+#include "patchentrypoints.h"
 
 
 static const __GLXapiExports *apiExports = NULL;
@@ -629,162 +630,11 @@ static void         dummySetDispatchIndex      (const GLubyte *procName, int ind
 
 PUBLIC int __glXSawVertex3fv;
 
-static void patch_x86_64(char *writeEntry,
-                             const char *execEntry,
-                             int stubSize)
-{
-#if defined(__x86_64__)
-    char *pSawVertex3fv = (char *)&__glXSawVertex3fv;
-    int *p;
-    char tmpl[] = {
-        0x8b, 0x05, 0x0, 0x0, 0x0, 0x0,  // mov 0x0(%rip), %eax
-        0x83, 0xc0, 0x01,                // add $0x1, %eax
-        0x89, 0x05, 0x0, 0x0, 0x0, 0x0,  // mov %eax, 0x0(%rip)
-        0xc3,                            // ret
-    };
-
-    STATIC_ASSERT(sizeof(int) == 0x4);
-
-    if (stubSize < sizeof(tmpl)) {
-        return;
-    }
-
-    p = (int *)&tmpl[2];
-    *p = (int)(pSawVertex3fv - (execEntry + 6));
-
-    p = (int *)&tmpl[11];
-    *p = (int)(pSawVertex3fv - (execEntry + 15));
-
-    memcpy(writeEntry, tmpl, sizeof(tmpl));
-#else
-    assert(0); // Should not be calling this
-#endif
-}
-
-static void patch_x86(char *writeEntry,
-                          const char *execEntry,
-                          int stubSize)
-{
-#if defined(__i386__)
-    uintptr_t *p;
-    char tmpl[] = {
-        0xa1, 0x0, 0x0, 0x0, 0x0,   // mov 0x0, %eax
-        0x83, 0xc0, 0x01,           // add $0x1, %eax
-        0xa3, 0x0, 0x0, 0x0, 0x0,   // mov %eax, 0x0
-        0xc3                        // ret
-    };
-
-    STATIC_ASSERT(sizeof(int) == 0x4);
-
-    if (stubSize < sizeof(tmpl)) {
-        return;
-    }
-
-    // Patch the address of the __glXSawVertex3fv variable. Note that we patch
-    // in an absolute address in this case. Unlike x86-64, x86 does not allow
-    // PC-relative addressing for MOV instructions.
-    p = (uintptr_t *)&tmpl[1];
-    *p = (uintptr_t) &__glXSawVertex3fv;
-
-    p = (uintptr_t *)&tmpl[9];
-    *p = (uintptr_t) &__glXSawVertex3fv;
-
-    memcpy(writeEntry, tmpl, sizeof(tmpl));
-
-    // Jump to an intermediate location
-    __asm__(
-        "\tjmp 0f\n"
-        "\t0:\n"
-    );
-#else
-    assert(0); // Should not be calling this
-#endif
-}
-
-static void patch_armv7_thumb(char *writeEntry,
-                                  const char *execEntry,
-                                  int stubSize)
-{
-#if defined(__arm__)
-    char *pSawVertex3fv = (char *)&__glXSawVertex3fv;
-
-    // Thumb bytecode
-    char tmpl[] = {
-        // ldr r0, 1f
-        0x48, 0x02,
-        // ldr r1, [r0]
-        0x68, 0x01,
-        // add r1, r1, #1
-        0xf1, 0x01, 0x01, 0x01,
-        // str r1, [r0]
-        0x60, 0x01,
-        // bx lr
-        0x47, 0x70,
-        // 1:
-        0x00, 0x00, 0x00, 0x00,
-    };
-
-    int offsetAddr = sizeof(tmpl) - 4;
-
-    if (stubSize < sizeof(tmpl)) {
-        return;
-    }
-
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    glvnd_byte_swap16((uint16_t *)tmpl, offsetAddr);
-#endif
-
-    *((uint32_t *)(tmpl + offsetAddr)) = (uint32_t)pSawVertex3fv;
-
-    memcpy(writeEntry, tmpl, sizeof(tmpl));
-
-    __builtin___clear_cache((char *) execEntry, (char *) (execEntry + sizeof(tmpl)));
-#else
-    assert(0); // Should not be calling this
-#endif
-}
-
-static GLboolean dummyCheckPatchSupported(int type, int stubSize)
-{
-    switch (type) {
-        case __GLDISPATCH_STUB_X86_64:
-        case __GLDISPATCH_STUB_X86:
-        case __GLDISPATCH_STUB_ARMV7_THUMB:
-            return GL_TRUE;
-        default:
-            return GL_FALSE;
-    }
-}
-
 static GLboolean dummyInitiatePatch(int type,
                                     int stubSize,
                                     DispatchPatchLookupStubOffset lookupStubOffset)
 {
-    void *writeAddr;
-    const void *execAddr;
-
-    if (!dummyCheckPatchSupported(type, stubSize))
-    {
-        return GL_FALSE;
-    }
-
-    if (lookupStubOffset("Vertex3fv", &writeAddr, &execAddr)) {
-        switch (type) {
-            case __GLDISPATCH_STUB_X86_64:
-                patch_x86_64(writeAddr, execAddr, stubSize);
-                break;
-            case __GLDISPATCH_STUB_X86:
-                patch_x86(writeAddr, execAddr, stubSize);
-                break;
-            case __GLDISPATCH_STUB_ARMV7_THUMB:
-                patch_armv7_thumb(writeAddr, execAddr, stubSize);
-                break;
-            default:
-                assert(0);
-        }
-    }
-
-    return GL_TRUE;
+    return commonInitiatePatch(type, stubSize, lookupStubOffset, &__glXSawVertex3fv);
 }
 
 static Bool GetEnvFlag(const char *name)
