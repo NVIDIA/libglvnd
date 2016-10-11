@@ -46,6 +46,7 @@ TESTS = \
 	testglxgetclientstr.sh \
 	testglxqueryversion.sh \
 	testpatchentrypoints.sh \
+	testpatchentrypoints_gldispatch.sh \
 	fini_test_env.sh
 
 EXTRA_DIST = $(TESTS) \
@@ -57,7 +58,8 @@ check_PROGRAMS = \
 	testglxmakecurrent_oldlink \
 	testglxgetclientstr \
 	testglxqueryversion \
-	testpatchentrypoints
+	testpatchentrypoints \
+	testpatchentrypoints_gldispatch
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
 
@@ -111,3 +113,14 @@ testpatchentrypoints_LDADD = -lX11 -ldl
 testpatchentrypoints_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/util/libtrace.la
+
+testpatchentrypoints_gldispatch_SOURCES = \
+	testpatchentrypoints_gldispatch.c
+testpatchentrypoints_gldispatch_CFLAGS = \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src/GLdispatch
+testpatchentrypoints_gldispatch_LDADD = $(top_builddir)/src/GLdispatch/libGLdispatch.la
+testpatchentrypoints_gldispatch_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
+testpatchentrypoints_gldispatch_LDADD += dummy/libpatchentrypoints.la
+testpatchentrypoints_gldispatch_LDADD += $(top_builddir)/src/util/libutils_misc.la
+

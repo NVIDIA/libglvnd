@@ -39,32 +39,28 @@ static void patch_x86_64(char *writeEntry, const char *execEntry,
         int stubSize, void *incrementPtr)
 {
 #if defined(__x86_64__)
-    char *pSawVertex3fv = (char *)incrementPtr;
-    int *p;
-    char tmpl[] = {
-        0x8b, 0x05, 0x0, 0x0, 0x0, 0x0,  // mov 0x0(%rip), %eax
-        0x83, 0xc0, 0x01,                // add $0x1, %eax
-        0x89, 0x05, 0x0, 0x0, 0x0, 0x0,  // mov %eax, 0x0(%rip)
-        0xc3,                            // ret
+    const char tmpl[] = {
+        0xa1, 0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12, // movabs 0x123456789abcdef0, %eax
+        0x83, 0xc0, 0x01,                                     // add    $0x1,%eax
+        0xa3, 0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12, // movabs %eax,0x123456789abcdef0
+        0xc3,                                                 // ret
     };
 
-    STATIC_ASSERT(sizeof(int) == 0x4);
+    STATIC_ASSERT(sizeof(void*) == 0x8);
 
     if (stubSize < sizeof(tmpl)) {
         return;
     }
 
-    p = (int *)&tmpl[2];
-    *p = (int)(pSawVertex3fv - (execEntry + 6));
-
-    p = (int *)&tmpl[11];
-    *p = (int)(pSawVertex3fv - (execEntry + 15));
-
     memcpy(writeEntry, tmpl, sizeof(tmpl));
+    memcpy(writeEntry + 1, &incrementPtr, sizeof(incrementPtr));
+    memcpy(writeEntry + 13, &incrementPtr, sizeof(incrementPtr));
+
 #else
     assert(0); // Should not be calling this
 #endif
 }
+
 
 static void patch_x86(char *writeEntry, const char *execEntry,
         int stubSize, void *incrementPtr)
@@ -84,9 +80,7 @@ static void patch_x86(char *writeEntry, const char *execEntry,
         return;
     }
 
-    // Patch the address of the incrementPtr variable. Note that we patch
-    // in an absolute address in this case. Unlike x86-64, x86 does not allow
-    // PC-relative addressing for MOV instructions.
+    // Patch the address of the incrementPtr variable.
     p = (uintptr_t *)&tmpl[1];
     *p = (uintptr_t) incrementPtr;
 
