@@ -150,4 +150,34 @@ char **SplitString(const char *str, size_t *count, const char *sep);
  */
 int IsTokenInString(const char *str, const char *token, size_t tokenLen, const char *sep);
 
+/**
+ * Merges two extension strings (that is, finds the union of two sets of
+ * extensions).
+ *
+ * If \p newString is a subset of \c currentString, then \c currentString will
+ * be returned unmodified. Otherwise, \c currentString will be re-allocated
+ * with enough space to hold the union of both string.
+ *
+ * If an error occurrs, then \c currentString will be freed before returning.
+ *
+ * \param currentString The current string, which must have been allocated with malloc.
+ * \param newString The extension string to merge.
+ * \return A new extension string.
+ */
+char *UnionExtensionStrings(char *currentString, const char *newString);
+
+/**
+ * Finds the intersection between two extension strings.
+ *
+ * This function will modify \p currentString so that it only includes the
+ * extensions that are listed in both \p currentString and \p newString.
+ *
+ * Note that unlike \c UnionExtensionString, the result cannot be longer than
+ * \p currentString, so it won't need to reallocate the string.
+ *
+ * \param currentString The extension string that will be modified.
+ * \param newString The other extension string.
+ */
+void IntersectionExtensionStrings(char *currentString, const char *newString);
+
 #endif // !defined(__UTILS_MISC_H)

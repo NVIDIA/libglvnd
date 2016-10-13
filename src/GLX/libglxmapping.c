@@ -40,7 +40,6 @@
 #include "libglxcurrent.h"
 #include "libglxmapping.h"
 #include "libglxthread.h"
-#include "libglxstring.h"
 #include "libglxproto.h"
 #include "utils_misc.h"
 #include "glvnd_genentry.h"
@@ -644,8 +643,8 @@ static __GLXdisplayInfoHash *InitDisplayInfoEntry(Display *dpy)
                 screen++) {
             char *extensions = __glXQueryServerString(&pEntry->info, screen, GLX_EXTENSIONS);
             if (extensions != NULL) {
-                if (!IsExtensionInString(extensions, GLX_EXT_LIBGLVND_NAME,
-                            strlen(GLX_EXT_LIBGLVND_NAME))) {
+                if (!IsTokenInString(extensions, GLX_EXT_LIBGLVND_NAME,
+                            strlen(GLX_EXT_LIBGLVND_NAME), " ")) {
                     pEntry->info.libglvndExtensionSupported = False;
                 }
                 free(extensions);

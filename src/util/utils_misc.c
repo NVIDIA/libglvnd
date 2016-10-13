@@ -341,3 +341,79 @@ int IsTokenInString(const char *str, const char *token, size_t tokenLen, const c
     return 0;
 }
 
+char *UnionExtensionStrings(char *currentString, const char *newString)
+{
+    size_t origLen;
+    size_t newLen;
+    const char *token;
+    size_t tokenLen;
+    char *buf, *ptr;
+
+    // Calculate the length of the new string.
+    origLen = newLen = strlen(currentString);
+
+    // The code below assumes that currentString is not empty, so if it is
+    // empty, then just copy the new string.
+    if (origLen == 0) {
+        buf = currentString;
+        if (newString[0] != '\0') {
+            buf = strdup(newString);
+            free(currentString);
+        }
+        return buf;
+    }
+
+    token = newString;
+    tokenLen = 0;
+    while (FindNextStringToken(&token, &tokenLen, " ")) {
+        if (!IsTokenInString(currentString, token, tokenLen, " ")) {
+            newLen += tokenLen + 1;
+        }
+    }
+    if (origLen == newLen) {
+        // No new extensions to add.
+        return currentString;
+    }
+
+    buf = (char *) realloc(currentString, newLen + 1);
+    if (buf == NULL) {
+        free(currentString);
+        return NULL;
+    }
+    currentString = NULL;
+
+    ptr = buf + origLen;
+    token = newString;
+    tokenLen = 0;
+    while (FindNextStringToken(&token, &tokenLen, " ")) {
+        if (!IsTokenInString(buf, token, tokenLen, " ")) {
+            *ptr++ = ' ';
+            memcpy(ptr, token, tokenLen);
+            ptr += tokenLen;
+            *ptr = '\0';
+        }
+    }
+    assert((size_t) (ptr - buf) == newLen);
+    return buf;
+}
+
+void IntersectionExtensionStrings(char *currentString, const char *newString)
+{
+    const char *token;
+    size_t tokenLen;
+    char *ptr;
+
+    token = currentString;
+    tokenLen = 0;
+    ptr = currentString;
+    while(FindNextStringToken(&token, &tokenLen, " ")) {
+        if (IsTokenInString(newString, token, tokenLen, " ")) {
+            if (ptr != currentString) {
+                *ptr++ = ' ';
+            }
+            memmove(ptr, token, tokenLen);
+            ptr += tokenLen;
+        }
+    }
+    *ptr = '\0';
+}

@@ -30,7 +30,6 @@ noinst_HEADERS = \
 	libglxcurrent.h \
 	libglxmapping.h \
 	libglxgl.h \
-	libglxstring.h \
 	libglxthread.h \
 	libglxproto.h
 
@@ -68,6 +67,5 @@ libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDE
 libGLX_la_SOURCES = \
 	libglx.c \
 	libglxmapping.c \
-	libglxstring.c \
 	libglxproto.c
 
