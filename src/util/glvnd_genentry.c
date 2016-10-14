@@ -72,17 +72,17 @@ static const int DISPATCH_FUNC_OFFSET = 2;
 
 #elif defined(USE_ARMV7_ASM)
 // Thumb bytecode
-static unsigned char STUB_TEMPLATE[] =
+static const uint16_t STUB_TEMPLATE[] =
 {
     // ldr ip, 1f
-    0xf8, 0xdf, 0xc0, 0x04,
+    0xf8df, 0xc004,
     // bx ip
-    0x47, 0x60,
+    0x4760,
     // nop
-    0xbf, 0x00,
+    0xbf00,
     // Offset that needs to be patched
     // 1:
-    0x00, 0x00, 0x00, 0x00,
+    0x0000, 0x0000,
 };
 
 static const int DISPATCH_FUNC_OFFSET = 8;
@@ -214,12 +214,6 @@ int InitEntrypoints(void)
         }
         entrypointBufferWrite = (uint8_t *) writeBuf;
         entrypointBufferExec = (uint8_t *) execBuf;
-
-#if defined(USE_ARMV7_ASM)
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        glvnd_byte_swap16((uint16_t *)STUB_TEMPLATE, sizeof(STUB_TEMPLATE) - 4);
-#endif
-#endif
     }
     return 0;
 }

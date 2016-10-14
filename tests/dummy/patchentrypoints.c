@@ -104,34 +104,23 @@ static void patch_armv7_thumb(char *writeEntry, const char *execEntry,
 {
 #if defined(__arm__)
     // Thumb bytecode
-    char tmpl[] = {
-        // ldr r0, 1f
-        0x48, 0x02,
-        // ldr r1, [r0]
-        0x68, 0x01,
-        // add r1, r1, #1
-        0xf1, 0x01, 0x01, 0x01,
-        // str r1, [r0]
-        0x60, 0x01,
-        // bx lr
-        0x47, 0x70,
+    const uint16_t tmpl[] = {
+        0x4802,         // ldr r0, 1f
+        0x6801,         // ldr r1, [r0]
+        0xf101, 0x0101, // add r1, r1, #1
+        0x6001,         // str r1, [r0]
+        0x4770,         // bx lr
         // 1:
-        0x00, 0x00, 0x00, 0x00,
+        0x0000, 0x0000,
     };
 
-    int offsetAddr = sizeof(tmpl) - 4;
-
+    static int offsetAddr = sizeof(tmpl) - 4;
     if (stubSize < sizeof(tmpl)) {
         return;
     }
 
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    glvnd_byte_swap16((uint16_t *)tmpl, offsetAddr);
-#endif
-
-    *((uint32_t *)(tmpl + offsetAddr)) = (uint32_t)incrementPtr;
-
     memcpy(writeEntry, tmpl, sizeof(tmpl));
+    *((uint32_t *)(writeEntry + offsetAddr)) = (uint32_t)incrementPtr;
 
     __builtin___clear_cache((char *) execEntry, (char *) (execEntry + sizeof(tmpl)));
 #else
