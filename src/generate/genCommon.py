@@ -41,6 +41,7 @@ _LIBRARY_FEATURE_NAMES = {
         "GL_VERSION_2_0", "GL_VERSION_2_1", "GL_VERSION_3_0", "GL_VERSION_3_1",
         "GL_VERSION_3_2", "GL_VERSION_3_3", "GL_VERSION_4_0", "GL_VERSION_4_1",
         "GL_VERSION_4_2", "GL_VERSION_4_3", "GL_VERSION_4_4", "GL_VERSION_4_5",
+        "GL_ARB_imaging", "GL_ARB_multitexture",
     )),
     "glesv1" : frozenset(("GL_VERSION_ES_CM_1_0", "GL_OES_point_size_array")),
     "glesv2" : frozenset(("GL_ES_VERSION_2_0", "GL_ES_VERSION_3_0",
