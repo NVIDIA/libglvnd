@@ -70,6 +70,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    /*
+     * Load the function addresses up front. Note that in order to test GLX
+     * entrypoint generation, we have to load the functions early, before
+     * libGLX.so loads the vendor library.
+     */
     ptr_glXGetProcAddress = (pfn_glXGetProcAddress)
         LoadFunction("glXGetProcAddress");
     ptr_glXWaitGL = (pfn_glXWaitGL) LoadFunction("glXWaitGL");
@@ -85,6 +90,9 @@ int main(int argc, char **argv)
      */
     ptr_glXGetProcAddress((const GLubyte *) "glBogusFunc1");
     ptr_glXWaitGL();
+
+    // Call glXGetClientString to force libGLX to load the vendor library.
+    glXGetClientString(dpy, GLX_EXTENSIONS);
 
     /*
      * Test a "GLX extension" function with a vendor-neutral dispatcher

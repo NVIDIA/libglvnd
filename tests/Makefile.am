@@ -38,6 +38,7 @@ TESTS_ENVIRONMENT = \
 TESTS = \
 	init_test_env.sh \
 	testglxgetprocaddress.sh \
+	testglxgetprocaddress_genentry.sh \
 	testglxmcbasic.sh \
 	testglxmcloop.sh \
 	testglxmcthreads.sh \
