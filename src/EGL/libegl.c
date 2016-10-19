@@ -142,28 +142,33 @@ static EGLBoolean _eglPointerIsDereferencable(void *p)
 #endif
 }
 
+#if !defined(HAVE_RTLD_NOLOAD)
+#define RTLD_NOLOAD 0
+#endif
+static void *GetLibrarySymbol(const char *lib, const char *sym)
+{
+    void *handle, *ret = NULL;
+
+    if ((handle = dlopen(lib, RTLD_LOCAL | RTLD_LAZY | RTLD_NOLOAD))) {
+	ret = dlsym(handle, sym);
+	dlclose(handle);
+    }
+
+    return ret;
+}
+
+static void *SafeDereference(void *ptr)
+{
+    if (_eglPointerIsDereferencable(ptr))
+	return *((void **)ptr);
+    return NULL;
+}
+
 static EGLBoolean IsWaylandDisplay(void *native_display)
 {
-    void *first_pointer;
-    void *waylandClientHandle = NULL;
-    void *waylandClientSymbol = NULL;
-
-    if (!_eglPointerIsDereferencable(native_display)) {
-	return EGL_FALSE;
-    }
-    first_pointer = *(void **) native_display;
-
-    waylandClientHandle = dlopen("libwayland-client.so.0", RTLD_LOCAL | RTLD_LAZY
-#if defined(HAVE_RTLD_NOLOAD)
-            | RTLD_NOLOAD
-#endif
-            );
-    if (waylandClientHandle == NULL) {
-        return EGL_FALSE;
-    }
-
-    waylandClientSymbol = dlsym(waylandClientHandle, "wl_display_interface");
-    dlclose(waylandClientHandle);
+    void *first_pointer = SafeDereference(native_display);
+    void *waylandClientSymbol = GetLibrarySymbol("libwayland-client.so.0",
+						 "wl_display_interface");
 
     return (waylandClientSymbol != NULL && waylandClientSymbol == first_pointer);
 }
