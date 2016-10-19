@@ -173,6 +173,14 @@ static EGLBoolean IsWaylandDisplay(void *native_display)
     return (waylandClientSymbol != NULL && waylandClientSymbol == first_pointer);
 }
 
+static EGLBoolean IsX11Display(void *dpy)
+{
+    void *alloc = SafeDereference(&((_XPrivDisplay)dpy)->resource_alloc);
+    void *XAllocID = GetLibrarySymbol("libX11.so.6", "_XAllocID");
+
+    return (XAllocID != NULL && XAllocID == alloc);
+}
+
 /*!
  * This is a helper function for eglGetDisplay to try to guess the platform
  * type to use.
@@ -192,6 +200,11 @@ static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
 	if (vendor->supportsPlatformWayland &&
 	    IsWaylandDisplay(display_id)) {
 	    return EGL_PLATFORM_WAYLAND_KHR;
+	}
+
+	if (vendor->supportsPlatformX11 &&
+	    IsX11Display(display_id)) {
+	    return EGL_PLATFORM_X11_KHR;
 	}
     }
 
