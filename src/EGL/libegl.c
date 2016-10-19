@@ -208,12 +208,6 @@ static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
 	}
     }
 
-    // If there's a DISPLAY environment variable, then assume it's an X11
-    // display.
-    if (getenv("DISPLAY") != NULL) {
-        return EGL_PLATFORM_X11_KHR;
-    }
-
     return EGL_NONE;
 };
 
