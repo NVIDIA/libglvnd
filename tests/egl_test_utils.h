@@ -39,6 +39,30 @@
  */
 #define DUMMY_VENDOR_COUNT 2
 
+/**
+ * The expected number of devices that should be returned from
+ * eglQueryDevicesEXT().
+ */
+#define DUMMY_TOTAL_DEVICE_COUNT (DUMMY_VENDOR_COUNT * DUMMY_EGL_DEVICE_COUNT)
+
 extern const char *DUMMY_VENDOR_NAMES[DUMMY_VENDOR_COUNT];
+
+extern PFNEGLQUERYDEVICESEXTPROC ptr_eglQueryDevicesEXT;
+
+extern pfn_eglTestDispatchDisplay ptr_eglTestDispatchDisplay;
+extern pfn_eglTestDispatchDevice ptr_eglTestDispatchDevice;
+extern pfn_eglTestDispatchCurrent ptr_eglTestDispatchCurrent;
+
+/**
+ * Loads an EGL extension function with eglGetProcAddress. If it fails, then it
+ * calls abort().
+ */
+__eglMustCastToProperFunctionPointerType loadEGLFunction(const char *name);
+
+/**
+ * Loads all of the EGL extension functions that the dummy vendor library
+ * supports.
+ */
+void loadEGLExtensions(void);
 
 #endif // EGL_TEST_UTILS_H

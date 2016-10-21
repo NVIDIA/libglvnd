@@ -48,9 +48,13 @@ enum
 static const char *CLIENT_EXTENSIONS =
     "EGL_KHR_client_get_all_proc_addresses"
     " EGL_EXT_client_extensions"
+    " EGL_EXT_device_enumeration"
     ;
 
-static const char *PLATFORM_EXTENSIONS = "";
+static const char *PLATFORM_EXTENSIONS =
+    "EGL_EXT_platform_device"
+    ;
+
 static const char *DISPLAY_EXTENSIONS = "";
 static const EGLint DUMMY_EGL_CONFIG_COUNT = 2;
 
@@ -120,6 +124,27 @@ static DummyEGLDisplay *LookupEGLDisplay(EGLDisplay dpy)
     abort();
 }
 
+static EGLDeviceEXT GetEGLDevice(EGLint index)
+{
+    // The EGLDeviceEXT handle values have to be pointers, so just use the
+    // address of an array element for each EGLDeviceEXT handle.
+    static const char EGL_DEVICE_HANDLES[DUMMY_EGL_DEVICE_COUNT];
+
+    assert(index >= 0 && index < DUMMY_EGL_DEVICE_COUNT);
+    return (EGLDeviceEXT) (EGL_DEVICE_HANDLES + index);
+}
+
+static EGLBoolean IsEGLDeviceValid(EGLDeviceEXT dev)
+{
+    int i;
+    for (i=0; i<DUMMY_EGL_DEVICE_COUNT; i++) {
+        if (dev == GetEGLDevice(i)) {
+            return EGL_TRUE;
+        }
+    }
+    return EGL_FALSE;
+}
+
 static const char *dummyGetVendorString(int name)
 {
     if (name == __EGL_VENDOR_STRING_PLATFORM_EXTENSIONS) {
@@ -155,6 +180,14 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
             // Set the native_display pointer to NULL. This makes it simpler to
             // find the same dispaly below.
             native_display = NULL;
+        }
+    } else if (platform == EGL_PLATFORM_DEVICE_EXT) {
+        if (native_display == EGL_DEFAULT_DISPLAY) {
+            native_display = (void *) GetEGLDevice(0);
+        } else {
+            if (!IsEGLDeviceValid((EGLDeviceEXT) native_display)) {
+                return EGL_NO_DISPLAY;
+            }
         }
     } else {
         // We don't support this platform.
@@ -413,6 +446,26 @@ static EGLint EGLAPIENTRY dummy_eglGetError(void)
     return error;
 }
 
+static EGLBoolean EGLAPIENTRY dummy_eglQueryDevicesEXT(EGLint max_devices, EGLDeviceEXT *devices, EGLint *num_devices)
+{
+    CommonEntrypoint();
+    if (devices != NULL) {
+        EGLint i;
+        if (max_devices != DUMMY_EGL_DEVICE_COUNT) {
+            // libEGL should only every query the full list of devices.
+            printf("Wrong max_devices in eglQueryDevicesEXT: %d\n", max_devices);
+            abort();
+        }
+        *num_devices = DUMMY_EGL_DEVICE_COUNT;
+        for (i=0; i<*num_devices; i++) {
+            devices[i] = GetEGLDevice(i);
+        }
+    } else {
+        *num_devices = DUMMY_EGL_DEVICE_COUNT;
+    }
+    return EGL_TRUE;
+}
+
 static const GLubyte *dummy_glGetString(GLenum name)
 {
     if (name == GL_VENDOR) {
@@ -540,6 +593,7 @@ static void *dispatch_eglTestDispatchCurrent(EGLint command, EGLAttrib param)
     }
 }
 
+
 static const struct {
     const char *name;
     void *addr;
@@ -575,6 +629,8 @@ static const struct {
     PROC_ENTRY(eglReleaseThread),
     PROC_ENTRY(eglWaitClient),
     PROC_ENTRY(eglGetError),
+
+    PROC_ENTRY(eglQueryDevicesEXT),
 
     PROC_ENTRY(glGetString),
 #undef PROC_ENTRY

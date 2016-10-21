@@ -60,6 +60,12 @@
 #define DUMMY_VENDOR_NAME_1 "dummy1"
 
 /**
+ * The number of devices that each dummy vendor library exposes. This is used
+ * to figure out which vendor library should be behind each device.
+ */
+#define DUMMY_EGL_DEVICE_COUNT 2
+
+/**
  * A platform enum to select a vendor library by name.
  * The native display should be a pointer to a string with the vendor name.
  */
