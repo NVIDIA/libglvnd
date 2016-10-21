@@ -49,7 +49,8 @@ TESTS = \
 	testglxqueryversion.sh \
 	testpatchentrypoints.sh \
 	testpatchentrypoints_gldispatch.sh \
-	testegldisplay.sh
+	testegldisplay.sh \
+	testeglgetprocaddress.sh
 
 EXTRA_DIST = $(TESTS) \
 	glxenv.sh \
@@ -64,7 +65,8 @@ check_PROGRAMS = \
 	testglxqueryversion \
 	testpatchentrypoints \
 	testpatchentrypoints_gldispatch \
-	testegldisplay
+	testegldisplay \
+	testeglgetprocaddress
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
 
@@ -133,3 +135,8 @@ testegldisplay_SOURCES = \
 	testegldisplay.c \
 	egl_test_utils.c
 testegldisplay_LDADD = $(top_builddir)/src/EGL/libEGL.la
+
+testeglgetprocaddress_SOURCES = \
+	testeglgetprocaddress.c \
+	egl_test_utils.c
+testeglgetprocaddress_LDADD = $(top_builddir)/src/EGL/libEGL.la

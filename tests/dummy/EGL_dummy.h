@@ -53,6 +53,9 @@
 #ifndef EGL_DUMMY_H
 #define EGL_DUMMY_H
 
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+
 #define DUMMY_VENDOR_NAME_0 "dummy0"
 #define DUMMY_VENDOR_NAME_1 "dummy1"
 
@@ -61,5 +64,30 @@
  * The native display should be a pointer to a string with the vendor name.
  */
 #define EGL_DUMMY_PLATFORM 0x010000
+
+enum
+{
+    DUMMY_COMMAND_GET_VENDOR_NAME
+};
+
+/**
+ * A simple EGL extension function with a vendor-provided dispatch stub.
+ *
+ * The function will return the vendor name, so the caller can check whether it
+ * gets dispatched to the correct vendor.
+ */
+typedef void * (* pfn_eglTestDispatchDisplay) (EGLDisplay dpy, EGLint command, EGLAttrib param);
+
+/**
+ * Does the same thing as \c eglTestDispatchDisplay, but dispatches based on an
+ * EGLDeviceEXT instead of an EGLDisplay.
+ */
+typedef void * (* pfn_eglTestDispatchDevice) (EGLDeviceEXT dev, EGLint command, EGLAttrib param);
+
+/**
+ * Does the same thing as \c eglTestDispatchDisplay, but dispatches based on
+ * the current context.
+ */
+typedef void * (* pfn_eglTestDispatchCurrent) (EGLint command, EGLAttrib param);
 
 #endif // EGL_DUMMY_H

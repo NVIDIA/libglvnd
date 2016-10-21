@@ -37,6 +37,14 @@
 #include "glvnd_pthread.h"
 #include "compiler.h"
 
+enum
+{
+    DI_eglTestDispatchDisplay,
+    DI_eglTestDispatchDevice,
+    DI_eglTestDispatchCurrent,
+    DI_COUNT,
+};
+
 static const char *CLIENT_EXTENSIONS =
     "EGL_KHR_client_get_all_proc_addresses"
     " EGL_EXT_client_extensions"
@@ -56,6 +64,10 @@ typedef struct DummyEGLDisplayRec {
 typedef struct DummyThreadStateRec {
     EGLint lastError;
 } DummyThreadState;
+
+typedef struct DummyEGLContextRec {
+    int unused;
+} DummyEGLContext;
 
 static const __EGLapiExports *apiExports = NULL;
 static glvnd_key_t threadStateKey;
@@ -214,14 +226,26 @@ static EGLBoolean EGLAPIENTRY dummy_eglCopyBuffers(EGLDisplay dpy, EGLSurface su
 static EGLContext EGLAPIENTRY dummy_eglCreateContext(EGLDisplay dpy,
         EGLConfig config, EGLContext share_context, const EGLint *attrib_list)
 {
+    DummyEGLContext *dctx;
+
     CommonEntrypoint();
     LookupEGLDisplay(dpy);
-    return EGL_NO_CONTEXT;
+
+    dctx = (DummyEGLContext *) calloc(1, sizeof(DummyEGLContext));
+
+    return (EGLContext) dctx;
 }
 
 static EGLBoolean EGLAPIENTRY dummy_eglDestroyContext(EGLDisplay dpy, EGLContext ctx)
 {
-    return CommonDisplayStub(dpy);
+    CommonEntrypoint();
+    LookupEGLDisplay(dpy);
+
+    if (ctx != EGL_NO_CONTEXT) {
+        DummyEGLContext *dctx = (DummyEGLContext *) ctx;
+        free(dctx);
+    }
+    return EGL_TRUE;
 }
 
 static EGLSurface CommonCreateSurface(EGLDisplay dpy)
@@ -280,7 +304,9 @@ static EGLBoolean EGLAPIENTRY dummy_eglGetConfigAttrib(EGLDisplay dpy, EGLConfig
 
 static EGLBoolean EGLAPIENTRY dummy_eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx)
 {
-    return CommonDisplayStub(dpy);
+    CommonEntrypoint();
+    LookupEGLDisplay(dpy);
+    return EGL_TRUE;
 }
 
 static EGLBoolean EGLAPIENTRY dummy_eglQueryContext(EGLDisplay dpy, EGLContext ctx, EGLint attribute, EGLint *value)
@@ -387,6 +413,133 @@ static EGLint EGLAPIENTRY dummy_eglGetError(void)
     return error;
 }
 
+static const GLubyte *dummy_glGetString(GLenum name)
+{
+    if (name == GL_VENDOR) {
+        return (const GLubyte *) DUMMY_VENDOR_NAME;
+    }
+    return NULL;
+}
+
+static void *CommonTestDispatch(const char *funcName,
+        EGLDisplay dpy, EGLDeviceEXT dev,
+        EGLint command, EGLAttrib param)
+{
+    CommonEntrypoint();
+
+    if (dpy != EGL_NO_DISPLAY) {
+        LookupEGLDisplay(dpy);
+    }
+
+    if (command == DUMMY_COMMAND_GET_VENDOR_NAME) {
+        // Just return the vendor name and don't do anything else.
+        return DUMMY_VENDOR_NAME;
+    } else {
+        printf("Invalid command: %d\n", command);
+        abort();
+    }
+}
+
+static void *dummy_eglTestDispatchDisplay(EGLDisplay dpy, EGLint command, EGLAttrib param)
+{
+    return CommonTestDispatch("eglTestDispatchDisplay", dpy, EGL_NO_DEVICE_EXT, command, param);
+}
+
+static void *dummy_eglTestDispatchDevice(EGLDeviceEXT dev, EGLint command, EGLAttrib param)
+{
+    return CommonTestDispatch("eglTestDispatchDevice", EGL_NO_DISPLAY, dev, command, param);
+}
+
+static void *dummy_eglTestDispatchCurrent(EGLint command, EGLAttrib param)
+{
+    return CommonTestDispatch("eglTestDispatchCurrent", EGL_NO_DISPLAY, EGL_NO_DEVICE_EXT, command, param);
+}
+
+static void *dispatch_eglTestDispatchDisplay(EGLDisplay dpy, EGLint command, EGLAttrib param);
+static void *dispatch_eglTestDispatchDevice(EGLDeviceEXT dpy, EGLint command, EGLAttrib param);
+static void *dispatch_eglTestDispatchCurrent(EGLint command, EGLAttrib param);
+
+static struct {
+    const char *name;
+    void *addr;
+    void *dispatchAddress;
+    int index;
+} EGL_EXTENSION_PROCS[DI_COUNT] = {
+#define PROC_ENTRY(name) { #name, dummy_##name, dispatch_##name, -1 }
+    PROC_ENTRY(eglTestDispatchDisplay),
+    PROC_ENTRY(eglTestDispatchDevice),
+    PROC_ENTRY(eglTestDispatchCurrent),
+#undef PROC_ENTRY
+};
+
+static __eglMustCastToProperFunctionPointerType FetchVendorFunc(__EGLvendorInfo *vendor,
+        int index, EGLint errorCode)
+{
+    __eglMustCastToProperFunctionPointerType func = NULL;
+
+    if (vendor != NULL) {
+        func = apiExports->fetchDispatchEntry(vendor, EGL_EXTENSION_PROCS[index].index);
+    }
+    if (func == NULL) {
+        if (errorCode != EGL_SUCCESS) {
+            apiExports->setEGLError(errorCode);
+        }
+        return NULL;
+    }
+
+    if (!apiExports->setLastVendor(vendor)) {
+        printf("setLastVendor failed\n");
+        abort();
+    }
+
+    return func;
+}
+
+static void *dispatch_eglTestDispatchDisplay(EGLDisplay dpy, EGLint command, EGLAttrib param)
+{
+    __EGLvendorInfo *vendor;
+    pfn_eglTestDispatchDisplay func;
+
+    apiExports->threadInit();
+    vendor = apiExports->getVendorFromDisplay(dpy);
+    func = (pfn_eglTestDispatchDisplay) FetchVendorFunc(vendor, DI_eglTestDispatchDisplay, EGL_BAD_DISPLAY);
+    if (func != NULL) {
+        return func(dpy, command, param);
+    } else {
+        return NULL;
+    }
+}
+
+static void *dispatch_eglTestDispatchDevice(EGLDeviceEXT dev, EGLint command, EGLAttrib param)
+{
+    __EGLvendorInfo *vendor;
+    pfn_eglTestDispatchDevice func;
+
+    apiExports->threadInit();
+    vendor = apiExports->getVendorFromDevice(dev);
+    func = (pfn_eglTestDispatchDevice) FetchVendorFunc(vendor, DI_eglTestDispatchDevice, EGL_BAD_DEVICE_EXT);
+    if (func != NULL) {
+        return func(dev, command, param);
+    } else {
+        return NULL;
+    }
+}
+
+static void *dispatch_eglTestDispatchCurrent(EGLint command, EGLAttrib param)
+{
+    __EGLvendorInfo *vendor;
+    pfn_eglTestDispatchCurrent func;
+
+    apiExports->threadInit();
+    vendor = apiExports->getCurrentVendor();
+    func = (pfn_eglTestDispatchCurrent) FetchVendorFunc(vendor, DI_eglTestDispatchCurrent, EGL_SUCCESS);
+    if (func != NULL) {
+        return func(command, param);
+    } else {
+        return NULL;
+    }
+}
+
 static const struct {
     const char *name;
     void *addr;
@@ -422,6 +575,8 @@ static const struct {
     PROC_ENTRY(eglReleaseThread),
     PROC_ENTRY(eglWaitClient),
     PROC_ENTRY(eglGetError),
+
+    PROC_ENTRY(glGetString),
 #undef PROC_ENTRY
     { NULL, NULL }
 };
@@ -434,16 +589,34 @@ static void *dummyGetProcAddress(const char *procName)
             return PROC_ADDRESSES[i].addr;
         }
     }
+
+    for (i=0; i < DI_COUNT; i++) {
+        if (strcmp(procName, EGL_EXTENSION_PROCS[i].name) == 0) {
+            return EGL_EXTENSION_PROCS[i].addr;
+        }
+    }
     return NULL;
 }
 
 static void *dummyFindDispatchFunction(const char *name)
 {
+    int i;
+    for (i=0; i < DI_COUNT; i++) {
+        if (strcmp(name, EGL_EXTENSION_PROCS[i].name) == 0) {
+            return EGL_EXTENSION_PROCS[i].dispatchAddress;
+        }
+    }
     return NULL;
 }
 
 static void dummySetDispatchIndex(const char *name, int index)
 {
+    int i;
+    for (i=0; i < DI_COUNT; i++) {
+        if (strcmp(name, EGL_EXTENSION_PROCS[i].name) == 0) {
+            EGL_EXTENSION_PROCS[i].index = index;
+        }
+    }
 }
 
 static EGLBoolean dummyGetSupportsAPI(EGLenum api)
