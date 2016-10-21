@@ -28,7 +28,9 @@
 SUBDIRS = \
 	dummy
 
-noinst_HEADERS = test_utils.h
+noinst_HEADERS = \
+	test_utils.h \
+	egl_test_utils.h
 
 TESTS_ENVIRONMENT = \
 	TOP_SRCDIR=$(top_srcdir) \
@@ -46,10 +48,13 @@ TESTS = \
 	testglxgetclientstr.sh \
 	testglxqueryversion.sh \
 	testpatchentrypoints.sh \
-	testpatchentrypoints_gldispatch.sh
+	testpatchentrypoints_gldispatch.sh \
+	testegldisplay.sh
 
 EXTRA_DIST = $(TESTS) \
-	glxenv.sh
+	glxenv.sh \
+	eglenv.sh \
+	json
 
 check_PROGRAMS = \
 	testglxgetprocaddress \
@@ -58,7 +63,8 @@ check_PROGRAMS = \
 	testglxgetclientstr \
 	testglxqueryversion \
 	testpatchentrypoints \
-	testpatchentrypoints_gldispatch
+	testpatchentrypoints_gldispatch \
+	testegldisplay
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
 
@@ -123,3 +129,7 @@ testpatchentrypoints_gldispatch_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testpatchentrypoints_gldispatch_LDADD += dummy/libpatchentrypoints.la
 testpatchentrypoints_gldispatch_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
+testegldisplay_SOURCES = \
+	testegldisplay.c \
+	egl_test_utils.c
+testegldisplay_LDADD = $(top_builddir)/src/EGL/libEGL.la

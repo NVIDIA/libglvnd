@@ -1,0 +1,487 @@
+/*
+ * Copyright (c) 2016, NVIDIA CORPORATION.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and/or associated documentation files (the
+ * "Materials"), to deal in the Materials without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Materials, and to
+ * permit persons to whom the Materials are furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * unaltered in all copies or substantial portions of the Materials.
+ * Any additions, deletions, or changes to the original source files
+ * must be clearly indicated in accompanying documentation.
+ *
+ * If only executable code is distributed, then the accompanying
+ * documentation must state that "this software is based in part on the
+ * work of the Khronos Group."
+ *
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+ */
+
+#include "EGL_dummy.h"
+
+#include <stdlib.h>
+#include <assert.h>
+
+#include "glvnd/libeglabi.h"
+#include "glvnd_list.h"
+#include "glvnd_pthread.h"
+#include "compiler.h"
+
+static const char *CLIENT_EXTENSIONS =
+    "EGL_KHR_client_get_all_proc_addresses"
+    " EGL_EXT_client_extensions"
+    ;
+
+static const char *PLATFORM_EXTENSIONS = "";
+static const char *DISPLAY_EXTENSIONS = "";
+static const EGLint DUMMY_EGL_CONFIG_COUNT = 2;
+
+typedef struct DummyEGLDisplayRec {
+    EGLenum platform;
+    void *native_display;
+
+    struct glvnd_list entry;
+} DummyEGLDisplay;
+
+typedef struct DummyThreadStateRec {
+    EGLint lastError;
+} DummyThreadState;
+
+static const __EGLapiExports *apiExports = NULL;
+static glvnd_key_t threadStateKey;
+static struct glvnd_list displayList;
+
+static DummyThreadState *GetThreadState(void)
+{
+    DummyThreadState *thr = (DummyThreadState *)
+        __glvndPthreadFuncs.getspecific(threadStateKey);
+    if (thr == NULL) {
+        thr = (DummyThreadState *) calloc(1, sizeof(DummyThreadState));
+        if (thr == NULL) {
+            printf("Can't allocate thread state\n");
+            abort();
+        }
+        thr->lastError = EGL_SUCCESS;
+        __glvndPthreadFuncs.setspecific(threadStateKey, thr);
+    }
+    return thr;
+}
+
+static void OnThreadTerminate(void *ptr)
+{
+    free(ptr);
+}
+
+static void CommonEntrypoint(void)
+{
+    DummyThreadState *thr = GetThreadState();
+    thr->lastError = EGL_SUCCESS;
+}
+
+static void SetLastError(EGLint error)
+{
+    DummyThreadState *thr = GetThreadState();
+    thr->lastError = error;
+}
+
+static DummyEGLDisplay *LookupEGLDisplay(EGLDisplay dpy)
+{
+    DummyEGLDisplay *disp = NULL;
+    glvnd_list_for_each_entry(disp, &displayList, entry) {
+        if (dpy == (EGLDisplay) disp) {
+            return disp;
+        }
+    }
+    // Libglvnd should never pass an invalid EGLDisplay handle to a vendor
+    // library.
+    printf("Invalid EGLDisplay %p\n", dpy);
+    abort();
+}
+
+static const char *dummyGetVendorString(int name)
+{
+    if (name == __EGL_VENDOR_STRING_PLATFORM_EXTENSIONS) {
+        return PLATFORM_EXTENSIONS;
+    }
+
+    return NULL;
+}
+
+static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display,
+      const EGLAttrib *attrib_list)
+{
+    CommonEntrypoint();
+    DummyEGLDisplay *disp = NULL;
+
+    if (platform == EGL_NONE) {
+        if (native_display != EGL_DEFAULT_DISPLAY) {
+            // If the native display is not EGL_DEFAULT_DISPLAY, then libEGL
+            // is supposed to guess a platform enum.
+            printf("getPlatformDisplay called without a platform enum.");
+            abort();
+        }
+
+        platform = EGL_DUMMY_PLATFORM;
+        native_display = NULL;
+    } else if (platform == EGL_DUMMY_PLATFORM) {
+        if (native_display != NULL) {
+            const char *name = (const char *) native_display;
+            if (strcmp(name, DUMMY_VENDOR_NAME) != 0) {
+                return EGL_NO_DISPLAY;
+            }
+
+            // Set the native_display pointer to NULL. This makes it simpler to
+            // find the same dispaly below.
+            native_display = NULL;
+        }
+    } else {
+        // We don't support this platform.
+        SetLastError(EGL_BAD_PARAMETER);
+        return EGL_NO_DISPLAY;
+    }
+
+    glvnd_list_for_each_entry(disp, &displayList, entry) {
+        if (disp->platform == platform && disp->native_display == native_display) {
+            return disp;
+        }
+    }
+
+    // Create a new DummyEGLDisplay structure.
+    disp = (DummyEGLDisplay *) calloc(1, sizeof(DummyEGLDisplay));
+    disp->platform = platform;
+    disp->native_display = native_display;
+    glvnd_list_append(&disp->entry, &displayList);
+    return disp;
+}
+
+/**
+ * A common function for a bunch of EGL functions that the dummy vendor doesn't
+ * implement. This just checks that the display is valid, and returns EGL_FALSE.
+ */
+static EGLBoolean CommonDisplayStub(EGLDisplay dpy)
+{
+    CommonEntrypoint();
+    LookupEGLDisplay(dpy);
+    return EGL_FALSE;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglInitialize(EGLDisplay dpy,
+        EGLint *major, EGLint *minor)
+{
+    CommonEntrypoint();
+    LookupEGLDisplay(dpy);
+
+    *major = 1;
+    *minor = 5;
+    return EGL_TRUE;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglTerminate(EGLDisplay dpy)
+{
+    CommonEntrypoint();
+    LookupEGLDisplay(dpy);
+    return EGL_TRUE;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglChooseConfig(EGLDisplay dpy,
+        const EGLint *attrib_list, EGLConfig *configs, EGLint config_size,
+        EGLint *num_config)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglGetConfigs(EGLDisplay dpy, EGLConfig *configs,
+        EGLint config_size, EGLint *num_config)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglCopyBuffers(EGLDisplay dpy, EGLSurface surface, EGLNativePixmapType target)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLContext EGLAPIENTRY dummy_eglCreateContext(EGLDisplay dpy,
+        EGLConfig config, EGLContext share_context, const EGLint *attrib_list)
+{
+    CommonEntrypoint();
+    LookupEGLDisplay(dpy);
+    return EGL_NO_CONTEXT;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglDestroyContext(EGLDisplay dpy, EGLContext ctx)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLSurface CommonCreateSurface(EGLDisplay dpy)
+{
+    CommonEntrypoint();
+    LookupEGLDisplay(dpy);
+    return EGL_NO_SURFACE;
+}
+
+static EGLSurface dummy_eglCreatePlatformWindowSurface(EGLDisplay dpy,
+        EGLConfig config, void *native_window, const EGLAttrib *attrib_list)
+{
+    return CommonCreateSurface(dpy);
+}
+
+static EGLSurface dummy_eglCreatePlatformPixmapSurface(EGLDisplay dpy,
+        EGLConfig config, void *native_pixmap, const EGLAttrib *attrib_list)
+{
+    return CommonCreateSurface(dpy);
+}
+
+static EGLSurface EGLAPIENTRY dummy_eglCreatePbufferSurface(EGLDisplay dpy,
+        EGLConfig config, const EGLint *attrib_list)
+{
+    return CommonCreateSurface(dpy);
+}
+
+static EGLSurface EGLAPIENTRY dummy_eglCreatePixmapSurface(EGLDisplay dpy,
+        EGLConfig config, EGLNativePixmapType pixmap, const EGLint *attrib_list)
+{
+    return CommonCreateSurface(dpy);
+}
+
+static EGLSurface EGLAPIENTRY dummy_eglCreateWindowSurface(EGLDisplay dpy,
+        EGLConfig config, EGLNativeWindowType win, const EGLint *attrib_list)
+{
+    return CommonCreateSurface(dpy);
+}
+
+static EGLSurface EGLAPIENTRY dummy_eglCreatePbufferFromClientBuffer(EGLDisplay dpy,
+        EGLenum buftype, EGLClientBuffer buffer, EGLConfig config,
+        const EGLint *attrib_list)
+{
+    return CommonCreateSurface(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglDestroySurface(EGLDisplay dpy, EGLSurface surface)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglGetConfigAttrib(EGLDisplay dpy, EGLConfig config, EGLint attribute, EGLint *value)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglQueryContext(EGLDisplay dpy, EGLContext ctx, EGLint attribute, EGLint *value)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static const char * EGLAPIENTRY dummy_eglQueryString(EGLDisplay dpy, EGLenum name)
+{
+    CommonEntrypoint();
+
+    if (dpy == EGL_NO_DISPLAY) {
+        if (name == EGL_VERSION) {
+            return "1.5 EGL dummy";
+        } else if (name == EGL_EXTENSIONS) {
+            return CLIENT_EXTENSIONS;
+        } else {
+            return NULL;
+        }
+    }
+
+    LookupEGLDisplay(dpy);
+
+    if (name == EGL_VENDOR) {
+        return DUMMY_VENDOR_NAME;
+    } else if (name == EGL_CLIENT_APIS) {
+        return "OpenGL OpenGL_ES";
+    } else if (name == EGL_EXTENSIONS) {
+        return DISPLAY_EXTENSIONS;
+    } else {
+        return NULL;
+    }
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglQuerySurface(EGLDisplay dpy, EGLSurface surface, EGLint attribute, EGLint *value)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglWaitGL(void)
+{
+    CommonEntrypoint();
+    return EGL_FALSE;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglWaitNative(EGLint engine)
+{
+    CommonEntrypoint();
+    return EGL_FALSE;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglBindTexImage(EGLDisplay dpy, EGLSurface surface, EGLint buffer)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglReleaseTexImage(EGLDisplay dpy, EGLSurface surface, EGLint buffer)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglSurfaceAttrib(EGLDisplay dpy, EGLSurface surface, EGLint attribute, EGLint value)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglSwapInterval(EGLDisplay dpy, EGLint interval)
+{
+    return CommonDisplayStub(dpy);
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglBindAPI(EGLenum api)
+{
+    CommonEntrypoint();
+    if (api != EGL_OPENGL_API && api != EGL_OPENGL_ES_API) {
+        printf("eglBindAPI called with invalid API 0x%04x\n", api);
+        abort();
+    }
+    return EGL_TRUE;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglReleaseThread(void)
+{
+    CommonEntrypoint();
+    return EGL_TRUE;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglWaitClient(void)
+{
+    CommonEntrypoint();
+    return EGL_FALSE;
+}
+
+static EGLint EGLAPIENTRY dummy_eglGetError(void)
+{
+    DummyThreadState *thr = GetThreadState();
+    EGLint error = thr->lastError;
+    thr->lastError = EGL_SUCCESS;
+    return error;
+}
+
+static const struct {
+    const char *name;
+    void *addr;
+} PROC_ADDRESSES[] = {
+#define PROC_ENTRY(name) { #name, (void *)dummy_ ## name }
+    PROC_ENTRY(eglInitialize),
+    PROC_ENTRY(eglTerminate),
+    PROC_ENTRY(eglChooseConfig),
+    PROC_ENTRY(eglGetConfigs),
+    PROC_ENTRY(eglCopyBuffers),
+    PROC_ENTRY(eglCreateContext),
+    PROC_ENTRY(eglDestroyContext),
+    PROC_ENTRY(eglCreatePlatformWindowSurface),
+    PROC_ENTRY(eglCreatePlatformPixmapSurface),
+    PROC_ENTRY(eglCreatePbufferSurface),
+    PROC_ENTRY(eglCreatePixmapSurface),
+    PROC_ENTRY(eglCreateWindowSurface),
+    PROC_ENTRY(eglCreatePbufferFromClientBuffer),
+    PROC_ENTRY(eglDestroySurface),
+    PROC_ENTRY(eglGetConfigAttrib),
+    PROC_ENTRY(eglMakeCurrent),
+    PROC_ENTRY(eglQueryContext),
+    PROC_ENTRY(eglQueryString),
+    PROC_ENTRY(eglQuerySurface),
+    PROC_ENTRY(eglSwapBuffers),
+    PROC_ENTRY(eglWaitGL),
+    PROC_ENTRY(eglWaitNative),
+    PROC_ENTRY(eglBindTexImage),
+    PROC_ENTRY(eglReleaseTexImage),
+    PROC_ENTRY(eglSurfaceAttrib),
+    PROC_ENTRY(eglSwapInterval),
+    PROC_ENTRY(eglBindAPI),
+    PROC_ENTRY(eglReleaseThread),
+    PROC_ENTRY(eglWaitClient),
+    PROC_ENTRY(eglGetError),
+#undef PROC_ENTRY
+    { NULL, NULL }
+};
+
+static void *dummyGetProcAddress(const char *procName)
+{
+    int i;
+    for (i=0; PROC_ADDRESSES[i].name != NULL; i++) {
+        if (strcmp(procName, PROC_ADDRESSES[i].name) == 0) {
+            return PROC_ADDRESSES[i].addr;
+        }
+    }
+    return NULL;
+}
+
+static void *dummyFindDispatchFunction(const char *name)
+{
+    return NULL;
+}
+
+static void dummySetDispatchIndex(const char *name, int index)
+{
+}
+
+static EGLBoolean dummyGetSupportsAPI(EGLenum api)
+{
+    if (api == EGL_OPENGL_ES_API || api == EGL_OPENGL_API) {
+        return EGL_TRUE;
+    } else {
+        return EGL_FALSE;
+    }
+}
+
+PUBLIC EGLBoolean
+__egl_Main(uint32_t version, const __EGLapiExports *exports,
+     __EGLvendorInfo *vendor, __EGLapiImports *imports)
+{
+    if (EGL_VENDOR_ABI_GET_MAJOR_VERSION(version) !=
+        EGL_VENDOR_ABI_MAJOR_VERSION) {
+        return EGL_FALSE;
+    }
+
+    if (apiExports != NULL) {
+        // Already initialized.
+        return EGL_TRUE;
+    }
+
+    glvndSetupPthreads();
+
+    apiExports = exports;
+    __glvndPthreadFuncs.key_create(&threadStateKey, OnThreadTerminate);
+    glvnd_list_init(&displayList);
+
+    imports->getPlatformDisplay = dummyGetPlatformDisplay;
+    imports->getSupportsAPI = dummyGetSupportsAPI;
+    imports->getVendorString = dummyGetVendorString;
+    imports->getProcAddress = dummyGetProcAddress;
+    imports->getDispatchAddress = dummyFindDispatchFunction;
+    imports->setDispatchIndex = dummySetDispatchIndex;
+
+    return EGL_TRUE;
+}
+
