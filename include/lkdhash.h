@@ -12,6 +12,13 @@
  */
 
 #include "glvnd_pthread.h"
+
+/*
+ *  Macro to handle uthash_fatal error - Avoid using exit()
+ */
+#include "../src/util/app_error_check.h"
+#define uthash_fatal(msg) glvndAppErrorCheckReportError("Error: %s\n", msg); break
+
 #include "uthash.h"
 
 /*

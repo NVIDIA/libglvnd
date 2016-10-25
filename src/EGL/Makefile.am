@@ -59,6 +59,7 @@ libEGL_la_CFLAGS += $(PTHREAD_CFLAGS)
 libEGL_la_LIBADD = -ldl
 libEGL_la_LIBADD += -lm
 libEGL_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
+libEGL_la_LIBADD += $(UTIL_DIR)/libapp_error_check.la
 libEGL_la_LIBADD += $(UTIL_DIR)/libtrace.la
 libEGL_la_LIBADD += $(UTIL_DIR)/libglvnd_pthread.la
 libEGL_la_LIBADD += $(UTIL_DIR)/libutils_misc.la
