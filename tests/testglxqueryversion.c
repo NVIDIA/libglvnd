@@ -38,10 +38,19 @@ int main(int argc, char **argv)
     Display *dpy = XOpenDisplay(NULL);
     Bool ret;
     int major, minor;
+    int event, error;
 
     if (!dpy) {
         printError("No display!\n");
         return 1;
+    }
+
+    ret = XQueryExtension(dpy, "GLX", &major, &event, &error);
+    if (!ret) {
+        printError("Skipping test: The server does not support the GLX extension.\n");
+        // For automake tests, returning 77 indicates that this test was
+        // skipped instead of failing.
+        return 77;
     }
 
     ret = glXQueryVersion(dpy, &major, &minor);
