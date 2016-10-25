@@ -1088,7 +1088,7 @@ static void __eglResetOnFork(void);
  * Currently, this only detects whether a fork occurred since the last
  * entrypoint was called, and performs recovery as needed.
  */
-void __eglThreadInitialize(void)
+void CheckFork(void)
 {
     volatile static int g_threadsInCheck = 0;
     volatile static int g_lastPid = -1;
@@ -1120,7 +1120,11 @@ void __eglThreadInitialize(void)
             sched_yield();
         }
     }
+}
 
+void __eglThreadInitialize(void)
+{
+    CheckFork();
     __glDispatchCheckMultithreaded();
 }
 
@@ -1190,7 +1194,7 @@ void _fini(void)
 #endif
 {
     /* Check for a fork before going further. */
-    __eglThreadInitialize();
+    CheckFork();
 
     /*
      * If libEGL owns the current API state, lose current
