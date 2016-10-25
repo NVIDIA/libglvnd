@@ -1026,8 +1026,18 @@ void __glXMappingTeardown(Bool doReset)
             __glvndPthreadFuncs.rwlock_init(&dpyInfoEntry->info.vendorLock, NULL);
         }
     } else {
+        __GLXvendorNameHash *pEntry, *tmp;
+
         /* Tear down all hashtables used in this file */
         __glvndWinsysDispatchCleanup();
+
+        // If a GLX vendor library has patched the OpenGL entrypoints, then
+        // unpatch them before we unload the vendors.
+        LKDHASH_RDLOCK(__glXVendorNameHash);
+        HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
+            __glDispatchForceUnpatch(pEntry->vendor.vendorID);
+        }
+        LKDHASH_UNLOCK(__glXVendorNameHash);
 
         LKDHASH_TEARDOWN(__GLXvendorConfigMappingHash,
                          fbconfigHashtable, NULL, NULL, False);

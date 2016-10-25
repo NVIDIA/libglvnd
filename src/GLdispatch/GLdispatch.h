@@ -320,4 +320,13 @@ PUBLIC __GLdispatchThreadState *__glDispatchGetCurrentThreadState(void);
  */
 PUBLIC void __glDispatchCheckMultithreaded(void);
 
+/**
+ * Tells libGLdispatch to unpatch the OpenGL entrypoints, but only if they were
+ * patched by the given vendor.
+ *
+ * This is called when libEGL or libGLX is unloaded, to remove any dangling
+ * pointers to the vendor library's patch callbacks.
+ */
+PUBLIC GLboolean __glDispatchForceUnpatch(int vendorID);
+
 #endif

@@ -144,6 +144,7 @@ void __eglTeardownVendors(void)
 
     glvnd_list_for_each_entry_safe(vendor, vendorTemp, &__eglVendorList, entry) {
         glvnd_list_del(&vendor->entry);
+        __glDispatchForceUnpatch(vendor->vendorID);
         TeardownVendor(vendor);
     }
 }
