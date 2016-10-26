@@ -36,6 +36,8 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+#include <X11/Xlib.h>
+
 #include "glvnd_pthread.h"
 #include "libeglabipriv.h"
 #include "libeglmapping.h"
@@ -48,6 +50,10 @@
 #include "utils_misc.h"
 
 #include "lkdhash.h"
+
+#if !defined(HAVE_RTLD_NOLOAD)
+#define RTLD_NOLOAD 0
+#endif
 
 /*!
  * This is the set of client extensions that libglvnd will support, if at least
@@ -142,9 +148,36 @@ static EGLBoolean _eglPointerIsDereferencable(void *p)
 #endif
 }
 
+static void *SafeDereference(void *ptr)
+{
+    if (_eglPointerIsDereferencable(ptr))
+        return *((void **)ptr);
+    return NULL;
+}
+
+static EGLBoolean IsX11Display(void *dpy)
+{
+    void *alloc;
+    void *handle;
+    void *XAllocID;
+
+    alloc = SafeDereference(&((_XPrivDisplay)dpy)->resource_alloc);
+    if (alloc == NULL) {
+        return EGL_FALSE;
+    }
+
+    handle = dlopen("libX11.so.6", RTLD_LOCAL | RTLD_LAZY | RTLD_NOLOAD);
+    if (handle != NULL) {
+        XAllocID = dlsym(handle, "_XAllocID");
+        dlclose(handle);
+    }
+
+    return (XAllocID != NULL && XAllocID == alloc);
+}
+
 static EGLBoolean IsWaylandDisplay(void *native_display)
 {
-    void *first_pointer = *(void **) native_display;
+    void *first_pointer = SafeDereference(native_display);
     Dl_info info;
 
     if (dladdr(first_pointer, &info) == 0) {
@@ -160,7 +193,8 @@ static EGLBoolean IsWaylandDisplay(void *native_display)
  */
 static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
 {
-    EGLBoolean waylandSupported;
+    EGLBoolean waylandSupported = EGL_FALSE;
+    EGLBoolean x11Supported = EGL_FALSE;
     struct glvnd_list *vendorList = __eglLoadVendors();
     __EGLvendorInfo *vendor;
 
@@ -170,25 +204,19 @@ static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
     }
 
     // Check if any vendor supports EGL_KHR_platform_wayland.
-    waylandSupported = EGL_FALSE;
     glvnd_list_for_each_entry(vendor, vendorList, entry) {
         if (vendor->supportsPlatformWayland) {
             waylandSupported = EGL_TRUE;
-            break;
+        }
+        if (vendor->supportsPlatformX11) {
+            x11Supported = EGL_TRUE;
         }
     }
 
-    // If display_id is a dereferenceable pointer, then see if it looks like
-    // a Wayland display.
-    if (waylandSupported && _eglPointerIsDereferencable(display_id)) {
-        if (IsWaylandDisplay(display_id)) {
-            return EGL_PLATFORM_WAYLAND_KHR;
-        }
+    if (waylandSupported && IsWaylandDisplay(display_id)) {
+        return EGL_PLATFORM_WAYLAND_KHR;
     }
-
-    // If there's a DISPLAY environment variable, then assume it's an X11
-    // display.
-    if (getenv("DISPLAY") != NULL) {
+    if (x11Supported && IsX11Display(display_id)) {
         return EGL_PLATFORM_X11_KHR;
     }
 
