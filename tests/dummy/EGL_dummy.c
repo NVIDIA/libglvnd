@@ -61,6 +61,7 @@ static const EGLint DUMMY_EGL_CONFIG_COUNT = 2;
 typedef struct DummyEGLDisplayRec {
     EGLenum platform;
     void *native_display;
+    EGLLabelKHR label;
 
     struct glvnd_list entry;
 } DummyEGLDisplay;
@@ -68,12 +69,16 @@ typedef struct DummyEGLDisplayRec {
 typedef struct DummyThreadStateRec {
     EGLint lastError;
     EGLContext currentContext;
+    EGLLabelKHR label;
 } DummyThreadState;
 
 static const __EGLapiExports *apiExports = NULL;
 static glvnd_key_t threadStateKey;
 static struct glvnd_list displayList;
 static EGLint failNextMakeCurrentError = EGL_NONE;
+
+static EGLDEBUGPROCKHR debugCallbackFunc = NULL;
+static EGLBoolean debugCallbackEnabled = EGL_TRUE;
 
 static DummyThreadState *GetThreadState(void)
 {
@@ -102,10 +107,16 @@ static void CommonEntrypoint(void)
     thr->lastError = EGL_SUCCESS;
 }
 
-static void SetLastError(EGLint error)
+static void SetLastError(const char *command, EGLLabelKHR label, EGLint error)
 {
     DummyThreadState *thr = GetThreadState();
+
     thr->lastError = error;
+
+    if (error != EGL_SUCCESS && debugCallbackFunc != NULL && debugCallbackEnabled) {
+        debugCallbackFunc(error, command, EGL_DEBUG_MSG_ERROR_KHR, thr->label,
+                label, DUMMY_VENDOR_NAME);
+    }
 }
 
 static DummyEGLDisplay *LookupEGLDisplay(EGLDisplay dpy)
@@ -189,7 +200,7 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
         }
     } else {
         // We don't support this platform.
-        SetLastError(EGL_BAD_PARAMETER);
+        SetLastError("eglGetPlatformDisplay", NULL, EGL_BAD_PARAMETER);
         return EGL_NO_DISPLAY;
     }
 
@@ -258,15 +269,16 @@ static EGLContext EGLAPIENTRY dummy_eglCreateContext(EGLDisplay dpy,
         EGLConfig config, EGLContext share_context, const EGLint *attrib_list)
 {
     DummyEGLContext *dctx;
+    DummyEGLDisplay *disp;
 
     CommonEntrypoint();
-    LookupEGLDisplay(dpy);
+    disp = LookupEGLDisplay(dpy);
 
     if (attrib_list != NULL) {
         int i;
         for (i=0; attrib_list[i] != EGL_NONE; i += 2) {
             if (attrib_list[i] == EGL_CREATE_CONTEXT_FAIL) {
-                SetLastError(attrib_list[i + 1]);
+                SetLastError("eglCreateContext", disp->label, attrib_list[i + 1]);
                 return EGL_NO_CONTEXT;
             } else {
                 printf("Invalid attribute 0x%04x in eglCreateContext\n", attrib_list[i]);
@@ -355,7 +367,7 @@ static EGLBoolean EGLAPIENTRY dummy_eglMakeCurrent(EGLDisplay dpy, EGLSurface dr
     LookupEGLDisplay(dpy);
 
     if (failNextMakeCurrentError != EGL_NONE) {
-        SetLastError(failNextMakeCurrentError);
+        SetLastError("eglMakeCurrent", NULL, failNextMakeCurrentError);
         failNextMakeCurrentError = EGL_NONE;
         return EGL_FALSE;
     }
@@ -493,6 +505,51 @@ static EGLBoolean EGLAPIENTRY dummy_eglQueryDevicesEXT(EGLint max_devices, EGLDe
         *num_devices = DUMMY_EGL_DEVICE_COUNT;
     }
     return EGL_TRUE;
+}
+
+static EGLint EGLAPIENTRY dummy_eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback, const EGLAttrib *attrib_list)
+{
+    CommonEntrypoint();
+
+    if (callback != NULL) {
+        if (attrib_list != NULL) {
+            int i;
+            for (i=0; attrib_list[i] != EGL_NONE; i += 2) {
+                if (EGL_DEBUG_MSG_ERROR_KHR) {
+                    debugCallbackEnabled = (attrib_list[i + 1] != 0);
+                }
+            }
+        }
+    } else {
+        debugCallbackEnabled = EGL_TRUE;
+    }
+    debugCallbackFunc = callback;
+
+    return EGL_SUCCESS;
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglQueryDebugKHR(EGLint attribute, EGLAttrib *value)
+{
+    // eglQueryDebugKHR should never be called, because libEGL keeps track of
+    // all of the debug state.
+    printf("eglQueryDebugKHR should never be called\n");
+    abort();
+    return EGL_FALSE;
+}
+
+static EGLint EGLAPIENTRY dummy_eglLabelObjectKHR(EGLDisplay dpy,
+        EGLenum objectType, EGLObjectKHR object, EGLLabelKHR label)
+{
+    CommonEntrypoint();
+
+    if (objectType == EGL_OBJECT_THREAD_KHR) {
+        DummyThreadState *thr = GetThreadState();
+        thr->label = label;
+    } else if (objectType == EGL_OBJECT_DISPLAY_KHR) {
+        DummyEGLDisplay *disp = LookupEGLDisplay(dpy);
+        disp->label = label;
+    }
+    return EGL_SUCCESS;
 }
 
 static const GLubyte *dummy_glGetString(GLenum name)
@@ -666,6 +723,9 @@ static const struct {
     PROC_ENTRY(eglGetError),
 
     PROC_ENTRY(eglQueryDevicesEXT),
+    PROC_ENTRY(eglDebugMessageControlKHR),
+    PROC_ENTRY(eglQueryDebugKHR),
+    PROC_ENTRY(eglLabelObjectKHR),
 
     PROC_ENTRY(glGetString),
 #undef PROC_ENTRY

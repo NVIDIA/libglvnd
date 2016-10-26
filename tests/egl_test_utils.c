@@ -9,6 +9,9 @@ const char *DUMMY_VENDOR_NAMES[DUMMY_VENDOR_COUNT] = {
 };
 
 PFNEGLQUERYDEVICESEXTPROC ptr_eglQueryDevicesEXT;
+PFNEGLDEBUGMESSAGECONTROLKHRPROC ptr_eglDebugMessageControlKHR;
+PFNEGLQUERYDEBUGKHRPROC ptr_eglQueryDebugKHR;
+PFNEGLLABELOBJECTKHRPROC ptr_eglLabelObjectKHR;
 
 pfn_eglTestDispatchDisplay ptr_eglTestDispatchDisplay;
 pfn_eglTestDispatchDevice ptr_eglTestDispatchDevice;
@@ -28,6 +31,12 @@ void loadEGLExtensions(void)
 {
     ptr_eglQueryDevicesEXT = (PFNEGLQUERYDEVICESEXTPROC)
         loadEGLFunction("eglQueryDevicesEXT");
+    ptr_eglDebugMessageControlKHR = (PFNEGLDEBUGMESSAGECONTROLKHRPROC)
+        loadEGLFunction("eglDebugMessageControlKHR");
+    ptr_eglQueryDebugKHR = (PFNEGLQUERYDEBUGKHRPROC)
+        loadEGLFunction("eglQueryDebugKHR");
+    ptr_eglLabelObjectKHR = (PFNEGLLABELOBJECTKHRPROC)
+        loadEGLFunction("eglLabelObjectKHR");
 
     ptr_eglTestDispatchDisplay = (pfn_eglTestDispatchDisplay)
         loadEGLFunction("eglTestDispatchDisplay");

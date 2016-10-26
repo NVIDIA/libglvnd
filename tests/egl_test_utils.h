@@ -48,6 +48,9 @@
 extern const char *DUMMY_VENDOR_NAMES[DUMMY_VENDOR_COUNT];
 
 extern PFNEGLQUERYDEVICESEXTPROC ptr_eglQueryDevicesEXT;
+extern PFNEGLDEBUGMESSAGECONTROLKHRPROC ptr_eglDebugMessageControlKHR;
+extern PFNEGLQUERYDEBUGKHRPROC ptr_eglQueryDebugKHR;
+extern PFNEGLLABELOBJECTKHRPROC ptr_eglLabelObjectKHR;
 
 extern pfn_eglTestDispatchDisplay ptr_eglTestDispatchDisplay;
 extern pfn_eglTestDispatchDevice ptr_eglTestDispatchDevice;
