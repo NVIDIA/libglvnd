@@ -71,6 +71,15 @@
  */
 #define EGL_DUMMY_PLATFORM 0x010000
 
+/**
+ * This attrbute tells eglCreateContext to set an error and fail. This is used
+ * for testing eglGetError and the EGL_KHR_debug functions.
+ *
+ * For EGL_KHR_debug, the vendor will call the debug callback with its vendor
+ * name for the message string.
+ */
+#define EGL_CREATE_CONTEXT_FAIL 0x010001
+
 enum
 {
     DUMMY_COMMAND_GET_VENDOR_NAME,

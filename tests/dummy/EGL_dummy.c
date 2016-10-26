@@ -262,6 +262,19 @@ static EGLContext EGLAPIENTRY dummy_eglCreateContext(EGLDisplay dpy,
     CommonEntrypoint();
     LookupEGLDisplay(dpy);
 
+    if (attrib_list != NULL) {
+        int i;
+        for (i=0; attrib_list[i] != EGL_NONE; i += 2) {
+            if (attrib_list[i] == EGL_CREATE_CONTEXT_FAIL) {
+                SetLastError(attrib_list[i + 1]);
+                return EGL_NO_CONTEXT;
+            } else {
+                printf("Invalid attribute 0x%04x in eglCreateContext\n", attrib_list[i]);
+                abort();
+            }
+        }
+    }
+
     dctx = (DummyEGLContext *) calloc(1, sizeof(DummyEGLContext));
     dctx->vendorName = DUMMY_VENDOR_NAME;
 

@@ -52,7 +52,8 @@ TESTS = \
 	testegldisplay.sh \
 	testegldevice.sh \
 	testeglgetprocaddress.sh \
-	testeglmakecurrent.sh
+	testeglmakecurrent.sh \
+	testeglerror.sh
 
 EXTRA_DIST = $(TESTS) \
 	glxenv.sh \
@@ -70,7 +71,8 @@ check_PROGRAMS = \
 	testegldisplay \
 	testegldevice \
 	testeglgetprocaddress \
-	testeglmakecurrent
+	testeglmakecurrent \
+	testeglerror
 
 # The *_oldlink variant tests that linking against legacy libGL.so works
 
@@ -155,3 +157,9 @@ testeglmakecurrent_SOURCES = \
 	egl_test_utils.c
 testeglmakecurrent_LDADD = $(top_builddir)/src/EGL/libEGL.la
 testeglmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
+
+testeglerror_SOURCES = \
+	testeglerror.c \
+	egl_test_utils.c
+testeglerror_LDADD = $(top_builddir)/src/EGL/libEGL.la
+testeglerror_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
