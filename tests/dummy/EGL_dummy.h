@@ -73,8 +73,18 @@
 
 enum
 {
-    DUMMY_COMMAND_GET_VENDOR_NAME
+    DUMMY_COMMAND_GET_VENDOR_NAME,
+    DUMMY_COMMAND_GET_CURRENT_CONTEXT,
+    DUMMY_COMMAND_FAIL_NEXT_MAKE_CURRENT,
 };
+
+/**
+ * The struct that an EGLContext points to. This is used to test
+ * eglCreateContext and eglMakeCurrent.
+ */
+typedef struct DummyEGLContextRec {
+    const char *vendorName;
+} DummyEGLContext;
 
 /**
  * A simple EGL extension function with a vendor-provided dispatch stub.

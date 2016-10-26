@@ -67,15 +67,13 @@ typedef struct DummyEGLDisplayRec {
 
 typedef struct DummyThreadStateRec {
     EGLint lastError;
+    EGLContext currentContext;
 } DummyThreadState;
-
-typedef struct DummyEGLContextRec {
-    int unused;
-} DummyEGLContext;
 
 static const __EGLapiExports *apiExports = NULL;
 static glvnd_key_t threadStateKey;
 static struct glvnd_list displayList;
+static EGLint failNextMakeCurrentError = EGL_NONE;
 
 static DummyThreadState *GetThreadState(void)
 {
@@ -265,6 +263,7 @@ static EGLContext EGLAPIENTRY dummy_eglCreateContext(EGLDisplay dpy,
     LookupEGLDisplay(dpy);
 
     dctx = (DummyEGLContext *) calloc(1, sizeof(DummyEGLContext));
+    dctx->vendorName = DUMMY_VENDOR_NAME;
 
     return (EGLContext) dctx;
 }
@@ -337,8 +336,20 @@ static EGLBoolean EGLAPIENTRY dummy_eglGetConfigAttrib(EGLDisplay dpy, EGLConfig
 
 static EGLBoolean EGLAPIENTRY dummy_eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx)
 {
+    DummyThreadState *thr;
     CommonEntrypoint();
+
     LookupEGLDisplay(dpy);
+
+    if (failNextMakeCurrentError != EGL_NONE) {
+        SetLastError(failNextMakeCurrentError);
+        failNextMakeCurrentError = EGL_NONE;
+        return EGL_FALSE;
+    }
+
+    thr = GetThreadState();
+    thr->currentContext = ctx;
+
     return EGL_TRUE;
 }
 
@@ -428,7 +439,12 @@ static EGLBoolean EGLAPIENTRY dummy_eglBindAPI(EGLenum api)
 
 static EGLBoolean EGLAPIENTRY dummy_eglReleaseThread(void)
 {
-    CommonEntrypoint();
+    DummyThreadState *thr = (DummyThreadState *)
+        __glvndPthreadFuncs.getspecific(threadStateKey);
+    if (thr != NULL) {
+        __glvndPthreadFuncs.setspecific(threadStateKey, NULL);
+        free(thr);
+    }
     return EGL_TRUE;
 }
 
@@ -486,6 +502,12 @@ static void *CommonTestDispatch(const char *funcName,
 
     if (command == DUMMY_COMMAND_GET_VENDOR_NAME) {
         // Just return the vendor name and don't do anything else.
+        return DUMMY_VENDOR_NAME;
+    } else if (command == DUMMY_COMMAND_GET_CURRENT_CONTEXT) {
+        DummyThreadState *thr = GetThreadState();
+        return (void *) thr->currentContext;
+    } else if (command == DUMMY_COMMAND_FAIL_NEXT_MAKE_CURRENT) {
+        failNextMakeCurrentError = (EGLint) param;
         return DUMMY_VENDOR_NAME;
     } else {
         printf("Invalid command: %d\n", command);
