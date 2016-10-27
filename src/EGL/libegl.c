@@ -159,7 +159,7 @@ static EGLBoolean IsX11Display(void *dpy)
 {
     void *alloc;
     void *handle;
-    void *XAllocID;
+    void *XAllocID = NULL;
 
     alloc = SafeDereference(&((_XPrivDisplay)dpy)->resource_alloc);
     if (alloc == NULL) {
