@@ -546,10 +546,18 @@ __GLXvendorInfo *__glXLookupVendorByScreen(Display *dpy, const int screen)
          * If we have specified a vendor library, use that. Otherwise,
          * try to lookup the vendor based on the current screen.
          */
-        const char *preloadedVendorName = getenv("__GLX_VENDOR_LIBRARY_NAME");
+        char envName[40];
+        const char *specifiedVendorName;
 
-        if (preloadedVendorName) {
-            vendor = __glXLookupVendorByName(preloadedVendorName);
+        snprintf(envName, sizeof(envName), "__GLX_FORCE_VENDOR_LIBRARY_%d", screen);
+        specifiedVendorName = getenv(envName);
+
+        if (specifiedVendorName == NULL) {
+            specifiedVendorName = getenv("__GLX_VENDOR_LIBRARY_NAME");
+        }
+
+        if (specifiedVendorName) {
+            vendor = __glXLookupVendorByName(specifiedVendorName);
         }
 
         if (!vendor) {

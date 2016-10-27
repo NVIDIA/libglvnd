@@ -30,34 +30,33 @@
 #include <GL/glx.h>
 #include <GL/gl.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#define PROC_DEFINES(ret, proc, params)  \
-    typedef ret (*PTR_ ## proc) params ; \
-    static PTR_ ## proc p_ ## proc
+typedef __GLXextFuncPtr (* pfn_glXGetProcAddress) (const GLubyte *procName);
+static pfn_glXGetProcAddress ptr_glXGetProcAddress;
 
-#define CHECK_PROC(proc, args) do {                             \
-    printf("checking " #proc "\n");                             \
-    if (!(p_ ## proc =                                          \
-         (PTR_ ## proc)glXGetProcAddress((GLubyte *)#proc))) {  \
-        printf("failed to get " #proc "!\n");                   \
-        goto fail;                                              \
-    }                                                           \
-    (*p_ ## proc) args;                                         \
-} while (0)
+typedef void (* pfn_glXWaitGL) (void);
+static pfn_glXWaitGL ptr_glXWaitGL;
 
-PROC_DEFINES(void *, glXGetProcAddress, (GLubyte *procName));
-PROC_DEFINES(void, glXWaitGL, (void));
-PROC_DEFINES(void, glVertex3fv, (GLfloat *v));
-PROC_DEFINES(void, glXExampleExtensionFunction,
-             (Display *dpy, int screen, int *retval));
-PROC_DEFINES(void, glBogusFunc1, (int a, int b, int c));
-PROC_DEFINES(void, glBogusFunc2, (int a, int b, int c));
+typedef void (* pfn_glVertex3fv) (const GLfloat *v);
+static pfn_glVertex3fv ptr_glVertex3fv;
+
+typedef void (* pfn_glXExampleExtensionFunction) (Display *dpy, int screen, int *retval);
+static pfn_glXExampleExtensionFunction ptr_glXExampleExtensionFunction;
+
+typedef void (* pfn_glBogusFunc1) (int a, int b, int c);
+static pfn_glBogusFunc1 ptr_glBogusFunc1;
+
+typedef void (* pfn_glBogusFunc2) (int a, int b, int c);
+static pfn_glBogusFunc2 ptr_glBogusFunc2;
+
+static void *LoadFunction(const char *name);
 
 int main(int argc, char **argv)
 {
     Display *dpy = NULL;
-
     int retval = 0;
+
     /*
      * Try GetProcAddress on different classes of API functions, and bogus
      * functions. The API library should return entry point addresses for
@@ -68,15 +67,32 @@ int main(int argc, char **argv)
     dpy = XOpenDisplay(NULL);
     if (dpy == NULL) {
         printf("Can't open display\n");
-        goto fail;
+        return 1;
     }
+
+    /*
+     * Load the function addresses up front. Note that in order to test GLX
+     * entrypoint generation, we have to load the functions early, before
+     * libGLX.so loads the vendor library.
+     */
+    ptr_glXGetProcAddress = (pfn_glXGetProcAddress)
+        LoadFunction("glXGetProcAddress");
+    ptr_glXWaitGL = (pfn_glXWaitGL) LoadFunction("glXWaitGL");
+    ptr_glXExampleExtensionFunction = (pfn_glXExampleExtensionFunction)
+        LoadFunction("glXExampleExtensionFunction");
+    ptr_glVertex3fv = (pfn_glVertex3fv) LoadFunction("glVertex3fv");
+    ptr_glBogusFunc1 = (pfn_glBogusFunc1) LoadFunction("glBogusFunc1");
+    ptr_glBogusFunc2 = (pfn_glBogusFunc2) LoadFunction("glBogusFunc2");
 
     /*
      * Test core GLX dispatch functions implemented by API library. This
      * simply returns the symbol exported by libGLX.
      */
-    CHECK_PROC(glXGetProcAddress, ((GLubyte *)"glBogusFunc1"));
-    CHECK_PROC(glXWaitGL, ());
+    ptr_glXGetProcAddress((const GLubyte *) "glBogusFunc1");
+    ptr_glXWaitGL();
+
+    // Call glXGetClientString to force libGLX to load the vendor library.
+    glXGetClientString(dpy, GLX_EXTENSIONS);
 
     /*
      * Test a "GLX extension" function with a vendor-neutral dispatcher
@@ -85,11 +101,10 @@ int main(int argc, char **argv)
      * (a zero value indicates we might be calling into a no-op stub generated
      * by libGLdispatch).
      */
-    CHECK_PROC(glXExampleExtensionFunction, (dpy, DefaultScreen(dpy), &retval));
-
+    ptr_glXExampleExtensionFunction(dpy, 0, &retval);
     if (!retval) {
         printf("Unexpected glXExampleExtensionFunction() return value!\n");
-        goto fail;
+        return 1;
     }
 
     /*
@@ -98,7 +113,7 @@ int main(int argc, char **argv)
      * Note calling this function with a NULL pointer is fine since this is a
      * no-op function while there is no context current.
      */
-    CHECK_PROC(glVertex3fv, (NULL));
+    ptr_glVertex3fv(NULL);
 
     /*
      * These are bogus functions, but will get a valid entry point since they
@@ -108,12 +123,21 @@ int main(int argc, char **argv)
      *
      * Again, calling these functions should be a no-op.
      */
-    CHECK_PROC(glBogusFunc1, (0, 0, 0));
-    CHECK_PROC(glBogusFunc2, (1, 1, 1));
+    ptr_glBogusFunc1(0, 0, 0);
+    ptr_glBogusFunc2(1, 1, 1);
 
     // Success!
     return 0;
-
-fail:
-    return -1;
 }
+
+static void *LoadFunction(const char *name)
+{
+    __GLXextFuncPtr func = glXGetProcAddress((const GLubyte *) name);
+    if (func == NULL) {
+        printf("failed to get %s!\n", name);
+        exit(1);
+    }
+
+    return (void *) func;
+}
+
