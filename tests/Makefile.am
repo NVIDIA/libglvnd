@@ -36,7 +36,6 @@ TESTS_ENVIRONMENT = \
 	ABS_TOP_BUILDDIR=$(abs_top_builddir)
 
 TESTS = \
-	init_test_env.sh \
 	testglxgetprocaddress.sh \
 	testglxgetprocaddress_genentry.sh \
 	testglxmcbasic.sh \
@@ -47,8 +46,7 @@ TESTS = \
 	testglxgetclientstr.sh \
 	testglxqueryversion.sh \
 	testpatchentrypoints.sh \
-	testpatchentrypoints_gldispatch.sh \
-	fini_test_env.sh
+	testpatchentrypoints_gldispatch.sh
 
 EXTRA_DIST = $(TESTS) \
 	glxenv.sh
