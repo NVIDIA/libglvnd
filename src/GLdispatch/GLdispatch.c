@@ -570,8 +570,10 @@ static int PatchEntrypoints(
 
     if (stubCurrentPatchCb) {
         // Notify the previous vendor that it no longer owns these
-        // entrypoints.
-        if (stubCurrentPatchCb->releasePatch != NULL) {
+        // entrypoints. If this is being called from a library unload,
+        // though, then skip the callback, because the vendor may have
+        // already been unloaded.
+        if (stubCurrentPatchCb->releasePatch != NULL && !force) {
             stubCurrentPatchCb->releasePatch();
         }
 
