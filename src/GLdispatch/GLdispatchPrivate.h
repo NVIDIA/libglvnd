@@ -44,8 +44,11 @@ struct __GLdispatchTableRec {
     /*! Number of threads this dispatch is current on */
     int currentThreads;
 
-    /*! Generation number for tracking whether this needs fixup */
-    int generation;
+    /*!
+     * The number of dispatch table entries that have been populated. This is
+     * used to update the table after generating new dispatch stubs.
+     */
+    int stubsPopulated;
 
     /*! Saved vendor library callbacks */
     __GLgetProcAddressCallback getProcAddress;

@@ -201,6 +201,11 @@ stub_get_name(const struct mapi_stub *stub)
    return stub->name;
 }
 
+int stub_get_count(void)
+{
+    return ARRAY_SIZE(public_stubs) + num_dynamic_stubs;
+}
+
 #endif // !defined(STATIC_DISPATCH_ONLY)
 
 /**

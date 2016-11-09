@@ -70,22 +70,6 @@ typedef struct __GLdispatchThreadStatePrivateRec {
     __GLdispatchTable *dispatch;
 } __GLdispatchThreadStatePrivate;
 
-typedef struct __GLdispatchProcEntryRec {
-    char *procName;
-
-    // Cached offset of this dispatch entry, retrieved from
-    // _glapi_get_proc_offset()
-    int offset;
-
-    // The generation in which this dispatch entry was defined.
-    // Used to determine whether a given dispatch table needs to
-    // be fixed up with the right function address at this offset.
-    int generation;
-
-    // List handle
-    struct glvnd_list entry;
-} __GLdispatchProcEntry;
-
 /*
  * List of valid extension procs which have been assigned prototypes. At make
  * current time, if the new context's generation is out-of-date, we iterate
@@ -94,17 +78,6 @@ typedef struct __GLdispatchProcEntryRec {
  * lock.
  */
 static struct glvnd_list extProcList;
-
-/*
- * Monotonically increasing integer describing the most up-to-date "generation"
- * of the dispatch table. Used to determine if a given table needs fixup.
- * Accesses to this need to be protected by the dispatch lock.
- *
- * Note: wrapping is theoretically an issue here, but shouldn't happen in
- * practice as it requires calling GetProcAddress() on 2^31-1 unique functions.
- * We'll run out of dispatch stubs long before then.
- */
-static int latestGeneration;
 
 /*
  * Dispatch stub list for entrypoint rewriting.
@@ -257,59 +230,42 @@ static void DispatchCurrentUnref(__GLdispatchTable *dispatch)
  * Fix up a dispatch table. Calls to this function must be protected by the
  * dispatch lock.
  */
-static void FixupDispatchTable(__GLdispatchTable *dispatch)
+static GLboolean FixupDispatchTable(__GLdispatchTable *dispatch)
 {
     DBG_PRINTF(20, "dispatch=%p\n", dispatch);
     CheckDispatchLocked();
 
-    __GLdispatchProcEntry *curProc;
-    void *procAddr;
-    void **tbl = (void **)dispatch->table;
+    void **tbl;
+    int count = _glapi_get_stub_count();
+    int i;
 
-    /*
-     * For each proc in the extProcList, compare its gen# against that of
-     * the context. If greater, then fix up the dispatch table to contain
-     * the right entrypoint.
-     * XXX optimization: could we assume that the list is sorted by generation
-     * number and hence early out once we reach gen# <= the context's?
-     */
-    glvnd_list_for_each_entry(curProc, &extProcList, entry) {
-        if (curProc->generation > dispatch->generation) {
-            assert(curProc->offset != -1);
-            assert(curProc->procName);
-
-            procAddr = (void*)(*dispatch->getProcAddress)(
-                curProc->procName,
-                dispatch->getProcAddressParam);
-
-            tbl[curProc->offset] = procAddr ? procAddr : (void *)noop_func;
-            DBG_PRINTF(20, "extProc procName=%s, addr=%p, noop=%p\n",
-                       curProc->procName, procAddr, noop_func);
+    if (dispatch->table == NULL) {
+        dispatch->table = (struct _glapi_table *)
+            calloc(1, _glapi_get_dispatch_table_size() * sizeof(void *));
+        if (dispatch->table == NULL) {
+            return GL_FALSE;
         }
     }
 
-    dispatch->generation = latestGeneration;
-}
+    tbl = (void **)dispatch->table;
+    for (i=dispatch->stubsPopulated; i<count; i++) {
+        const char *name = _glapi_get_proc_name(i);
+        void *procAddr;
 
-static __GLdispatchProcEntry *FindProcInList(const char *procName,
-                                             struct glvnd_list *list)
-{
-    DBG_PRINTF(20, "%s\n", procName);
-    __GLdispatchProcEntry *curProc;
-    CheckDispatchLocked();
-    glvnd_list_for_each_entry(curProc, list, entry) {
-        if (!strcmp(curProc->procName, procName)) {
-            DBG_PRINTF(20, "yes\n");
-            return curProc;
-        }
+        assert(name != NULL);
+
+        procAddr = (void*)(*dispatch->getProcAddress)(
+            name, dispatch->getProcAddressParam);
+        tbl[i] = procAddr ? procAddr : (void *)noop_func;
     }
+    dispatch->stubsPopulated = count;
 
-    DBG_PRINTF(20, "no\n");
-    return NULL;
+    return GL_TRUE;
 }
 
 PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
 {
+    int prevCount;
     _glapi_proc addr;
 
     /*
@@ -317,33 +273,21 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
      * prevent races when retrieving the entrypoint stub.
      */
     LockDispatch();
-
+    prevCount = _glapi_get_stub_count();
     addr = _glapi_get_proc_address(procName);
+    if (addr != NULL && prevCount != _glapi_get_stub_count()) {
+        __GLdispatchTable *curDispatch;
 
-    DBG_PRINTF(20, "addr=%p\n", addr);
-    if (addr) {
-        if (!FindProcInList(procName, &extProcList))
-        {
-            __GLdispatchTable *curDispatch;
-            __GLdispatchProcEntry *pEntry = malloc(sizeof(*pEntry));
-            pEntry->procName = strdup(procName);
-            pEntry->offset = _glapi_get_proc_offset(procName);
-            assert(pEntry->offset >= 0);
-
-            /*
-             * Bump the latestGeneration, then assign it to this proc.
-             */
-            pEntry->generation = ++latestGeneration;
-
-            glvnd_list_add(&pEntry->entry, &extProcList);
-
-            /*
-             * Fixup any current dispatch tables to contain the right pointer
-             * to this proc.
-             */
-            glvnd_list_for_each_entry(curDispatch, &currentDispatchList, entry) {
-                FixupDispatchTable(curDispatch);
-            }
+        /*
+         * Fixup any current dispatch tables to contain the right pointer
+         * to this proc.
+         */
+        glvnd_list_for_each_entry(curDispatch, &currentDispatchList, entry) {
+            // Sanity check: Every current dispatch table must have already
+            // been allocated. That's important because it means
+            // FixupDispatchTable can't fail.
+            assert(curDispatch->table != NULL);
+            FixupDispatchTable(curDispatch);
         }
     }
     UnlockDispatch();
@@ -354,11 +298,10 @@ PUBLIC __GLdispatchProc __glDispatchGetProcAddress(const char *procName)
 PUBLIC __GLdispatchTable *__glDispatchCreateTable(
         __GLgetProcAddressCallback getProcAddress, void *param)
 {
-    __GLdispatchTable *dispatch = malloc(sizeof(__GLdispatchTable));
-
-    dispatch->generation = 0;
-    dispatch->currentThreads = 0;
-    dispatch->table = NULL;
+    __GLdispatchTable *dispatch = calloc(1, sizeof(__GLdispatchTable));
+    if (dispatch == NULL) {
+        return NULL;
+    }
 
     dispatch->getProcAddress = getProcAddress;
     dispatch->getProcAddressParam = param;
@@ -378,31 +321,6 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch)
     free(dispatch->table);
     free(dispatch);
     UnlockDispatch();
-}
-
-static void CreateGLAPITable(__GLdispatchTable *dispatch)
-{
-    int entries = (int) _glapi_get_dispatch_table_size();
-    void **table;
-    int i;
-
-    CheckDispatchLocked();
-
-    table = (void **) calloc(1, entries * sizeof(void *));
-    for (i=0; i<entries; i++) {
-        const char *name = _glapi_get_proc_name(i);
-        void *func;
-
-        if (name == NULL) {
-            // We found the last static or dynamic stub in the table.
-            break;
-        }
-
-        func = dispatch->getProcAddress(name, dispatch->getProcAddressParam);
-        table[i] = func ? func : (void *) noop_func;
-    }
-    dispatch->table = (struct _glapi_table *) table;
-    dispatch->generation = latestGeneration;
 }
 
 static int CurrentEntrypointsSafeToUse(int vendorID)
@@ -666,15 +584,10 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchThreadState *threadState,
         return GL_FALSE;
     }
 
-    if (!dispatch->table ||
-        (dispatch->generation < latestGeneration)) {
-
-        // Lazily create the dispatch table if we haven't already
-        if (!dispatch->table) {
-            CreateGLAPITable(dispatch);
-        }
-
-        FixupDispatchTable(dispatch);
+    if (!FixupDispatchTable(dispatch)) {
+        UnlockDispatch();
+        free(priv);
+        return GL_FALSE;
     }
 
     DispatchCurrentRef(dispatch);
@@ -813,19 +726,8 @@ void __glDispatchFini(void)
     clientRefcount--;
 
     if (clientRefcount == 0) {
-        __GLdispatchProcEntry *curProc, *tmpProc;
-
         /* This frees the dispatchStubList */
         UnregisterAllStubCallbacks();
-
-        /*
-         * Clear out the getProcAddress lists.
-         */
-        glvnd_list_for_each_entry_safe(curProc, tmpProc, &extProcList, entry) {
-            glvnd_list_del(&curProc->entry);
-            free(curProc->procName);
-            free(curProc);
-        }
 
         __glvndPthreadFuncs.key_delete(threadContextKey);
 

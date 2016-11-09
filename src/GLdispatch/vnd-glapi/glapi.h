@@ -158,6 +158,13 @@ const char *
 _glapi_get_proc_name(unsigned int offset);
 
 /**
+ * Returns the total number of defined stubs. This count only includes dynamic
+ * stubs that have been generated, so it will always be less than or equal to
+ * the size of the dispatch table.
+ */
+int _glapi_get_stub_count(void);
+
+/**
  * Functions used for patching entrypoints. These functions are exported from
  * an entrypoint library such as libGL.so or libOpenGL.so, and used in
  * libGLdispatch.

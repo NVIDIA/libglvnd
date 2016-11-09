@@ -130,3 +130,9 @@ _glapi_get_proc_name(unsigned int offset)
    return stub ? stub_get_name(stub) : NULL;
 }
 
+
+int _glapi_get_stub_count(void)
+{
+    return stub_get_count();
+}
+

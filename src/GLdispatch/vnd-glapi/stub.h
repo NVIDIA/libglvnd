@@ -60,6 +60,8 @@ stub_get_slot(const struct mapi_stub *stub);
 
 mapi_func
 stub_get_addr(const struct mapi_stub *stub);
+
+int stub_get_count(void);
 #endif // !defined(STATIC_DISPATCH_ONLY)
 
 /**
