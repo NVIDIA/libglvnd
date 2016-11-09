@@ -131,19 +131,9 @@ def generate_public_stubs(functions):
 
     sortedFuncs = sorted(functions, key=lambda f: f.name)
 
-    text += "static const char public_string_pool[] ="
-    for (i, func) in enumerate(sortedFuncs):
-        text += '   "%s' % (func.basename,)
-        if (i < len(sortedFuncs) - 1):
-            text += '\\0"\n'
-        else:
-            text += '";\n\n'
-
-    offset = 0
     text += "static const struct mapi_stub public_stubs[] = {\n"
     for func in sortedFuncs:
-        text += "   { (void *) %d, %d, NULL },\n" % (offset, func.slot)
-        offset += len(func.basename) + 1
+        text += "   { \"%s\", %d, NULL },\n" % (func.basename, func.slot)
     text += "};\n"
     text += "#undef MAPI_TMP_PUBLIC_STUBS\n"
     text += "#endif /* MAPI_TMP_PUBLIC_STUBS */\n"
