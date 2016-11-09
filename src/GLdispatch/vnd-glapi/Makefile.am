@@ -23,8 +23,7 @@ libglapi_la_SOURCES = \
 	mapi_glapi.c \
 	stub.c \
 	table.c \
-	u_execmem.c \
-	g_glapi_inittable.c
+	u_execmem.c
 
 # Select the appropriate file for looking up the current dispatch table.
 if GLDISPATCH_USE_TLS
@@ -40,13 +39,7 @@ include $(top_srcdir)/src/generate/glvnd_gen.mk
 glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi, gldispatch)
 
-g_glapi_inittable.c: $(glapi_gen_initdispatch_deps)
-	$(call glapi_gen_initdispatch)
-
-glapitable.h: $(glapi_gen_glapitable_deps)
-	$(call glapi_gen_glapitable_header)
-
-BUILT_SOURCES = glapi_mapi_tmp.h g_glapi_inittable.c glapitable.h
+BUILT_SOURCES = glapi_mapi_tmp.h
 
 COMMON_CPPFLAGS = \
 	$(DEFINES) \

@@ -69,7 +69,8 @@ stub_compare(const void *key, const void *elem)
    const struct mapi_stub *stub = (const struct mapi_stub *) elem;
    const char *stub_name;
 
-   stub_name = stub->name;
+   // Skip the "gl" prefix.
+   stub_name = stub->name + 2;
 
    return strcmp(name, stub_name);
 }
@@ -80,10 +81,11 @@ stub_compare(const void *key, const void *elem)
 const struct mapi_stub *
 stub_find_public(const char *name)
 {
-   /* Public entry points are stored without their 'gl' prefix */
-   if (name[0] == 'g' && name[1] == 'l') {
-       name += 2;
-   }
+    // All of the function names start with "gl", so skip that prefix when
+    // comparing names.
+    if (name[0] == 'g' && name[1] == 'l') {
+        name += 2;
+    }
 
    return (const struct mapi_stub *) bsearch(name, public_stubs,
          ARRAY_SIZE(public_stubs), sizeof(public_stubs[0]), stub_compare);
@@ -176,26 +178,18 @@ stub_find_dynamic(const char *name, int generate)
    return stub;
 }
 
-static const struct mapi_stub *
-search_table_by_slot(const struct mapi_stub *table, size_t num_entries,
-                     int slot)
-{
-   size_t i;
-   for (i = 0; i < num_entries; ++i) {
-      if (table[i].slot == slot)
-         return &table[i];
-   }
-   return NULL;
-}
-
 const struct mapi_stub *
 stub_find_by_slot(int slot)
 {
-   const struct mapi_stub *stub =
-      search_table_by_slot(public_stubs, ARRAY_SIZE(public_stubs), slot);
-   if (stub)
-      return stub;
-   return search_table_by_slot(dynamic_stubs, num_dynamic_stubs, slot);
+    assert(slot >= 0);
+
+    if (slot < ARRAY_SIZE(public_stubs)) {
+        return &public_stubs[slot];
+    } else if (slot - ARRAY_SIZE(public_stubs) < num_dynamic_stubs) {
+        return &dynamic_stubs[slot - ARRAY_SIZE(public_stubs)];
+    } else {
+        return NULL;
+    }
 }
 
 /**

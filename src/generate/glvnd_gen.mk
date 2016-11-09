@@ -34,28 +34,6 @@ $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_mapi_script) \
 	$(1) $(glapi_gen_gl_xml) > $@
 endef
 
-glapi_gen_glapitable_script := $(top_srcdir)/src/generate/gl_table.py
-glapi_gen_glapitable_deps := \
-	$(glapi_gen_glapitable_script) \
-	$(glapi_gen_gl_deps)
-
-define glapi_gen_glapitable_header
-$(AM_V_at)$(MKDIR_P) $(@D)
-$(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_glapitable_script) \
-	$(glapi_gen_gl_xml) > $@
-endef
-
-glapi_gen_initdispatch_script := $(top_srcdir)/src/generate/gl_inittable.py
-glapi_gen_initdispatch_deps := \
-	$(glapi_gen_initdispatch_script) \
-	$(glapi_gen_gl_deps)
-
-define glapi_gen_initdispatch
-$(AM_V_at)$(MKDIR_P) $(@D)
-$(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_initdispatch_script) \
-	$(glapi_gen_gl_xml) > $@
-endef
-
 # glapi_gen_libopengl_exports:
 # Generates an export list for an entrypoint library.
 # $(1) specifies which library we're building, using the same names as

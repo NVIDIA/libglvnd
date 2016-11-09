@@ -122,7 +122,6 @@ _glapi_get_proc_address(const char *funcName)
 
 /**
  * Return the name of the function at the given dispatch offset.
- * This is only intended for debugging.
  */
 const char *
 _glapi_get_proc_name(unsigned int offset)

@@ -380,23 +380,29 @@ PUBLIC void __glDispatchDestroyTable(__GLdispatchTable *dispatch)
     UnlockDispatch();
 }
 
-static struct _glapi_table
-*CreateGLAPITable(__GLgetProcAddressCallback getProcAddress, void *param)
+static void CreateGLAPITable(__GLdispatchTable *dispatch)
 {
-    size_t entries = _glapi_get_dispatch_table_size();
-    struct _glapi_table *table = (struct _glapi_table *)
-        calloc(1, entries * sizeof(void *));
+    int entries = (int) _glapi_get_dispatch_table_size();
+    void **table;
+    int i;
 
     CheckDispatchLocked();
 
-    if (table) {
-        _glapi_init_table_from_callback(table,
-                                        entries,
-                                        getProcAddress,
-                                        param);
-    }
+    table = (void **) calloc(1, entries * sizeof(void *));
+    for (i=0; i<entries; i++) {
+        const char *name = _glapi_get_proc_name(i);
+        void *func;
 
-    return table;
+        if (name == NULL) {
+            // We found the last static or dynamic stub in the table.
+            break;
+        }
+
+        func = dispatch->getProcAddress(name, dispatch->getProcAddressParam);
+        table[i] = func ? func : (void *) noop_func;
+    }
+    dispatch->table = (struct _glapi_table *) table;
+    dispatch->generation = latestGeneration;
 }
 
 static int CurrentEntrypointsSafeToUse(int vendorID)
@@ -665,8 +671,7 @@ PUBLIC GLboolean __glDispatchMakeCurrent(__GLdispatchThreadState *threadState,
 
         // Lazily create the dispatch table if we haven't already
         if (!dispatch->table) {
-            dispatch->table = CreateGLAPITable(dispatch->getProcAddress,
-                    dispatch->getProcAddressParam);
+            CreateGLAPITable(dispatch);
         }
 
         FixupDispatchTable(dispatch);
