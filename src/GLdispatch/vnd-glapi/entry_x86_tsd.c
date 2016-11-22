@@ -38,7 +38,7 @@
 #include "glapi.h"
 #include "glvnd/GLdispatchABI.h"
 
-#define X86_ENTRY_SIZE 32
+#define X86_ENTRY_SIZE 64
 
 __asm__(".section wtext,\"ax\",@progbits\n");
 __asm__(".balign 4096\n"
@@ -53,13 +53,19 @@ __asm__(".balign 4096\n"
    func ":"
 
 #define STUB_ASM_CODE(slot)         \
-    "movl _glapi_Current, %eax\n\t" \
-    "testl %eax, %eax\n\t"           \
-    "je 1f\n\t"                      \
-    "jmp *(4 * " slot ")(%eax)\n"    \
-    "1:\n\t"                         \
-    "call _glapi_get_current\n\t" \
-    "jmp *(4 * " slot ")(%eax)"
+    "push %ebx\n" \
+    "call 1f\n" \
+    "1:\n" \
+    "popl %ebx\n" \
+    "addl $_GLOBAL_OFFSET_TABLE_+[.-1b], %ebx\n" \
+    "movl _glapi_Current@GOT(%ebx), %eax\n" \
+    "mov (%eax), %eax\n" \
+    "testl %eax, %eax\n" \
+    "jne 1f\n" \
+    "call _glapi_get_current@PLT\n" \
+    "1:\n" \
+    "pop %ebx\n" \
+    "jmp *(4 * " slot ")(%eax)\n"
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
@@ -74,6 +80,9 @@ __asm__(".text\n");
 const int entry_type = __GLDISPATCH_STUB_X86;
 const int entry_stub_size = X86_ENTRY_SIZE;
 
+// Note that the generated stubs are simpler than the assembly stubs above.
+// For the generated stubs, we can patch in the addresses of _glapi_Current and
+// _glapi_get_current, so we don't need to go through the GOT and PLT lookups.
 static const unsigned char ENTRY_TEMPLATE[] =
 {
     0xa1, 0x40, 0x30, 0x20, 0x10,       // <ENTRY>:    mov    _glapi_Current, %eax
