@@ -145,22 +145,12 @@ static EGLBoolean _eglPointerIsDereferencable(void *p)
 static EGLBoolean IsWaylandDisplay(void *native_display)
 {
     void *first_pointer = *(void **) native_display;
-    void *waylandClientHandle = NULL;
-    void *waylandClientSymbol = NULL;
+    Dl_info info;
 
-    waylandClientHandle = dlopen("libwayland-client.so.0", RTLD_LOCAL | RTLD_LAZY
-#if defined(HAVE_RTLD_NOLOAD)
-            | RTLD_NOLOAD
-#endif
-            );
-    if (waylandClientHandle == NULL) {
-        return EGL_FALSE;
-    }
+    if (dladdr(first_pointer, &info) == 0)
+	return EGL_FALSE;
 
-    waylandClientSymbol = dlsym(waylandClientHandle, "wl_display_interface");
-    dlclose(waylandClientHandle);
-
-    return (waylandClientSymbol != NULL && waylandClientSymbol == first_pointer);
+    return !strcmp(info.dli_sname, "wl_display_interface");
 }
 
 /*!
