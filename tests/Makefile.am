@@ -68,12 +68,26 @@ testpatchentrypoints_gldispatch_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testpatchentrypoints_gldispatch_LDADD += dummy/libpatchentrypoints.la
 testpatchentrypoints_gldispatch_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
+# Start of GLX-specific tests.
+# Notes that the TESTS_GLX variable must be defined outside the conditional, so
+# that we can include the test scripts in the EXTRA_DIST package. Otherwise,
+# the scripts would be missing when you run "make dist" or "make distcheck".
 
-TESTS += testglxmcbasic.sh
-TESTS += testglxmcloop.sh
-TESTS += testglxmcthreads.sh
-TESTS += testglxmclate.sh
-TESTS += testglxmcoldlink.sh
+TESTS_GLX =
+TESTS_GLX += testglxmcbasic.sh
+TESTS_GLX += testglxmcloop.sh
+TESTS_GLX += testglxmcthreads.sh
+TESTS_GLX += testglxmclate.sh
+TESTS_GLX += testglxmcoldlink.sh
+TESTS_GLX += testglxgetprocaddress.sh
+TESTS_GLX += testglxgetprocaddress_genentry.sh
+TESTS_GLX += testglxgetclientstr.sh
+TESTS_GLX += testglxqueryversion.sh
+TESTS_GLX += testpatchentrypoints.sh
+
+if ENABLE_GLX
+
+TESTS += $(TESTS_GLX)
 
 TESTGLXMAKECURRENT_SOURCES_COMMON = \
 	testglxmakecurrent.c \
@@ -96,14 +110,11 @@ testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libtrace.la
 
 
-TESTS += testglxgetprocaddress.sh
-TESTS += testglxgetprocaddress_genentry.sh
 check_PROGRAMS += testglxgetprocaddress
 testglxgetprocaddress_LDADD = -lX11
 testglxgetprocaddress_LDADD += $(top_builddir)/src/GLX/libGLX.la
 
 
-TESTS += testglxgetclientstr.sh
 check_PROGRAMS += testglxgetclientstr
 testglxgetclientstr_LDADD = -lX11
 testglxgetclientstr_LDADD += $(top_builddir)/src/GLX/libGLX.la
@@ -111,14 +122,12 @@ testglxgetclientstr_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testglxgetclientstr_LDADD += $(top_builddir)/src/util/libtrace.la
 
 
-TESTS += testglxqueryversion.sh
 check_PROGRAMS += testglxqueryversion
 testglxqueryversion_LDADD = -lX11
 testglxqueryversion_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxqueryversion_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 
 
-TESTS += testpatchentrypoints.sh
 check_PROGRAMS += testpatchentrypoints
 testpatchentrypoints_SOURCES = \
 	testpatchentrypoints.c \
@@ -129,29 +138,41 @@ testpatchentrypoints_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/util/libtrace.la
 
+endif # ENABLE_GLX
 
-TESTS += testegldisplay.sh
+
+# Start of EGL-specific tests.
+
+TESTS_EGL =
+TESTS_EGL += testegldisplay.sh
+TESTS_EGL += testegldevice.sh
+TESTS_EGL += testeglgetprocaddress.sh
+TESTS_EGL += testeglmakecurrent.sh
+TESTS_EGL += testeglerror.sh
+TESTS_EGL += testegldebug.sh
+
+if ENABLE_EGL
+
+TESTS += $(TESTS_EGL)
+
 check_PROGRAMS += testegldisplay
 testegldisplay_SOURCES = \
 	testegldisplay.c \
 	egl_test_utils.c
 testegldisplay_LDADD = $(top_builddir)/src/EGL/libEGL.la
 
-TESTS += testegldevice.sh
 check_PROGRAMS += testegldevice
 testegldevice_SOURCES = \
 	testegldevice.c \
 	egl_test_utils.c
 testegldevice_LDADD = $(top_builddir)/src/EGL/libEGL.la
 
-TESTS += testeglgetprocaddress.sh
 check_PROGRAMS += testeglgetprocaddress
 testeglgetprocaddress_SOURCES = \
 	testeglgetprocaddress.c \
 	egl_test_utils.c
 testeglgetprocaddress_LDADD = $(top_builddir)/src/EGL/libEGL.la
 
-TESTS += testeglmakecurrent.sh
 check_PROGRAMS += testeglmakecurrent
 testeglmakecurrent_SOURCES = \
 	testeglmakecurrent.c \
@@ -159,7 +180,6 @@ testeglmakecurrent_SOURCES = \
 testeglmakecurrent_LDADD = $(top_builddir)/src/EGL/libEGL.la
 testeglmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 
-TESTS += testeglerror.sh
 check_PROGRAMS += testeglerror
 testeglerror_SOURCES = \
 	testeglerror.c \
@@ -168,9 +188,12 @@ testeglerror_LDADD = $(top_builddir)/src/EGL/libEGL.la
 testeglerror_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 
 
-TESTS += testegldebug.sh
 check_PROGRAMS += testegldebug
 testegldebug_SOURCES = \
 	testegldebug.c \
 	egl_test_utils.c
 testegldebug_LDADD = $(top_builddir)/src/EGL/libEGL.la
+
+endif # ENABLE_EGL
+
+EXTRA_DIST += $(TESTS_GLX) $(TESTS_EGL)

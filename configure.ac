@@ -35,6 +35,30 @@ if test "x$ac_cv_prog_cc_c99" = xno; then
         AC_MSG_ERROR([Building libglvnd requires a C99-enabled compiler])
 fi
 
+AC_ARG_ENABLE([egl],
+    [AS_HELP_STRING([--disable-egl],
+        [Disable EGL support @<:@default=enabled@:>@])],
+    [enable_egl="$enableval"],
+    [enable_egl=yes]
+)
+AM_CONDITIONAL([ENABLE_EGL], [test "x$enable_egl" = "xyes"])
+
+AC_ARG_ENABLE([glx],
+    [AS_HELP_STRING([--disable-glx],
+        [Disable GLX support @<:@default=enabled@:>@])],
+    [enable_glx="$enableval"],
+    [enable_glx=yes]
+)
+AM_CONDITIONAL([ENABLE_GLX], [test "x$enable_glx" = "xyes"])
+
+AC_ARG_ENABLE([gles],
+    [AS_HELP_STRING([--disable-gles],
+        [Disable GLES support @<:@default=enabled@:>@])],
+    [enable_gles="$enableval"],
+    [enable_gles=yes]
+)
+AM_CONDITIONAL([ENABLE_GLES], [test "x$enable_gles" = "xyes"])
+
 dnl
 dnl Arch/platform-specific settings. Copied from mesa
 dnl

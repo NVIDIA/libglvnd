@@ -1,11 +1,21 @@
-SUBDIRS = util \
-	GLdispatch \
-	EGL \
-	GLX \
-	OpenGL \
-	GLESv1 \
-	GLESv2 \
-	GL
+SUBDIRS =
+SUBDIRS += util
+SUBDIRS += GLdispatch
+SUBDIRS += OpenGL
+
+if ENABLE_EGL
+SUBDIRS += EGL
+endif
+
+if ENABLE_GLX
+SUBDIRS += GLX
+SUBDIRS += GL
+endif
+
+if ENABLE_GLES
+SUBDIRS += GLESv1
+SUBDIRS += GLESv2
+endif
 
 EXTRA_DIST = generate
 

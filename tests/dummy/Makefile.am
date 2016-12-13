@@ -13,6 +13,7 @@ libpatchentrypoints_la_CFLAGS = \
 libpatchentrypoints_la_SOURCES = \
 	patchentrypoints.c
 
+if ENABLE_GLX
 check_LTLIBRARIES += libGLX_dummy.la
 libGLX_dummy_la_CFLAGS = \
 	-I$(top_srcdir)/src/GLX        \
@@ -29,7 +30,9 @@ libGLX_dummy_la_LIBADD += libpatchentrypoints.la
 libGLX_dummy_la_LDFLAGS = \
 	-shared \
 	-rpath /nowhere
+endif # ENABLE_GLX
 
+if ENABLE_EGL
 EGL_DUMMY_CFLAGS_COMMON = \
 	-I$(top_srcdir)/src/util \
 	-I$(top_srcdir)/include
@@ -56,3 +59,4 @@ libEGL_dummy1_la_SOURCES = $(EGL_DUMMY_SOURCES_COMMON)
 libEGL_dummy1_la_LIBADD = $(EGL_DUMMY_LIBADD_COMMON)
 libEGL_dummy1_la_LDFLAGS = $(EGL_DUMMY_LDFLAGS_COMMON)
 
+endif # ENABLE_EGL
