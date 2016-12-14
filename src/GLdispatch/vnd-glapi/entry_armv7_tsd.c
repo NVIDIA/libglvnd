@@ -140,6 +140,7 @@ static uint16_t BYTECODE_TEMPLATE[] =
 
 __asm__(".section wtext,\"ax\"\n"
         ".balign 4096\n"
+        ".syntax unified\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
         "public_entry_start:\n");
@@ -148,6 +149,7 @@ __asm__(".section wtext,\"ax\"\n"
 #include "mapi_tmp.h"
 
 __asm__(".balign 4096\n"
+        ".syntax divided\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:\n"
