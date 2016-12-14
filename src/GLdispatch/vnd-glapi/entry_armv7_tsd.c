@@ -166,7 +166,6 @@ const int entry_stub_size = ARMV7_ENTRY_SIZE;
 static const int TEMPLATE_OFFSET_CURRENT_TABLE     = ARMV7_BYTECODE_SIZE - 3*4;
 static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = ARMV7_BYTECODE_SIZE - 2*4;
 static const int TEMPLATE_OFFSET_SLOT              = ARMV7_BYTECODE_SIZE - 4;
-static const int TEMPLATE_OFFSETS_SIZE             = 3*4;
 
 void
 entry_init_public(void)
