@@ -93,7 +93,7 @@ if test "x$enable_asm" = xyes; then
         AC_MSG_RESULT([yes, aarch64])
         ;;
     *)
-        AC_MSG_RESULT([no, platform not supported])
+        AC_MSG_RESULT([no, platform '$host_cpu' not supported])
         ;;
     esac
 fi
