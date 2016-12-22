@@ -3,12 +3,9 @@ noinst_HEADERS = \
 	GLX_dummy.h \
 	EGL_dummy.h
 
-check_LTLIBRARIES = \
-	libpatchentrypoints.la \
-	libGLX_dummy.la \
-	libEGL_dummy0.la \
-	libEGL_dummy1.la
+check_LTLIBRARIES =
  
+check_LTLIBRARIES += libpatchentrypoints.la
 libpatchentrypoints_la_CFLAGS = \
 	-I$(top_srcdir)/src/GLdispatch \
 	-I$(top_srcdir)/src/util       \
@@ -16,6 +13,8 @@ libpatchentrypoints_la_CFLAGS = \
 libpatchentrypoints_la_SOURCES = \
 	patchentrypoints.c
 
+if ENABLE_GLX
+check_LTLIBRARIES += libGLX_dummy.la
 libGLX_dummy_la_CFLAGS = \
 	-I$(top_srcdir)/src/GLX        \
 	-I$(top_srcdir)/src/GLdispatch \
@@ -31,7 +30,9 @@ libGLX_dummy_la_LIBADD += libpatchentrypoints.la
 libGLX_dummy_la_LDFLAGS = \
 	-shared \
 	-rpath /nowhere
+endif # ENABLE_GLX
 
+if ENABLE_EGL
 EGL_DUMMY_CFLAGS_COMMON = \
 	-I$(top_srcdir)/src/util \
 	-I$(top_srcdir)/include
@@ -42,6 +43,7 @@ EGL_DUMMY_LDFLAGS_COMMON = \
 	-shared \
 	-rpath /nowhere
 
+check_LTLIBRARIES += libEGL_dummy0.la
 libEGL_dummy0_la_CFLAGS = \
 	$(EGL_DUMMY_CFLAGS_COMMON) \
 	-D DUMMY_VENDOR_NAME=\"dummy0\"
@@ -49,6 +51,7 @@ libEGL_dummy0_la_SOURCES = $(EGL_DUMMY_SOURCES_COMMON)
 libEGL_dummy0_la_LIBADD = $(EGL_DUMMY_LIBADD_COMMON)
 libEGL_dummy0_la_LDFLAGS = $(EGL_DUMMY_LDFLAGS_COMMON)
 
+check_LTLIBRARIES += libEGL_dummy1.la
 libEGL_dummy1_la_CFLAGS = \
 	$(EGL_DUMMY_CFLAGS_COMMON) \
 	-D DUMMY_VENDOR_NAME=\"dummy1\"
@@ -56,3 +59,4 @@ libEGL_dummy1_la_SOURCES = $(EGL_DUMMY_SOURCES_COMMON)
 libEGL_dummy1_la_LIBADD = $(EGL_DUMMY_LIBADD_COMMON)
 libEGL_dummy1_la_LDFLAGS = $(EGL_DUMMY_LDFLAGS_COMMON)
 
+endif # ENABLE_EGL
