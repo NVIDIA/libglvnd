@@ -53,7 +53,7 @@ AM_CONDITIONAL([ENABLE_GLX], [test "x$enable_glx" = "xyes"])
 
 AC_ARG_ENABLE([gles],
     [AS_HELP_STRING([--disable-gles],
-        [Disable GLES support @<:@default=enabled@:>@])],
+        [Do not build the libGLES*.so libraries @<:@default=enabled@:>@])],
     [enable_gles="$enableval"],
     [enable_gles=yes]
 )
