@@ -40,7 +40,8 @@
 #define USE_ASM (defined(USE_X86_ASM) ||    \
                  defined(USE_X86_64_ASM) || \
                  defined(USE_ARMV7_ASM) ||  \
-                 defined(USE_AARCH64_ASM))
+                 defined(USE_AARCH64_ASM) || \
+                 defined(USE_PPC64LE_ASM))
 
 #if defined(__GNUC__) && USE_ASM
 
@@ -107,6 +108,19 @@ static const uint32_t STUB_TEMPLATE[] =
 };
 
 static const int DISPATCH_FUNC_OFFSET = 12;
+
+#elif defined(USE_PPC64LE_ASM)
+
+static unsigned char STUB_TEMPLATE[] =
+{
+    // TODO: Fill in assembly code.
+    // This function should just jump to an immediate address. See the x86
+    // and x86-64 versions above for the simplest examples.
+};
+
+// TODO: Set this to the offset in STUB_TEMPLATE which contains the address to
+// jump to.
+static const int DISPATCH_FUNC_OFFSET = 0;
 
 #else
 #error "Can't happen -- not implemented"
@@ -293,6 +307,15 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
     __builtin___clear_cache((char *)entry->entrypointExec - 1,
                             (char *)entry->entrypointExec - 1 + sizeof(STUB_TEMPLATE));
+
+#elif defined(USE_PPC64LE_ASM)
+
+    // TODO: Update this if necessary:
+    // - Set the address correctly -- should it be an absolute or IP-relative
+    //   address?
+    // - Does it need to do anything to make self-modifying code work?
+    *((uintptr_t *)(code + DISPATCH_FUNC_OFFSET)) = (uintptr_t)dispatch;
+
 #else
 #error "Can't happen -- not implemented"
 #endif

@@ -164,6 +164,31 @@ static void patch_aarch64(char *writeEntry, const char *execEntry,
 #endif
 }
 
+static void patch_ppc64le(char *writeEntry, const char *execEntry,
+        int stubSize, void *incrementPtr)
+{
+#if defined(__PPC64__)
+    const unsigned char tmpl[] = {
+        // TODO: Fill in this assembly code
+        // The assembly code should increment the integer at (*incrementPtr).
+    };
+
+    if (stubSize < sizeof(tmpl)) {
+        return;
+    }
+
+    memcpy(writeEntry, tmpl, sizeof(tmpl));
+    // TODO: Patch the address of (*incrementPtr) in the writeEntry buffer.
+    memcpy(writeEntry + 0, &incrementPtr, sizeof(incrementPtr));
+
+    // TODO: Do any other architecture-specific stuff that is required for
+    // self-modifying code (e.g., a jmp for x86, or a cache clear for ARM).
+#else
+    assert(0); // Should not be calling this
+#endif
+}
+
+
 GLboolean dummyCheckPatchSupported(int type, int stubSize)
 {
     switch (type) {
@@ -172,6 +197,7 @@ GLboolean dummyCheckPatchSupported(int type, int stubSize)
         case __GLDISPATCH_STUB_ARMV7_THUMB:
         case __GLDISPATCH_STUB_AARCH64:
         case __GLDISPATCH_STUB_X32:
+        case __GLDISPATCH_STUB_PPC64LE:
             return GL_TRUE;
         default:
             return GL_FALSE;
@@ -203,6 +229,9 @@ GLboolean dummyPatchFunction(int type, int stubSize,
                 break;
             case __GLDISPATCH_STUB_AARCH64:
                 patch_aarch64(writeAddr, execAddr, stubSize, incrementPtr);
+                break;
+            case __GLDISPATCH_STUB_PPC64LE:
+                patch_ppc64le(writeAddr, execAddr, stubSize, incrementPtr);
                 break;
             default:
                 assert(0);
