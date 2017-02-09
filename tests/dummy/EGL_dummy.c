@@ -56,7 +56,6 @@ static const char *PLATFORM_EXTENSIONS =
     ;
 
 static const char *DISPLAY_EXTENSIONS = "";
-static const EGLint DUMMY_EGL_CONFIG_COUNT = 2;
 
 typedef struct DummyEGLDisplayRec {
     EGLenum platform;

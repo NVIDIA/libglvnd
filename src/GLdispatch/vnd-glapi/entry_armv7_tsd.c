@@ -140,6 +140,7 @@ static uint16_t BYTECODE_TEMPLATE[] =
 
 __asm__(".section wtext,\"ax\"\n"
         ".balign 4096\n"
+        ".syntax unified\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
         "public_entry_start:\n");
@@ -148,6 +149,7 @@ __asm__(".section wtext,\"ax\"\n"
 #include "mapi_tmp.h"
 
 __asm__(".balign 4096\n"
+        ".syntax divided\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:\n"
@@ -166,7 +168,6 @@ const int entry_stub_size = ARMV7_ENTRY_SIZE;
 static const int TEMPLATE_OFFSET_CURRENT_TABLE     = ARMV7_BYTECODE_SIZE - 3*4;
 static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = ARMV7_BYTECODE_SIZE - 2*4;
 static const int TEMPLATE_OFFSET_SLOT              = ARMV7_BYTECODE_SIZE - 4;
-static const int TEMPLATE_OFFSETS_SIZE             = 3*4;
 
 void
 entry_init_public(void)
