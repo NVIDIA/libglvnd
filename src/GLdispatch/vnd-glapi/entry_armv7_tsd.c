@@ -49,7 +49,7 @@ __asm__(".syntax unified\n\t");
 /*
  * u_execmem_alloc() allocates 64 bytes per stub.
  */
-#define ARMV7_ENTRY_SIZE 64
+#define ARMV7_ENTRY_SIZE 128
 
 /*
  * This runs in Thumb mode.
@@ -80,37 +80,47 @@ __asm__(".syntax unified\n\t");
  * This routine preserves the r0-r3 volatile registers as they store the
  * parameters of the entry point that is being looked up.
  */
-#define STUB_ASM_CODE(slot)                 \
-    "push {r0-r3}\n\t"                      \
-    "ldr r0, 1f\n\t"                        \
-    "ldr r0, [r0]\n\t"                      \
-    "cmp r0, #0\n\t"                        \
-    "it eq\n\t"                             \
-    "beq 10f\n\t"                           \
-    "11:\n\t"        /* found_dispatch */   \
-    "ldr r1, 3f\n\t"                        \
-    "mov r2, #4\n\t" /* sizeof(void *) */   \
-    "mul r1, r1, r2\n\t"                    \
-    "ldr ip, [r0, +r1]\n\t"                 \
-    "pop {r0-r3}\n\t"                       \
-    "bx ip\n\t"                             \
-    "10:\n\t"        /* lookup_dispatch */  \
-    "push {lr}\n\t"                         \
-    "ldr r0, 2f\n\t"                        \
-    "blx r0\n\t"                            \
-    "pop {lr}\n\t"                          \
-    "b 11b\n\t"                             \
-    "1:\n\t"                                \
-    ".word _glapi_Current\n\t"              \
-    "2:\n\t"                                \
-    ".word _glapi_get_current\n\t"         \
-    "3:\n\t"                                \
+#define STUB_ASM_CODE(slot)                  \
+    "push {r0-r3}\n\t"                       \
+    "ldr r2, 1f\n\t"                         \
+    "12:\n\t"                                \
+    "add r2, pc\n\t"                         \
+    "ldr r3, 1f+4\n\t"                       \
+    "ldr r0, [r2, r3]\n\t"                   \
+    "ldr r0, [r0]\n\t"                       \
+    "cmp r0, #0\n\t"                         \
+    "it eq\n\t"                              \
+    "beq 10f\n\t"                            \
+    "11:\n\t"        /* found_dispatch */    \
+    "ldr r1, 3f\n\t"                         \
+    "mov r2, #4\n\t" /* sizeof(void *) */    \
+    "mul r1, r1, r2\n\t"                     \
+    "ldr ip, [r0, +r1]\n\t"                  \
+    "pop {r0-r3}\n\t"                        \
+    "bx ip\n\t"                              \
+    "10:\n\t"        /* lookup_dispatch */   \
+    "push {lr}\n\t"                          \
+    "ldr r2, 2f\n\t"                         \
+    "13:\n\t"                                \
+    "add r2, pc\n\t"                         \
+    "ldr r3, 2f+4\n\t"                       \
+    "ldr r0, [r2, r3]\n\t"                   \
+    "blx r0\n\t"                             \
+    "pop {lr}\n\t"                           \
+    "b 11b\n\t"                              \
+    "1:\n\t"                                 \
+    ".word _GLOBAL_OFFSET_TABLE_-(12b+4)\n\t"\
+    ".word _glapi_Current(GOT)\n\t"          \
+    "2:\n\t"                                 \
+    ".word _GLOBAL_OFFSET_TABLE_-(13b+4)\n\t"\
+    ".word _glapi_get_current(GOT)\n\t"      \
+    "3:\n\t"                                 \
     ".word " slot "\n\t"
 
 /*
  * Bytecode for STUB_ASM_CODE()
  */
-static uint16_t BYTECODE_TEMPLATE[] =
+static const uint16_t BYTECODE_TEMPLATE[] =
 {
     0xb40f,
     0xf8df, 0x0028,
