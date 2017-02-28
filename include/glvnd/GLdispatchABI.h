@@ -88,6 +88,11 @@ enum {
      * Used for stubs on ARMv8/aarch64.
      */
     __GLDISPATCH_STUB_AARCH64,
+
+    /*!
+     * Used for stubs on x32 builds (x86-64 with 32-bit pointers).
+     */
+    __GLDISPATCH_STUB_X32,
 };
 
 /*!
