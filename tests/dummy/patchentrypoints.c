@@ -39,6 +39,10 @@ static void patch_x86_64(char *writeEntry, const char *execEntry,
         int stubSize, void *incrementPtr)
 {
 #if defined(__x86_64__)
+    // On an x32 build, pointers are 32 bits, but the code that we generate
+    // here uses a 64-bit address. Cast incrementPtr to a 64-bit integer so
+    // that it's the right size for either build.
+    uint64_t incrementAddr = (uint64_t) ((uintptr_t) incrementPtr);
     const char tmpl[] = {
         0xa1, 0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12, // movabs 0x123456789abcdef0, %eax
         0x83, 0xc0, 0x01,                                     // add    $0x1,%eax
@@ -46,15 +50,13 @@ static void patch_x86_64(char *writeEntry, const char *execEntry,
         0xc3,                                                 // ret
     };
 
-    STATIC_ASSERT(sizeof(void*) == 0x8);
-
     if (stubSize < sizeof(tmpl)) {
         return;
     }
 
     memcpy(writeEntry, tmpl, sizeof(tmpl));
-    memcpy(writeEntry + 1, &incrementPtr, sizeof(incrementPtr));
-    memcpy(writeEntry + 13, &incrementPtr, sizeof(incrementPtr));
+    memcpy(writeEntry + 1, &incrementAddr, sizeof(incrementAddr));
+    memcpy(writeEntry + 13, &incrementAddr, sizeof(incrementAddr));
 
 #else
     assert(0); // Should not be calling this
@@ -169,6 +171,7 @@ GLboolean dummyCheckPatchSupported(int type, int stubSize)
         case __GLDISPATCH_STUB_X86:
         case __GLDISPATCH_STUB_ARMV7_THUMB:
         case __GLDISPATCH_STUB_AARCH64:
+        case __GLDISPATCH_STUB_X32:
             return GL_TRUE;
         default:
             return GL_FALSE;
@@ -189,6 +192,7 @@ GLboolean commonInitiatePatch(int type, int stubSize,
     if (lookupStubOffset("Vertex3fv", &writeAddr, &execAddr)) {
         switch (type) {
             case __GLDISPATCH_STUB_X86_64:
+            case __GLDISPATCH_STUB_X32:
                 patch_x86_64(writeAddr, execAddr, stubSize, incrementPtr);
                 break;
             case __GLDISPATCH_STUB_X86:
