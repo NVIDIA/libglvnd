@@ -52,10 +52,22 @@ __asm__(".balign 4096\n"
    ".balign " U_STRINGIFY(ENTRY_STUB_SIZE) "\n" \
    func ":"
 
+#ifdef __ILP32__
+
+#define STUB_ASM_CODE(slot)                              \
+   "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
+   "movl %fs:(%rax), %r11d\n\t"                          \
+   "movl 4*" slot "(%r11d), %r11d\n\t"                   \
+   "jmp *%r11"
+
+#else // __ILP32__
+
 #define STUB_ASM_CODE(slot)                                 \
    "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
    "movq %fs:(%rax), %r11\n\t"                              \
    "jmp *(8 * " slot ")(%r11)"
+
+#endif // __ILP32__
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
@@ -74,8 +86,23 @@ __asm__("x86_64_current_tls:\n\t"
 extern uint64_t
 x86_64_current_tls();
 
-const int entry_type = __GLDISPATCH_STUB_X86_64;
 const int entry_stub_size = ENTRY_STUB_SIZE;
+
+#ifdef __ILP32__
+
+const int entry_type = __GLDISPATCH_STUB_X32;
+static const unsigned char ENTRY_TEMPLATE[] = {
+    0x64, 0x44, 0x8b, 0x1c, 0x25, 0x00, 0x00, 0x00, 0x00, // movl %fs:0, %r11d
+    0x67, 0x45, 0x8b, 0x9b, 0x34, 0x12, 0x00, 0x00,       // movl 0x1234(%r11d), %r11d
+    0x41, 0xff, 0xe3,                                     // jmp *%r11
+};
+
+static const unsigned int TLS_ADDR_OFFSET = 5;
+static const unsigned int SLOT_OFFSET = 13;
+
+#else // __ILP32__
+
+const int entry_type = __GLDISPATCH_STUB_X86_64;
 
 static const unsigned char ENTRY_TEMPLATE[] = {
     0x48, 0xc7, 0xc0, 0x0, 0x0, 0x0, 0x0,     // mov 0x0,%rax
@@ -85,6 +112,8 @@ static const unsigned char ENTRY_TEMPLATE[] = {
 };
 static const unsigned int TLS_ADDR_OFFSET = 3;
 static const unsigned int SLOT_OFFSET = 14;
+
+#endif // __ILP32__
 
 void entry_generate_default_code(char *entry, int slot)
 {
@@ -99,6 +128,6 @@ void entry_generate_default_code(char *entry, int slot)
 
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
     *((unsigned int *) &writeEntry[TLS_ADDR_OFFSET]) = (unsigned int) tls_addr;
-    *((unsigned int *) &writeEntry[SLOT_OFFSET]) = (unsigned int) (8 * slot);
+    *((unsigned int *) &writeEntry[SLOT_OFFSET]) = (unsigned int) (slot * sizeof(mapi_func));
 }
 
