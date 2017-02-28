@@ -56,17 +56,19 @@ AM_CFLAGS =                                  \
 	-I$(top_srcdir)/src/util/glvnd_pthread
 
 
-TESTS += testpatchentrypoints_gldispatch.sh
-check_PROGRAMS += testpatchentrypoints_gldispatch
-testpatchentrypoints_gldispatch_SOURCES = \
-	testpatchentrypoints_gldispatch.c
-testpatchentrypoints_gldispatch_CFLAGS = \
+TESTS += testgldispatch_static.sh
+TESTS += testgldispatch_generated.sh
+TESTS += testgldispatch_patched.sh
+check_PROGRAMS += testgldispatch
+testgldispatch_SOURCES = \
+	testgldispatch.c
+testgldispatch_CFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/GLdispatch
-testpatchentrypoints_gldispatch_LDADD = $(top_builddir)/src/GLdispatch/libGLdispatch.la
-testpatchentrypoints_gldispatch_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testpatchentrypoints_gldispatch_LDADD += dummy/libpatchentrypoints.la
-testpatchentrypoints_gldispatch_LDADD += $(top_builddir)/src/util/libutils_misc.la
+testgldispatch_LDADD = $(top_builddir)/src/GLdispatch/libGLdispatch.la
+testgldispatch_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
+testgldispatch_LDADD += dummy/libpatchentrypoints.la
+testgldispatch_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 # Start of GLX-specific tests.
 # Notes that the TESTS_GLX variable must be defined outside the conditional, so

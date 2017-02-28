@@ -40,8 +40,8 @@
 
 GLboolean dummyCheckPatchSupported(int type, int stubSize);
 
-GLboolean commonInitiatePatch(int type, int stubSize,
+GLboolean dummyPatchFunction(int type, int stubSize,
         DispatchPatchLookupStubOffset lookupStubOffset,
-        int *incrementPtr);
+        const char *name, int *incrementPtr);
 
 #endif // ENTRYPOINTPATCHING_H

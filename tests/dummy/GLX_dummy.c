@@ -634,7 +634,7 @@ static GLboolean dummyInitiatePatch(int type,
                                     int stubSize,
                                     DispatchPatchLookupStubOffset lookupStubOffset)
 {
-    return commonInitiatePatch(type, stubSize, lookupStubOffset, &__glXSawVertex3fv);
+    return dummyPatchFunction(type, stubSize, lookupStubOffset, "Vertex3fv", &__glXSawVertex3fv);
 }
 
 static Bool GetEnvFlag(const char *name)
