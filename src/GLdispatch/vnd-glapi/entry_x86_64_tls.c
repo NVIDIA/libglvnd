@@ -105,13 +105,11 @@ static const unsigned int SLOT_OFFSET = 13;
 const int entry_type = __GLDISPATCH_STUB_X86_64;
 
 static const unsigned char ENTRY_TEMPLATE[] = {
-    0x48, 0xc7, 0xc0, 0x0, 0x0, 0x0, 0x0,     // mov 0x0,%rax
-    0x64, 0x4c, 0x8b, 0x18,                   // mov %fs:(%rax),%r11
-    0x41, 0xff, 0xa3, 0x00, 0x00, 0x00, 0x00, // jmpq *0x0(%r11)
-    0x90                                      // nop
+    0x64, 0x4c, 0x8b, 0x1c, 0x25, 0x00, 0x00, 0x00, 0x00, // movq %fs:0, %r11
+    0x41, 0xff, 0xa3, 0x34, 0x12, 0x00, 0x00,             // jmp *0x1234(%r11)
 };
-static const unsigned int TLS_ADDR_OFFSET = 3;
-static const unsigned int SLOT_OFFSET = 14;
+static const unsigned int TLS_ADDR_OFFSET = 5;
+static const unsigned int SLOT_OFFSET = 12;
 
 #endif // __ILP32__
 
