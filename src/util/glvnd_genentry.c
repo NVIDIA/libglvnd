@@ -270,7 +270,7 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
 #elif defined(USE_X86_64_ASM)
     // For x86_64, we have to use a movabs instruction, which needs the
     // absolute address of the dispatch function.
-    *((GLVNDentrypointStub *) (code + DISPATCH_FUNC_OFFSET)) = dispatch;
+    *((uint64_t *) (code + DISPATCH_FUNC_OFFSET)) = (uint64_t) ((uintptr_t) dispatch);
 
 #elif defined(USE_ARMV7_ASM)
     *((uint32_t *)(code + DISPATCH_FUNC_OFFSET)) = (uint32_t)dispatch;
