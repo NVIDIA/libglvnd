@@ -118,32 +118,37 @@ __asm__(".syntax unified\n\t");
     ".word " slot "\n\t"
 
 /*
- * Bytecode for STUB_ASM_CODE()
+ * This template is used to generate new dispatch stubs at runtime. It's
+ * functionally equivalent to the code in STUB_ASM_CODE(), but not identical.
+ * The difference between the two is that STUB_ASM_CODE has to be position
+ * independent, so it has to go through the GOT and PLT to get the addresses of
+ * _glapi_Current and _glapi_get_current. In the generated stubs, we can just
+ * plug the addresses in directly.
  */
 static const uint16_t BYTECODE_TEMPLATE[] =
 {
-    0xb40f,
-    0xf8df, 0x0028,
-    0x6800,
-    0x2800,
-    0xbf08,
-    0xe008,
-    0x4909,
-    0xf04f, 0x0204,
-    0xfb01, 0xf102,
-    0xf850, 0xc001,
-    0xbc0f,
-    0x4760,
-    0xb500,
-    0x4803,
-    0x4780,
-    0xf85d, 0xeb04,
-    0xe7f0,
+    0xb40f, // push {r0-r3}
+    0xf8df, 0x0028, // ldr r0, 1f
+    0x6800, // ldr r0, [r0]
+    0x2800, // cmp r0, #0
+    0xbf08, // it eq
+    0xe008, // beq 10f
+    0x4909, // 11: ldr r1, 3f
+    0xf04f, 0x0204, // mov r2, #4
+    0xfb01, 0xf102, // mul r1, r1, r2
+    0xf850, 0xc001, // ldr ip, [r0, +r1]
+    0xbc0f, // pop {r0-r3}
+    0x4760, // bx ip
+    0xb500, // 10: push {lr}
+    0x4803, // ldr r0, 2f
+    0x4780, // blx r0
+    0xf85d, 0xeb04, // pop {lr}
+    0xe7f0, // b 11b
 
     // Offsets that need to be patched
-    0x0000, 0x0000,
-    0x0000, 0x0000,
-    0x0000, 0x0000,
+    0x0000, 0x0000, // 1: .word _glapi_Current
+    0x0000, 0x0000, // 2: .word _glapi_get_current
+    0x0000, 0x0000, // 3: .word " slot "
 };
 
 #define ARMV7_BYTECODE_SIZE sizeof(BYTECODE_TEMPLATE)
