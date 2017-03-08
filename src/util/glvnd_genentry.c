@@ -63,6 +63,9 @@ static const int DISPATCH_FUNC_OFFSET_REL = 5;
 #elif defined(USE_X86_64_ASM)
 // For x86_64, the offset from the entrypoint to the dispatch function might be
 // more than 2^31, and there's no JMP instruction that takes a 64-bit offset.
+// Note that the same stub also works for an x32 build. In that case, though, a
+// pointer is only 32 bits, so we have to make sure we expand it a 64-bit value
+// when we patch it in SetDispatchFuncPointer.
 static unsigned char STUB_TEMPLATE[] =
 {
     0x48, 0xb8, 0xbd, 0xac, 0xcd, 0xab, 0x78, 0x56, 0x34, 0x12, // movabs 0x12345678abcdacbd,%rax
@@ -269,8 +272,11 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
 
 #elif defined(USE_X86_64_ASM)
     // For x86_64, we have to use a movabs instruction, which needs the
-    // absolute address of the dispatch function.
-    *((GLVNDentrypointStub *) (code + DISPATCH_FUNC_OFFSET)) = dispatch;
+    // absolute address of the dispatch function. On an x32 build, pointers are
+    // 32 bits long, but the stub still uses a 64-bit address, so we cast it to
+    // a uint64_t value to make sure that we write a 64-bit value in both
+    // cases.
+    *((uint64_t *) (code + DISPATCH_FUNC_OFFSET)) = (uint64_t) ((uintptr_t) dispatch);
 
 #elif defined(USE_ARMV7_ASM)
     *((uint32_t *)(code + DISPATCH_FUNC_OFFSET)) = (uint32_t)dispatch;

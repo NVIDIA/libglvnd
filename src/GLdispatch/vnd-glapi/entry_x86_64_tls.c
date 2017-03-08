@@ -38,9 +38,7 @@
 #include "glapi.h"
 #include "glvnd/GLdispatchABI.h"
 
-#define ENTRY_STUB_ALIGN 32
-#define ENTRY_STUB_SIZE ENTRY_STUB_ALIGN
-#define ENTRY_STUB_ALIGN_DIRECTIVE ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n"
+#define ENTRY_STUB_SIZE 32
 
 __asm__(".section wtext,\"ax\",@progbits\n");
 __asm__(".balign 4096\n"
@@ -51,13 +49,25 @@ __asm__(".balign 4096\n"
 #define STUB_ASM_ENTRY(func)                             \
    ".globl " func "\n"                                   \
    ".type " func ", @function\n"                         \
-   ENTRY_STUB_ALIGN_DIRECTIVE                            \
+   ".balign " U_STRINGIFY(ENTRY_STUB_SIZE) "\n" \
    func ":"
+
+#ifdef __ILP32__
+
+#define STUB_ASM_CODE(slot)                              \
+   "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
+   "movl %fs:(%rax), %r11d\n\t"                          \
+   "movl 4*" slot "(%r11d), %r11d\n\t"                   \
+   "jmp *%r11"
+
+#else // __ILP32__
 
 #define STUB_ASM_CODE(slot)                                 \
    "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
    "movq %fs:(%rax), %r11\n\t"                              \
    "jmp *(8 * " slot ")(%r11)"
+
+#endif // __ILP32__
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
@@ -70,42 +80,52 @@ __asm__(".balign 4096\n"
 __asm__(".text\n");
 
 __asm__("x86_64_current_tls:\n\t"
-    ENTRY_STUB_ALIGN_DIRECTIVE
 	"movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"
 	"ret");
 
-extern unsigned long
+extern uint64_t
 x86_64_current_tls();
 
-const int entry_type = __GLDISPATCH_STUB_X86_64;
 const int entry_stub_size = ENTRY_STUB_SIZE;
+
+#ifdef __ILP32__
+
+const int entry_type = __GLDISPATCH_STUB_X32;
+static const unsigned char ENTRY_TEMPLATE[] = {
+    0x64, 0x44, 0x8b, 0x1c, 0x25, 0x00, 0x00, 0x00, 0x00, // movl %fs:0, %r11d
+    0x67, 0x45, 0x8b, 0x9b, 0x34, 0x12, 0x00, 0x00,       // movl 0x1234(%r11d), %r11d
+    0x41, 0xff, 0xe3,                                     // jmp *%r11
+};
+
+static const unsigned int TLS_ADDR_OFFSET = 5;
+static const unsigned int SLOT_OFFSET = 13;
+
+#else // __ILP32__
+
+const int entry_type = __GLDISPATCH_STUB_X86_64;
+
+static const unsigned char ENTRY_TEMPLATE[] = {
+    0x64, 0x4c, 0x8b, 0x1c, 0x25, 0x00, 0x00, 0x00, 0x00, // movq %fs:0, %r11
+    0x41, 0xff, 0xa3, 0x34, 0x12, 0x00, 0x00,             // jmp *0x1234(%r11)
+};
+static const unsigned int TLS_ADDR_OFFSET = 5;
+static const unsigned int SLOT_OFFSET = 12;
+
+#endif // __ILP32__
 
 void entry_generate_default_code(char *entry, int slot)
 {
     char *writeEntry = u_execmem_get_writable(entry);
-    unsigned int *p;
-    unsigned long tls_addr;
-    char tmpl[] = {
-        0x48, 0xc7, 0xc0, 0x0, 0x0, 0x0, 0x0, // mov 0x0,%rax
-        0x64, 0x4c, 0x8b, 0x18,               // mov %fs:(%rax),%r11
-        0x41, 0xff, 0xa3,                     // jmpq *0x0(%r11)
-        0x00, 0x00, 0x00, 0x00,
-        0x90                                  // nop
-    };
+    uint64_t tls_addr;
 
-    STATIC_ASSERT(sizeof(mapi_func) == 8);
-    STATIC_ASSERT(ENTRY_STUB_SIZE >= sizeof(tmpl));
+    STATIC_ASSERT(ENTRY_STUB_SIZE >= sizeof(ENTRY_TEMPLATE));
 
     assert(slot >= 0);
 
     tls_addr = x86_64_current_tls();
 
-    p = (unsigned int *)&tmpl[3];
-    *p = (unsigned int)tls_addr;
-
-    p = (unsigned int *)&tmpl[14];
-    *p = (unsigned int)(8 * slot);
-
-    memcpy(writeEntry, tmpl, sizeof(tmpl));
+    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+    *((unsigned int *) &writeEntry[TLS_ADDR_OFFSET]) = (unsigned int) tls_addr;
+    *((unsigned int *) &writeEntry[SLOT_OFFSET]) = (unsigned int) (slot * sizeof(mapi_func));
 }
 
