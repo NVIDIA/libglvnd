@@ -35,24 +35,68 @@
 #include "glvnd/GLdispatchABI.h"
 
 
-// TODO: Change this macro to be the size of the dispatch stubs.
-#define PPC64LE_ENTRY_SIZE 32
+// NOTE: These must be powers of two:
+#define PPC64LE_ENTRY_SIZE 256
+#define PPC64LE_PAGE_ALIGN 65536
+#if ((PPC64LE_ENTRY_SIZE & (PPC64LE_ENTRY_SIZE - 1)) != 0)
+#error PPC64LE_ENTRY_SIZE must be a power of two!
+#endif
+#if ((PPC64LE_PAGE_ALIGN & (PPC64LE_PAGE_ALIGN - 1)) != 0)
+#error PPC64LE_PAGE_ALIGN must be a power of two!
+#endif
 
 __asm__(".section wtext,\"ax\",@progbits\n");
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(PPC64LE_PAGE_ALIGN) "\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
         "public_entry_start:");
 
-#define STUB_ASM_ENTRY(func)        \
-   ".globl " func "\n"              \
-   ".type " func ", @function\n"    \
-   ".balign " U_STRINGIFY(PPC64LE_ENTRY_SIZE) "\n"                   \
-   func ":"
+#define STUB_ASM_ENTRY(func)                            \
+    ".globl " func "\n"                                 \
+    ".type " func ", @function\n"                       \
+    ".balign " U_STRINGIFY(PPC64LE_ENTRY_SIZE) "\n"     \
+    func ":\n\t"                                        \
+    "  addis  2, 12, .TOC.-" func "@ha\n\t"             \
+    "  addi   2, 2, .TOC.-" func "@l\n\t"               \
+    "  .localentry  " func ", .-" func "\n\t"
 
-#define STUB_ASM_CODE(slot) \
-    "nop"
-    // TODO: Fill in this assembly code.
+#define STUB_ASM_CODE(slot)                             \
+    "  addis  11, 2, _glapi_Current@got@ha\n\t"         \
+    "  ld     11, _glapi_Current@got@l(11)\n\t"         \
+    "  ld     11, 0(11)\n\t"                            \
+    "  cmpldi 11, 0\n\t"                                \
+    "  beq    2000f\n"                                  \
+    "1050:\n\t"                                         \
+    "  ld     12, " slot "*8(11)\n\t"                   \
+    "  mtctr  12\n\t"                                   \
+    "  bctr\n"                                          \
+    "2000:\n\t"                                         \
+    "  mflr   0\n\t"                                    \
+    "  std    0, 16(1)\n\t"                             \
+    "  std    2, 40(1)\n\t"                             \
+    "  stdu   1, -144(1)\n\t"                           \
+    "  std    3, 56(1)\n\t"                             \
+    "  stq    4, 64(1)\n\t"                             \
+    "  stq    6, 80(1)\n\t"                             \
+    "  stq    8, 96(1)\n\t"                             \
+    "  std    10, 112(1)\n\t"                           \
+    "  std    12, 128(1)\n\t"                           \
+    "  addis  12, 2, _glapi_get_current@got@ha\n\t"     \
+    "  ld     12, _glapi_get_current@got@l(12)\n\t"     \
+    "  mtctr  12\n\t"                                   \
+    "  bctrl\n\t"                                       \
+    "  ld     2, 144+40(1)\n\t"                         \
+    "  mr     11, 3\n\t"                                \
+    "  ld     3, 56(1)\n\t"                             \
+    "  lq     4, 64(1)\n\t"                             \
+    "  lq     6, 80(1)\n\t"                             \
+    "  lq     8, 96(1)\n\t"                             \
+    "  ld     10, 112(1)\n\t"                           \
+    "  ld     12, 128(1)\n\t"                           \
+    "  addi   1, 1, 144\n\t"                            \
+    "  ld     0, 16(1)\n\t"                             \
+    "  mtlr   0\n\t"                                    \
+    "  b      1050b\n"
     // Conceptually, this is:
     // {
     //     void **dispatchTable = _glapi_Current[GLAPI_CURRENT_DISPATCH];
@@ -69,7 +113,7 @@ __asm__(".balign 4096\n"
 #include "mapi_tmp.h"
 
 
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(PPC64LE_PAGE_ALIGN) "\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:");
@@ -78,23 +122,65 @@ __asm__(".text\n");
 const int entry_type = __GLDISPATCH_STUB_PPC64LE;
 const int entry_stub_size = PPC64LE_ENTRY_SIZE;
 
-static const unsigned char ENTRY_TEMPLATE[] =
+static const uint32_t ENTRY_TEMPLATE[] =
 {
-    // TODO: Fill in the assembly code here as well. This should be
-    // functionally the same code as would be generated from the STUB_ASM_CODE
-    // macro, but defined as a buffer.
+    // This should be functionally the same code as would be generated from
+    // the STUB_ASM_CODE macro, but defined as a buffer.
     // This is used to generate new dispatch stubs. libglvnd will copy this
     // data to the dispatch stub, and then it will patch the slot number and
     // any addresses that it needs to.
+    // NOTE!!!  NOTE!!!  NOTE!!!
+    // This representation is correct for both little- and big-endian systems.
+    // However, more work needs to be done for big-endian Linux because it
+    // adheres to an older, AIX-compatible ABI that uses function descriptors.
+    // 1000:
+    0x7C0802A6,    // <ENTRY+000>:    mflr   0
+    0xF8010010,    // <ENTRY+004>:    std    0, 16(1)
+    0xE96C0080,    // <ENTRY+008>:    ld     11, 9000f-1000b+0(12)
+    0xE96B0000,    // <ENTRY+012>:    ld     11, 0(11)
+    0x282B0000,    // <ENTRY+016>:    cmpldi 11, 0
+    0x41820014,    // <ENTRY+020>:    beq    2000f
+    // 1050:
+    0xE80C0090,    // <ENTRY+024>:    ld     0, 9000f-1000b+16(12)
+    0x7D8B002A,    // <ENTRY+028>:    ldx    12, 11, 0
+    0x7D8903A6,    // <ENTRY+032>:    mtctr  12
+    0x4E800420,    // <ENTRY+036>:    bctr
+    // 2000:
+    0xF8410028,    // <ENTRY+040>:    std    2, 40(1)
+    0xF821FF71,    // <ENTRY+044>:    stdu   1, -144(1)
+    0xF8610038,    // <ENTRY+048>:    std    3, 56(1)
+    0xF8810042,    // <ENTRY+052>:    stq    4, 64(1)
+    0xF8C10052,    // <ENTRY+056>:    stq    6, 80(1)
+    0xF9010062,    // <ENTRY+060>:    stq    8, 96(1)
+    0xF9410070,    // <ENTRY+064>:    std    10, 112(1)
+    0xF9810080,    // <ENTRY+068>:    std    12, 128(1)
+    0xE98C0088,    // <ENTRY+072>:    ld     12, 9000f-1000b+8(12)
+    0x7D8903A6,    // <ENTRY+076>:    mtctr  12
+    0x4E800421,    // <ENTRY+080>:    bctrl
+    0xE9410070,    // <ENTRY+084>:    ld     10, 112(1)
+    0x7C6B1B78,    // <ENTRY+088>:    mr     11, 3
+    0xE8610038,    // <ENTRY+092>:    ld     3, 56(1)
+    0xE0810040,    // <ENTRY+096>:    lq     4, 64(1)
+    0xE0C10050,    // <ENTRY+100>:    lq     6, 80(1)
+    0xE1010060,    // <ENTRY+104>:    lq     8, 96(1)
+    0xE9810080,    // <ENTRY+108>:    ld     12, 128(1)
+    0x38210090,    // <ENTRY+112>:    addi   1, 1, 144
+    0xE8010010,    // <ENTRY+116>:    ld     0, 16(1)
+    0x7C0803A6,    // <ENTRY+120>:    mtlr   0
+    0x4BFFFF9C,    // <ENTRY+124>:    b      1050b
+    // 9000:
+    0, 0,          // <ENTRY+128>:    .quad _glapi_Current
+    0, 0,          // <ENTRY+136>:    .quad _glapi_get_current
+    0, 0           // <ENTRY+144>:    .quad <slot>*8
 };
 
 // These are the offsets in ENTRY_TEMPLATE of the values that we have to patch.
-static const int TEMPLATE_OFFSET_CURRENT_TABLE = 0;
-static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = 0;
-static const int TEMPLATE_OFFSET_SLOT = 0;
+static const int TEMPLATE_OFFSET_CURRENT_TABLE = (sizeof(ENTRY_TEMPLATE) - 24);
+static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = (sizeof(ENTRY_TEMPLATE) - 16);
+static const int TEMPLATE_OFFSET_SLOT = (sizeof(ENTRY_TEMPLATE) - 8);
 
 /*
- * TODO: Fill in these offsets. These are used in entry_generate_default_code
+ * These offsets are used in entry_generate_default_code
  * to patch the dispatch table index and any memory addresses in the generated
  * function.
  *
@@ -111,17 +197,20 @@ void entry_generate_default_code(char *entry, int slot)
     char *writeEntry = u_execmem_get_writable(entry);
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
-    // TODO: Patch the dispatch table slot and the addresses of the
-    // _glapi_Current variable and _glapi_get_current function.
-    // Note that (entry) is the executable pointer, and (writeEntry) is the
-    // writable pointer, which may or may not be the same. So, if the stub
-    // needs to use IP-relative addresses, then calculate those addresses based
-    // on (entry).
     *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
     *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) _glapi_Current;
     *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = (uintptr_t) _glapi_get_current;
 
-    // TODO: Do any cache clears or anything else that is necessary on PPC64LE
-    // to make self-modifying code work.
+    // This sequence is from the PowerISA Version 2.07B book.
+    // It may be a bigger hammer than we need, but it works;
+    // note that the __builtin___clear_cache intrinsic for
+    // PPC does not seem to generate any code.
+    __asm__ __volatile__(
+                         "  dcbst 0, %0\n\t"
+                         "  sync\n\t"
+                         "  icbi 0, %0\n\t"
+                         "  isync\n"
+                         : "=r" (writeEntry)
+                     );
 }
 
