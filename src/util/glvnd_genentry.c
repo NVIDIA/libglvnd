@@ -111,16 +111,21 @@ static const int DISPATCH_FUNC_OFFSET = 12;
 
 #elif defined(USE_PPC64LE_ASM)
 
-static unsigned char STUB_TEMPLATE[] =
+static uint32_t STUB_TEMPLATE[] =
 {
-    // TODO: Fill in assembly code.
-    // This function should just jump to an immediate address. See the x86
-    // and x86-64 versions above for the simplest examples.
+    // NOTE!!!  NOTE!!!  NOTE!!!
+    // This data is endian-reversed from the code you would see in an assembly
+    // listing!
+    // 1000:
+    0xE98C0010,     //   ld 12, 9000f-1000b(12)
+    0x7D8903A6,     //   mtctr 12
+    0x4E800420,     //   bctr
+    0x60000000,     //   nop
+    // 9000:
+    0, 0            //   .quad 0
 };
 
-// TODO: Set this to the offset in STUB_TEMPLATE which contains the address to
-// jump to.
-static const int DISPATCH_FUNC_OFFSET = 0;
+static const int DISPATCH_FUNC_OFFSET = sizeof(STUB_TEMPLATE) - 8;
 
 #else
 #error "Can't happen -- not implemented"
@@ -310,10 +315,7 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
 
 #elif defined(USE_PPC64LE_ASM)
 
-    // TODO: Update this if necessary:
-    // - Set the address correctly -- should it be an absolute or IP-relative
-    //   address?
-    // - Does it need to do anything to make self-modifying code work?
+    // For PPC64LE, we need to patch in an absolute address.
     *((uintptr_t *)(code + DISPATCH_FUNC_OFFSET)) = (uintptr_t)dispatch;
 
 #else
