@@ -315,6 +315,7 @@ static EGLDisplay GetPlatformDisplayCommon(EGLenum platform,
 PUBLIC EGLDisplay EGLAPIENTRY eglGetDisplay(EGLNativeDisplayType display_id)
 {
     EGLenum platform = EGL_NONE;
+    EGLDisplay display = EGL_NO_DISPLAY;
     const char *name;
 
     __eglEntrypointCommon();
@@ -346,10 +347,10 @@ PUBLIC EGLDisplay EGLAPIENTRY eglGetDisplay(EGLNativeDisplayType display_id)
         }
     }
 
-    // For EGL_DEFAULT_DISPLAY, we can let the vendor libraries figure out a
-    // default.
-    if (display_id == EGL_DEFAULT_DISPLAY) {
-        return GetPlatformDisplayCommon(EGL_NONE, display_id, NULL, "eglGetDisplay");
+    // Let the vendor libraries attempt to validate display_id
+    display = GetPlatformDisplayCommon(EGL_NONE, display_id, NULL, "eglGetDisplay");
+    if (display != EGL_NO_DISPLAY) {
+        return display;
     }
 
     // Otherwise, try to guess a platform type.
