@@ -149,7 +149,6 @@ __asm__(".section wtext,\"ax\"\n"
 #include "mapi_tmp.h"
 
 __asm__(".balign 4096\n"
-        ".syntax divided\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:\n"
