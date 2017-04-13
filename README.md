@@ -4,12 +4,14 @@ libglvnd: the GL Vendor-Neutral Dispatch library
 Introduction
 ------------
 
-This is a work-in-progress implementation of the vendor-neutral dispatch layer
-for arbitrating OpenGL API calls between multiple vendors on a per-screen basis,
-as described by Andy Ritger's OpenGL ABI proposal [1].
+libglvnd is a vendor-neutral dispatch layer for arbitrating OpenGL API calls
+between multiple vendors. It allows multiple drivers from different vendors to
+coexist on the same filesystem, and determines which vendor to dispatch each
+API call to at runtime.
 
-Currently, only the GLX window-system API and OpenGL are supported, but in the
-future this library may support EGL and OpenGL ES as well.
+Both GLX and EGL are supported, in any combination with OpenGL and OpenGL ES.
+
+libglvnd was originally described in Andy Ritger's OpenGL ABI proposal [1].
 
 
 Building the library
@@ -29,12 +31,11 @@ Code overview
 The code in the src/ directory is organized as follows:
 
 - GLX/ contains code for libGLX, the GLX window-system API library.
+- EGL/ contains code for libEGL, the EGL window-system API library.
 - GLdispatch/ contains code for libGLdispatch, which is responsible for
-  dispatching OpenGL functions to the correct vendor library. Its interface is
-  defined in GLdispatch.h. This implements the guts of the core GL API
+  dispatching OpenGL functions to the correct vendor library based on the
+  current EGL or GLX rendering context. This implements the guts of the GL API
   libraries. Most of the dispatch code is based on Mesa's glapi.
-- EGL/ is a placeholder for now. It will contain libEGL, which may be
-  implemented similarly to libGLX.
 - OpenGL/, GLESv1/, and GLESv2/ contain code to generate libOpenGL.so,
   libGLESv1\_CM.so, and libGLESv2.so, respectively. All three are merely
   wrapper libraries for libGLdispatch. Ideally, these could be implemented via
@@ -45,7 +46,7 @@ The code in the src/ directory is organized as follows:
 - util/ contains generic utility code.
 
 In addition, libglvnd uses a GLX extension,
-[GLX\_EXT\_libglvnd](https://www.opengl.org/registry/specs/EXT/glx_libglvnd.txt),
+[GLX\_EXT\_libglvnd](https://khronos.org/registry/OpenGL/extensions/EXT/GLX_EXT_libglvnd.txt),
 to determine which vendor library to use for a screen or XID.
 
 There are a few good starting points for familiarizing oneself with the code:
@@ -60,6 +61,8 @@ There are a few good starting points for familiarizing oneself with the code:
   updated by the API library.
 - Look at `libglxmapping.c:__glXLookupVendorBy{Name,Screen}()` to see how
   vendor library names are queried.
+- For EGL, follow the flow of `eglGetPlatformDisplay()` to see how EGL selects
+  a vendor library.
 
 The tests/ directory contains several unit tests which verify that dispatching
 to different vendors actually works. Run `make check` to run these unit tests.
@@ -115,9 +118,8 @@ libGLdispatch implements core GL dispatching and TLS. It acts as a thin wrapper
 around glapi which provides some higher-level functionality for managing
 dispatch tables, requesting vendor proc addresses, and making current to a given
 context + dispatch table. This is a separate library rather than statically
-linked into libGLX, since current dispatch tables will eventually be shared
-between GLX and EGL, similarly to how glapi operates when Mesa is compiled with
-the --shared-glapi option.
+linked into libGLX, since the same dispatching code is used by both GLX and
+EGL.
 
 libOpenGL is a wrapper library to libGLdispatch which exposes OpenGL 4.5 core and
 compatibility entry points.
@@ -132,6 +134,23 @@ Note that since all OpenGL functions are dispatched through the same table in
 libGLdispatch, it doesn't matter which library is used to find the entrypoint.
 The same OpenGL function in libGL, libOpenGL, libGLES, and the function pointer
 returned by glXGetProcAddress are all interchangeable.
+
+### OpenGL dispatching ###
+
+By definition, all OpenGL functions are dispatched based on the current
+context. OpenGL dispatching is handled in libGLdispatch, which is used by both
+EGL and GLX.
+
+libGLdispatch uses a per-thread dispatch table to look up the correct vendor
+library function for every OpenGL function.
+
+When an application calls eglMakeCurrent or glXMakeCurrent, the EGL or GLX
+library finds the correct dispatch table and then calls into libGLdispatch to
+set that table for the current thread.
+
+Since they're all dispatched through the common libGLdispatch layer, that also
+means that all OpenGL entrypoints will work correctly, regardless of whether
+the current context is from EGL or GLX.
 
 ### GLX dispatching ###
 
@@ -177,6 +196,35 @@ map GLX API calls to the right vendor, we use the following strategy:
   XIDs, however, can be created by another process, so libGLX may not know in
   advance which screen they belong to. To deal with that, libGLX queries the
   server using the GLX extension GLX\_EXT\_libglvnd.
+
+### EGL dispatching ###
+
+EGL dispatching works similarly to GLX, but there are fewer object types to
+deal with. Almost all EGL functions are dispatched based on an EGLDisplay or
+EGLDeviceEXT parameter.
+
+EGL can't rely on asking an X server for a vendor name like GLX can, so
+instead, it enumerates and loads every available vendor library. Loading every
+vendor is also needed to support extensions such as
+EGL\_EXT\_device\_enumeration.
+
+In order to find the available vendor libraries, each vendor provides a JSON
+file in a well-known directory, similar to how Vulkan ICD's are loaded.
+
+When the application calls eglGetPlatformDisplay, EGL will simply call into
+each vendor library until it finds one that succeeds. After that, whichever
+vendor succeeded owns that display.
+
+As with GLX, vendor libraries must provide dispatch stubs for any display or
+device extensions that they support, so that they can add new extensions
+without having to modify libglvnd.
+
+Since libglvnd passes eglGetPlatformDisplay calls through to each vendor, a
+vendor can also add a new platform extension (e.g., EGL\_KHR\_platform\_x11)
+without changing libglvnd.
+
+Other EGL client extensions, by definition, do require modifying libglvnd.
+Those are handled on a case-by-case basis.
 
 Issues
 ------
