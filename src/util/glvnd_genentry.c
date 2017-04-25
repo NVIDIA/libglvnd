@@ -318,6 +318,17 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
     // For PPC64LE, we need to patch in an absolute address.
     *((uintptr_t *)(code + DISPATCH_FUNC_OFFSET)) = (uintptr_t)dispatch;
 
+    // This sequence is from the PowerISA Version 2.07B book.
+    // It may be a bigger hammer than we need, but it works;
+    // note that the __builtin___clear_cache intrinsic for
+    // PPC does not seem to generate any code.
+    __asm__ __volatile__(
+                         "  dcbst 0, %0\n\t"
+                         "  sync\n\t"
+                         "  icbi 0, %0\n\t"
+                         "  isync\n"
+                         : "=r" (code)
+                     );
 #else
 #error "Can't happen -- not implemented"
 #endif
