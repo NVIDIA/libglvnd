@@ -150,12 +150,6 @@ static const int TEMPLATE_OFFSET_CURRENT_TABLE     = AARCH64_BYTECODE_SIZE - 3*8
 static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = AARCH64_BYTECODE_SIZE - 2*8;
 static const int TEMPLATE_OFFSET_SLOT              = AARCH64_BYTECODE_SIZE - 8;
 
-void
-entry_init_public(void)
-{
-    STATIC_ASSERT(AARCH64_BYTECODE_SIZE <= AARCH64_ENTRY_SIZE);
-}
-
 void entry_generate_default_code(char *entry, int slot)
 {
     char *writeEntry;
@@ -175,33 +169,3 @@ void entry_generate_default_code(char *entry, int slot)
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
     __builtin___clear_cache(writeEntry, writeEntry + AARCH64_BYTECODE_SIZE);
 }
-
-// Note: The rest of these functions could also be used for aarch64 TLS stubs,
-// once those are implemented.
-
-mapi_func
-entry_get_public(int index)
-{
-    return (mapi_func)(public_entry_start + (index * entry_stub_size));
-}
-
-void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
-{
-    // Get the actual beginning of the stub allocation
-    *execPtr = (const void *) entry;
-    *writePtr = u_execmem_get_writable((void *) entry);
-}
-
-#if !defined(STATIC_DISPATCH_ONLY)
-mapi_func entry_generate(int slot)
-{
-    void *code = u_execmem_alloc(entry_stub_size);
-    if (!code) {
-        return NULL;
-    }
-
-    entry_generate_default_code(code, slot);
-
-    return (mapi_func) code;
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)
