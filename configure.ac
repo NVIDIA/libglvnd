@@ -68,6 +68,7 @@ AC_ARG_ENABLE([asm],
     [enable_asm="$enableval"],
     [enable_asm=yes]
 )
+
 asm_arch=""
 AC_MSG_CHECKING([whether to enable assembly])
 test "x$enable_asm" = xno && AC_MSG_RESULT([no])
@@ -97,6 +98,9 @@ if test "x$enable_asm" = xyes; then
     aarch64)
         asm_arch=aarch64
         ;;
+    powerpc64le)
+        asm_arch=ppc64le
+        ;;
     esac
 
     case "$asm_arch" in
@@ -115,6 +119,10 @@ if test "x$enable_asm" = xyes; then
     aarch64)
         DEFINES="$DEFINES -DUSE_AARCH64_ASM"
         AC_MSG_RESULT([yes, aarch64])
+        ;;
+    ppc64le)
+        DEFINES="$DEFINES -DUSE_PPC64LE_ASM"
+        AC_MSG_RESULT([yes, ppc64le])
         ;;
     *)
         AC_MSG_RESULT([no, platform '$host_cpu' not supported])
@@ -184,6 +192,16 @@ xaarch64)
     gldispatch_entry_type=aarch64_tsd
     gldispatch_use_tls=no
     ;;
+xppc64le)
+    # For ppc64le, allow both the TLS and TSD stubs for now.
+    if test "x$HAVE_INIT_TLS" = "xyes" ; then
+        gldispatch_entry_type=ppc64le_tls
+        gldispatch_use_tls=yes
+    else
+        gldispatch_entry_type=ppc64le_tsd
+        gldispatch_use_tls=no
+    fi
+    ;;
 *)
     # The C stubs will work with either TLS or TSD.
     gldispatch_entry_type=pure_c
@@ -200,6 +218,8 @@ AM_CONDITIONAL([GLDISPATCH_TYPE_X86_TLS], [test "x$gldispatch_entry_type" = "xx8
 AM_CONDITIONAL([GLDISPATCH_TYPE_X86_TSD], [test "x$gldispatch_entry_type" = "xx86_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_X86_64_TLS], [test "x$gldispatch_entry_type" = "xx86_64_tls"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_X86_64_TSD], [test "x$gldispatch_entry_type" = "xx86_64_tsd"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_PPC64LE_TLS], [test "x$gldispatch_entry_type" = "xppc64le_tls"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_PPC64LE_TSD], [test "x$gldispatch_entry_type" = "xppc64le_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_ARMV7_TSD], [test "x$gldispatch_entry_type" = "xarmv7_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_AARCH64_TSD], [test "x$gldispatch_entry_type" = "xaarch64_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_PURE_C], [test "x$gldispatch_entry_type" = "xpure_c"])

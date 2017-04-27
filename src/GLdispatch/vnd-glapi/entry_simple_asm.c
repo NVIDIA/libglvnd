@@ -42,11 +42,13 @@
 /**
  * \file
  *
- * Common functions for the x86 and x86-64 stubs.
+ * Common functions for assembly stubs other than ARMv7.
  *
- * These functions are almost identical to the ones used for ARMv7, except that
- * the ARM stubs have to add 1 to the address of each entrypoint to force
- * switching to Thumb mode.
+ * These functions are used for the assembly stubs on every architecture except
+ * for ARMv7.
+ *
+ * ARMv7 is different because the ARM stubs have to add 1 to the address of
+ * each entrypoint to force switching to Thumb mode.
  */
 
 void entry_init_public(void)

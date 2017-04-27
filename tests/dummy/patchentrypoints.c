@@ -164,6 +164,54 @@ static void patch_aarch64(char *writeEntry, const char *execEntry,
 #endif
 }
 
+static void patch_ppc64le(char *writeEntry, const char *execEntry,
+        int stubSize, void *incrementPtr)
+{
+#if defined(__PPC64__)
+    const unsigned int tmpl[] = {
+        // NOTE!!!  NOTE!!!  NOTE!!!
+        // This representation is correct for both little- and big-endian systems.
+        // However, more work needs to be done for big-endian Linux because it
+        // adheres to an older, AIX-compatible ABI that uses function descriptors.
+        // 1000:
+        0x7D2903A6,     //  mtctr 9
+        0xE96C0020,     //  ld    11, 9000f-1000b(12)
+        0xE92B0000,     //  ld    9, 0(11)
+        0x39290001,     //  addi  9, 9, 1
+        0xF92B0000,     //  std   9, 0(11)
+        0x7D2902A6,     //  mfctr 9
+        0x4E800020,     //  blr
+        0x60000000,     //  nop
+        // 9000:
+        0, 0
+    };
+
+    static const int offsetAddr = sizeof(tmpl) - 8;
+
+    if (stubSize < sizeof(tmpl)) {
+        return;
+    }
+
+    memcpy(writeEntry, tmpl, sizeof(tmpl));
+    memcpy(writeEntry + offsetAddr, &incrementPtr, sizeof(incrementPtr));
+
+    // This sequence is from the PowerISA Version 2.07B book.
+    // It may be a bigger hammer than we need, but it works;
+    // note that the __builtin___clear_cache intrinsic for
+    // PPC does not seem to generate any code:
+    __asm__ __volatile__(
+                         "  dcbst 0, %0\n\t"
+                         "  sync\n\t"
+                         "  icbi 0, %0\n\t"
+                         "  isync\n"
+                         : "=r" (writeEntry)
+                     );
+#else
+    assert(0); // Should not be calling this
+#endif
+}
+
+
 GLboolean dummyCheckPatchSupported(int type, int stubSize)
 {
     switch (type) {
@@ -172,6 +220,7 @@ GLboolean dummyCheckPatchSupported(int type, int stubSize)
         case __GLDISPATCH_STUB_ARMV7_THUMB:
         case __GLDISPATCH_STUB_AARCH64:
         case __GLDISPATCH_STUB_X32:
+        case __GLDISPATCH_STUB_PPC64LE:
             return GL_TRUE;
         default:
             return GL_FALSE;
@@ -203,6 +252,9 @@ GLboolean dummyPatchFunction(int type, int stubSize,
                 break;
             case __GLDISPATCH_STUB_AARCH64:
                 patch_aarch64(writeAddr, execAddr, stubSize, incrementPtr);
+                break;
+            case __GLDISPATCH_STUB_PPC64LE:
+                patch_ppc64le(writeAddr, execAddr, stubSize, incrementPtr);
                 break;
             default:
                 assert(0);

@@ -93,6 +93,11 @@ enum {
      * Used for stubs on x32 builds (x86-64 with 32-bit pointers).
      */
     __GLDISPATCH_STUB_X32,
+
+    /*!
+     * Used for stubs on PPC64LE systems.
+     */
+    __GLDISPATCH_STUB_PPC64LE,
 };
 
 /*!
