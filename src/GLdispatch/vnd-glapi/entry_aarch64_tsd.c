@@ -46,7 +46,7 @@
  */
 
 /*
- * u_execmem_alloc() allocates 128 bytes per stub.
+ * The size of each dispatch stub.
  */
 #define AARCH64_ENTRY_SIZE 128
 
@@ -152,10 +152,7 @@ static const int TEMPLATE_OFFSET_SLOT              = AARCH64_BYTECODE_SIZE - 8;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry;
-
-    // Get the pointer to the writable mapping.
-    writeEntry = (char *) u_execmem_get_writable(entry);
+    char *writeEntry = (char *) entry;
 
     memcpy(writeEntry, BYTECODE_TEMPLATE, AARCH64_BYTECODE_SIZE);
 

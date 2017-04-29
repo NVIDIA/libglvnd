@@ -94,7 +94,7 @@ static const int TEMPLATE_OFFSET_SLOT = 8;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = u_execmem_get_writable(entry);
+    char *writeEntry = entry;
 
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
     *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_TLS_OFFSET)) = x86_current_tls();

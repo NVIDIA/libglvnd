@@ -53,19 +53,6 @@ entry_init_public(void);
 mapi_func
 entry_get_public(int index);
 
-/**
- * Generates an entrypoint for an extension function.
- *
- * This will allocate executable memory and generate an entrypoint function.
- * This is used to dispatch any OpenGL functions that are not known at compile
- * time.
- *
- * \param slot The slot in the dispatch table.
- * \return A newly generated entrypoint function, or NULL on failure.
- */
-mapi_func
-entry_generate(int slot);
-
 void
 entry_generate_default_code(char *entry, int slot);
 

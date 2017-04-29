@@ -34,10 +34,6 @@
 #include "stub.h"
 #include "table.h"
 
-#if !defined(STATIC_DISPATCH_ONLY)
-#include "u_execmem.h"
-#endif
-
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
 #define MAPI_LAST_SLOT (MAPI_TABLE_NUM_STATIC + MAPI_TABLE_NUM_DYNAMIC - 1)
 
@@ -107,7 +103,6 @@ void stub_cleanup_dynamic(void)
     }
 
     num_dynamic_stubs = 0;
-    u_execmem_free();
 }
 
 /**
@@ -137,7 +132,7 @@ stub_add_dynamic(const char *name)
 
    /* Assign the next unused slot. */
    stub->slot = MAPI_TABLE_NUM_STATIC + idx;
-   stub->addr = entry_generate(stub->slot);
+   stub->addr = entry_get_public(stub->slot);
    if (!stub->addr) {
       free(stub->nameBuffer);
       stub->nameBuffer = NULL;

@@ -66,8 +66,12 @@ entry_generate_default_code(char *entry, int slot)
 mapi_func
 entry_get_public(int index)
 {
-   /* pubic_entries are defined by MAPI_TMP_PUBLIC_ENTRIES */
-   return public_entries[index];
+    /* pubic_entries are defined by MAPI_TMP_PUBLIC_ENTRIES */
+    if (index >= 0 && index < (sizeof(public_entries) / sizeof((public_entries)[0]))) {
+        return public_entries[index];
+    } else {
+        return NULL;
+    }
 }
 
 int entry_patch_start(void)
@@ -88,11 +92,3 @@ void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **ex
     *writePtr = NULL;
     *execPtr = NULL;
 }
-
-#if !defined(STATIC_DISPATCH_ONLY)
-mapi_func
-entry_generate(int slot)
-{
-   return NULL;
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)

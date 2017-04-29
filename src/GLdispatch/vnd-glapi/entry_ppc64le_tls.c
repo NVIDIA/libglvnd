@@ -142,7 +142,7 @@ static const int TEMPLATE_OFFSET_SLOT = sizeof(ENTRY_TEMPLATE) - 8;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = u_execmem_get_writable(entry);
+    char *writeEntry = entry;
 
     STATIC_ASSERT(PPC64LE_ENTRY_SIZE >= sizeof(ENTRY_TEMPLATE));
 
