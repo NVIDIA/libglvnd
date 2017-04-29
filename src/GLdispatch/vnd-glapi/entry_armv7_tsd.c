@@ -47,7 +47,7 @@
 __asm__(".syntax unified\n\t");
 
 /*
- * u_execmem_alloc() allocates 64 bytes per stub.
+ * The size of each dispatch stub.
  */
 #define ENTRY_STUB_ALIGN 128
 #if !defined(GLDISPATCH_PAGE_SIZE)
@@ -198,7 +198,7 @@ void entry_generate_default_code(char *entry, int slot)
     assert((uintptr_t)entry & (uintptr_t)0x1);
 
     // Get the pointer to the writable mapping.
-    writeEntry = (char *) u_execmem_get_writable(entry - 1);
+    writeEntry = (char *) (entry - 1);
 
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
@@ -227,22 +227,5 @@ void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **ex
     // Get the actual beginning of the stub allocation
     void *entryBase = (void *) (((uintptr_t) entry) - 1);
     *execPtr = (const void *) entryBase;
-    *writePtr = u_execmem_get_writable(entryBase);
+    *writePtr = entryBase;
 }
-
-#if !defined(STATIC_DISPATCH_ONLY)
-mapi_func entry_generate(int slot)
-{
-    void *code = u_execmem_alloc(entry_stub_size);
-    if (!code) {
-        return NULL;
-    }
-
-    // Add 1 to the base address to force Thumb mode when jumping to the stub
-    code = (void *)((char *)code + 1);
-
-    entry_generate_default_code(code, slot);
-
-    return (mapi_func) code;
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)
