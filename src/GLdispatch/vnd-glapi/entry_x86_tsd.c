@@ -105,7 +105,7 @@ static const int TEMPLATE_OFFSET_SLOT2 = 22;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = u_execmem_get_writable(entry);
+    char *writeEntry = entry;
     uintptr_t getTableOffset;
 
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));

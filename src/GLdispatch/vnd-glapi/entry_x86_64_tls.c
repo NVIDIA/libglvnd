@@ -118,7 +118,7 @@ static const unsigned int SLOT_OFFSET = 12;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = u_execmem_get_writable(entry);
+    char *writeEntry = entry;
     uint64_t tls_addr;
 
     STATIC_ASSERT(ENTRY_STUB_ALIGN >= sizeof(ENTRY_TEMPLATE));

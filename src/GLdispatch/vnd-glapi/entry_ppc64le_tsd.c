@@ -205,7 +205,7 @@ static const int TEMPLATE_OFFSET_SLOT = (sizeof(ENTRY_TEMPLATE) - 8);
  */
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = u_execmem_get_writable(entry);
+    char *writeEntry = entry;
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
     *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);

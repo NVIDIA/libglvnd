@@ -46,7 +46,7 @@
  */
 
 /*
- * u_execmem_alloc() allocates 128 bytes per stub.
+ * The size of each dispatch stub.
  */
 #define ENTRY_STUB_ALIGN 128
 #if !defined(GLDISPATCH_PAGE_SIZE)
@@ -155,10 +155,7 @@ static const int TEMPLATE_OFFSET_SLOT              = sizeof(ENTRY_TEMPLATE) - 8;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry;
-
-    // Get the pointer to the writable mapping.
-    writeEntry = (char *) u_execmem_get_writable(entry);
+    char *writeEntry = (char *) entry;
 
     memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
