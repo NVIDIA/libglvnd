@@ -132,7 +132,7 @@ def generate_public_stubs(functions):
 
     text += "static const struct mapi_stub public_stubs[] = {\n"
     for func in functions:
-        text += "   { \"%s\", %d, NULL },\n" % (func.name, func.slot)
+        text += "   { \"%s\", %d },\n" % (func.name, func.slot)
     text += "};\n"
     text += "#undef MAPI_TMP_PUBLIC_STUBS\n"
     text += "#endif /* MAPI_TMP_PUBLIC_STUBS */\n"

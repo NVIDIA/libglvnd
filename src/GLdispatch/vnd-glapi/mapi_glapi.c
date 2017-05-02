@@ -83,19 +83,21 @@ _glapi_get_dispatch_table_size(void)
    return MAPI_TABLE_NUM_SLOTS;
 }
 
-static const struct mapi_stub *
+static int
 _glapi_get_stub(const char *name, int generate)
 {
-   const struct mapi_stub *stub;
+    int index;
 
-   if (!name)
-      return NULL;
+    if (!name) {
+        return -1;
+    }
 
-   stub = stub_find_public(name);
-   if (!stub)
-      stub = stub_find_dynamic(name, generate);
+    index = stub_find_public(name);
+    if (index < 0) {
+        index = stub_find_dynamic(name, generate);
+    }
 
-   return stub;
+    return index;
 }
 
 /**
@@ -104,8 +106,7 @@ _glapi_get_stub(const char *name, int generate)
 int
 _glapi_get_proc_offset(const char *funcName)
 {
-   const struct mapi_stub *stub = _glapi_get_stub(funcName, 0);
-   return (stub) ? stub_get_slot(stub) : -1;
+    return _glapi_get_stub(funcName, 0);
 }
 
 /**
@@ -116,8 +117,12 @@ _glapi_get_proc_offset(const char *funcName)
 _glapi_proc
 _glapi_get_proc_address(const char *funcName)
 {
-   const struct mapi_stub *stub = _glapi_get_stub(funcName, 1);
-   return (stub) ? (_glapi_proc) stub_get_addr(stub) : NULL;
+    int index = _glapi_get_stub(funcName, 1);
+    if (index >= 0) {
+        return stub_get_addr(index);
+    } else {
+        return NULL;
+    }
 }
 
 /**
@@ -126,8 +131,7 @@ _glapi_get_proc_address(const char *funcName)
 const char *
 _glapi_get_proc_name(unsigned int offset)
 {
-   const struct mapi_stub *stub = stub_find_by_slot(offset);
-   return stub ? stub_get_name(stub) : NULL;
+   return stub_get_name(offset);
 }
 
 
