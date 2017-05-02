@@ -221,10 +221,9 @@ entry_get_public(int index)
     return (mapi_func)(public_entry_start + (index * entry_stub_size) + 1);
 }
 
-void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
+void entry_get_patch_addresses(int index, void **writePtr, const void **execPtr)
 {
-    // Get the actual beginning of the stub allocation
-    void *entryBase = (void *) (((uintptr_t) entry) - 1);
-    *execPtr = (const void *) entryBase;
-    *writePtr = entryBase;
+    void *entry = (void *) (public_entry_start + (index * entry_stub_size));
+    *execPtr = (const void *) entry;
+    *writePtr = entry;
 }
