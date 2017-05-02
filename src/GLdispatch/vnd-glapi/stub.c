@@ -226,13 +226,13 @@ static void stubRestoreFuncsInternal(void)
     assert(stub_allow_override());
 
     for (i = 0; i < ARRAY_SIZE(public_stubs); i++) {
-        entry_generate_default_code((char *)entry_get_public(i), public_stubs[i].slot);
+        entry_generate_default_code(i, public_stubs[i].slot);
     }
 
 #if !defined(STATIC_DISPATCH_ONLY)
     for (i=0; i<num_dynamic_stubs; i++) {
         int slot = ARRAY_SIZE(public_stubs) + i;
-        entry_generate_default_code((char *)entry_get_public(slot), slot);
+        entry_generate_default_code(slot, slot);
     }
 #endif
 }

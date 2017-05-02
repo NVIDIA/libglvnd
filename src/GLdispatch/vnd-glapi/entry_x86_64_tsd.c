@@ -128,8 +128,9 @@ static const int TEMPLATE_OFFSET_CURRENT_TABLE = 2;
 static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = 17;
 static const int TEMPLATE_OFFSET_SLOT = 45;
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
     *((uint32_t *) (entry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);

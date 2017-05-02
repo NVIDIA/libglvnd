@@ -140,8 +140,9 @@ static const uint32_t ENTRY_TEMPLATE[] =
 static const int TEMPLATE_OFFSET_TLS_ADDR = sizeof(ENTRY_TEMPLATE) - 16;
 static const int TEMPLATE_OFFSET_SLOT = sizeof(ENTRY_TEMPLATE) - 8;
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     STATIC_ASSERT(PPC64LE_ENTRY_SIZE >= sizeof(ENTRY_TEMPLATE));
 
     assert(slot >= 0);

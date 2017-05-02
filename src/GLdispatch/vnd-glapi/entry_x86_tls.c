@@ -92,8 +92,9 @@ static const unsigned char ENTRY_TEMPLATE[] =
 static const int TEMPLATE_OFFSET_TLS_OFFSET = 2;
 static const int TEMPLATE_OFFSET_SLOT = 8;
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
     *((uint32_t *) (entry + TEMPLATE_OFFSET_TLS_OFFSET)) = x86_current_tls();
     *((uint32_t *) (entry + TEMPLATE_OFFSET_SLOT)) = (uint32_t) (slot * sizeof(mapi_func));

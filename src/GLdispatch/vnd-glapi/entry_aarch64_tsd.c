@@ -150,8 +150,9 @@ static const int TEMPLATE_OFFSET_CURRENT_TABLE     = AARCH64_BYTECODE_SIZE - 3*8
 static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = AARCH64_BYTECODE_SIZE - 2*8;
 static const int TEMPLATE_OFFSET_SLOT              = AARCH64_BYTECODE_SIZE - 8;
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     memcpy(entry, BYTECODE_TEMPLATE, AARCH64_BYTECODE_SIZE);
 
     // Patch the slot number and whatever addresses need to be patched.
