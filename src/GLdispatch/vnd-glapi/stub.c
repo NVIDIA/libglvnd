@@ -268,10 +268,7 @@ static GLboolean stubGetPatchOffset(const char *name, void **writePtr, const voi
 #endif // !defined(STATIC_DISPATCH_ONLY)
 
     if (index >= 0) {
-        mapi_func addr = entry_get_public(index);
-        if (addr != NULL) {
-            entry_get_patch_addresses(addr, &writeAddr, &execAddr);
-        }
+        entry_get_patch_addresses(index, &writeAddr, &execAddr);
     }
 
     if (writePtr != NULL) {
