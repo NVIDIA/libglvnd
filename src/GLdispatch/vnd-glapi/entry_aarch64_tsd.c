@@ -153,8 +153,9 @@ static const int TEMPLATE_OFFSET_CURRENT_TABLE     = sizeof(ENTRY_TEMPLATE) - 3*
 static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = sizeof(ENTRY_TEMPLATE) - 2*8;
 static const int TEMPLATE_OFFSET_SLOT              = sizeof(ENTRY_TEMPLATE) - 8;
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
     // Patch the slot number and whatever addresses need to be patched.

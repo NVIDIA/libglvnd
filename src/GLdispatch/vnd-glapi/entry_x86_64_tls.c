@@ -116,8 +116,9 @@ static const unsigned int SLOT_OFFSET = 12;
 
 #endif // __ILP32__
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     uint64_t tls_addr;
 
     STATIC_ASSERT(ENTRY_STUB_ALIGN >= sizeof(ENTRY_TEMPLATE));

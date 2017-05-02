@@ -53,8 +53,15 @@ entry_init_public(void);
 mapi_func
 entry_get_public(int index);
 
-void
-entry_generate_default_code(char *entry, int slot);
+/**
+ * Restores the original code for a dispatch stub. This is used to unpatch the
+ * dispatch stubs after a vendor library patched them.
+ *
+ * \param index The index of the dispatch stub.
+ * \param slot The slot in the dispatch table that the stub should call
+ *      through.
+ */
+void entry_generate_default_code(int index, int slot);
 
 /**
  * Called before starting entrypoint patching.

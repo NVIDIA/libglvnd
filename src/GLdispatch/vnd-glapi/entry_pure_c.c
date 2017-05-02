@@ -58,8 +58,7 @@ entry_init_public(void)
 {
 }
 
-void
-entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
     assert(0);
 }
