@@ -103,8 +103,9 @@ static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET_RELATIVE = 20;
 static const int TEMPLATE_OFFSET_SLOT1 = 11;
 static const int TEMPLATE_OFFSET_SLOT2 = 22;
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     uintptr_t getTableOffset;
 
     memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));

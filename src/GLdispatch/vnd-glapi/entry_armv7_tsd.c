@@ -190,26 +190,20 @@ entry_init_public(void)
     STATIC_ASSERT(sizeof(ENTRY_TEMPLATE) <= ENTRY_STUB_ALIGN);
 }
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
-    char *writeEntry;
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
 
-    // Make sure the base address has the Thumb mode bit
-    assert((uintptr_t)entry & (uintptr_t)0x1);
+    memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
-    // Get the pointer to the writable mapping.
-    writeEntry = (char *) (entry - 1);
-
-    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
-
-    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_SLOT)) = slot;
-    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
+    *((uint32_t *)(entry + TEMPLATE_OFFSET_SLOT)) = slot;
+    *((uint32_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
         (uint32_t)_glapi_Current;
-    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
+    *((uint32_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
         (uint32_t)_glapi_get_current;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache(writeEntry, writeEntry + sizeof(ENTRY_TEMPLATE));
+    __builtin___clear_cache(entry, entry + sizeof(ENTRY_TEMPLATE));
 }
 
 // Note: The rest of these functions could also be used for ARMv7 TLS stubs,
