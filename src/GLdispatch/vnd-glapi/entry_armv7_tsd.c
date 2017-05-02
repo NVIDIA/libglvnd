@@ -222,9 +222,3 @@ entry_get_public(int index)
     return (mapi_func)(public_entry_start + (index * entry_stub_size) + 1);
 }
 
-void entry_get_patch_addresses(int index, void **writePtr, const void **execPtr)
-{
-    void *entry = (void *) (public_entry_start + (index * entry_stub_size));
-    *execPtr = (const void *) entry;
-    *writePtr = entry;
-}
