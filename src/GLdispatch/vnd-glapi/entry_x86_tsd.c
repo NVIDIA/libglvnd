@@ -105,19 +105,18 @@ static const int TEMPLATE_OFFSET_SLOT2 = 22;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = entry;
     uintptr_t getTableOffset;
 
-    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+    memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
-    *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT1)) = slot * sizeof(mapi_func);
-    *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT2)) = slot * sizeof(mapi_func);
-    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) _glapi_Current;
+    *((uint32_t *) (entry + TEMPLATE_OFFSET_SLOT1)) = slot * sizeof(mapi_func);
+    *((uint32_t *) (entry + TEMPLATE_OFFSET_SLOT2)) = slot * sizeof(mapi_func);
+    *((uintptr_t *) (entry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) _glapi_Current;
 
     // Calculate the offset to patch for the CALL instruction to
     // _glapi_get_current.
     getTableOffset = (uintptr_t) _glapi_get_current;
     getTableOffset -= (((uintptr_t) entry) + TEMPLATE_OFFSET_CURRENT_TABLE_GET_RELATIVE);
-    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = getTableOffset;
+    *((uintptr_t *) (entry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = getTableOffset;
 }
 
