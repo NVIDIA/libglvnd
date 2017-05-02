@@ -130,11 +130,10 @@ static const int TEMPLATE_OFFSET_SLOT = 45;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = entry;
-    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+    memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
-    *((uint32_t *) (writeEntry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
-    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) _glapi_Current;
-    *((uintptr_t *) (writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = (uintptr_t) _glapi_get_current;
+    *((uint32_t *) (entry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
+    *((uintptr_t *) (entry + TEMPLATE_OFFSET_CURRENT_TABLE)) = (uintptr_t) _glapi_Current;
+    *((uintptr_t *) (entry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) = (uintptr_t) _glapi_get_current;
 }
 

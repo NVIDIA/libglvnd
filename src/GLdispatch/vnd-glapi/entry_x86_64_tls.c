@@ -115,7 +115,6 @@ static const unsigned int SLOT_OFFSET = 12;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = entry;
     uint64_t tls_addr;
 
     STATIC_ASSERT(ENTRY_STUB_SIZE >= sizeof(ENTRY_TEMPLATE));
@@ -124,8 +123,8 @@ void entry_generate_default_code(char *entry, int slot)
 
     tls_addr = x86_64_current_tls();
 
-    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
-    *((unsigned int *) &writeEntry[TLS_ADDR_OFFSET]) = (unsigned int) tls_addr;
-    *((unsigned int *) &writeEntry[SLOT_OFFSET]) = (unsigned int) (slot * sizeof(mapi_func));
+    memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+    *((unsigned int *) &entry[TLS_ADDR_OFFSET]) = (unsigned int) tls_addr;
+    *((unsigned int *) &entry[SLOT_OFFSET]) = (unsigned int) (slot * sizeof(mapi_func));
 }
 

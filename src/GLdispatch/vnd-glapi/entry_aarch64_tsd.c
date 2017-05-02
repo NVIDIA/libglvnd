@@ -152,17 +152,15 @@ static const int TEMPLATE_OFFSET_SLOT              = AARCH64_BYTECODE_SIZE - 8;
 
 void entry_generate_default_code(char *entry, int slot)
 {
-    char *writeEntry = (char *) entry;
-
-    memcpy(writeEntry, BYTECODE_TEMPLATE, AARCH64_BYTECODE_SIZE);
+    memcpy(entry, BYTECODE_TEMPLATE, AARCH64_BYTECODE_SIZE);
 
     // Patch the slot number and whatever addresses need to be patched.
-    *((uint64_t *)(writeEntry + TEMPLATE_OFFSET_SLOT)) = (uint64_t)(slot * sizeof(mapi_func));
-    *((uint64_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
+    *((uint64_t *)(entry + TEMPLATE_OFFSET_SLOT)) = (uint64_t)(slot * sizeof(mapi_func));
+    *((uint64_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
         (uint64_t)_glapi_Current;
-    *((uint64_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
+    *((uint64_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
         (uint64_t)_glapi_get_current;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache(writeEntry, writeEntry + AARCH64_BYTECODE_SIZE);
+    __builtin___clear_cache(entry, entry + AARCH64_BYTECODE_SIZE);
 }
