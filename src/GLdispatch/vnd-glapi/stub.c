@@ -255,8 +255,7 @@ static void stubAbortPatch(void)
 static GLboolean stubGetPatchOffset(const char *name, void **writePtr, const void **execPtr)
 {
     int index;
-    void *writeAddr = NULL;
-    const void *execAddr = NULL;
+    void *addr = NULL;
 
     index = stub_find_public(name);
 
@@ -267,17 +266,17 @@ static GLboolean stubGetPatchOffset(const char *name, void **writePtr, const voi
 #endif // !defined(STATIC_DISPATCH_ONLY)
 
     if (index >= 0) {
-        entry_get_patch_addresses(index, &writeAddr, &execAddr);
+        addr = entry_get_patch_address(index);
     }
 
     if (writePtr != NULL) {
-        *writePtr = writeAddr;
+        *writePtr = addr;
     }
     if (execPtr != NULL) {
-        *execPtr = execAddr;
+        *execPtr = addr;
     }
 
-    return ((writeAddr != NULL && execAddr != NULL) ? GL_TRUE : GL_FALSE);
+    return (addr != NULL ? GL_TRUE : GL_FALSE);
 }
 
 static int stubGetStubType(void)

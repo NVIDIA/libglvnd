@@ -74,9 +74,7 @@ int entry_patch_finish(void)
     return entry_patch_mprotect(PROT_READ | PROT_EXEC);
 }
 
-void entry_get_patch_addresses(int index, void **writePtr, const void **execPtr)
+void *entry_get_patch_address(int index)
 {
-    void *entry = (void *) (public_entry_start + (index * entry_stub_size));
-    *execPtr = (const void *) entry;
-    *writePtr = (void *) entry;
+    return (void *) (public_entry_start + (index * entry_stub_size));
 }
