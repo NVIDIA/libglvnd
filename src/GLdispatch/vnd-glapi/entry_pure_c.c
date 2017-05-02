@@ -86,9 +86,8 @@ int entry_patch_finish(void)
     return 0;
 }
 
-void entry_get_patch_addresses(int index, void **writePtr, const void **execPtr)
+void *entry_get_patch_address(int index)
 {
     assert(!"This should never be called");
-    *writePtr = NULL;
-    *execPtr = NULL;
+    return NULL;
 }
