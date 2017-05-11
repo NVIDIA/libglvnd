@@ -240,6 +240,16 @@ static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
         return EGL_PLATFORM_X11_KHR;
     }
 
+    // Lastly, see if any of the vendor libraries can identify the display.
+    glvnd_list_for_each_entry(vendor, vendorList, entry) {
+        if (vendor->eglvc.findNativeDisplayPlatform != NULL) {
+            EGLenum platform = vendor->eglvc.findNativeDisplayPlatform((void *) display_id);
+            if (platform != EGL_NONE) {
+                return platform;
+            }
+        }
+    }
+
     return EGL_NONE;
 };
 
