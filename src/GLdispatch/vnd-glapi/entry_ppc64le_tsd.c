@@ -76,9 +76,12 @@ __asm__(".balign " U_STRINGIFY(PPC64LE_PAGE_ALIGN) "\n"
     "  std    2, 40(1)\n\t"                             \
     "  stdu   1, -144(1)\n\t"                           \
     "  std    3, 56(1)\n\t"                             \
-    "  stq    4, 64(1)\n\t"                             \
-    "  stq    6, 80(1)\n\t"                             \
-    "  stq    8, 96(1)\n\t"                             \
+    "  std    4, 64(1)\n\t"                             \
+    "  std    5, 72(1)\n\t"                             \
+    "  std    6, 80(1)\n\t"                             \
+    "  std    7, 88(1)\n\t"                             \
+    "  std    8, 96(1)\n\t"                             \
+    "  std    9, 104(1)\n\t"                            \
     "  std    10, 112(1)\n\t"                           \
     "  std    12, 128(1)\n\t"                           \
     "  addis  12, 2, _glapi_get_current@got@ha\n\t"     \
@@ -88,9 +91,12 @@ __asm__(".balign " U_STRINGIFY(PPC64LE_PAGE_ALIGN) "\n"
     "  ld     2, 144+40(1)\n\t"                         \
     "  mr     11, 3\n\t"                                \
     "  ld     3, 56(1)\n\t"                             \
-    "  lq     4, 64(1)\n\t"                             \
-    "  lq     6, 80(1)\n\t"                             \
-    "  lq     8, 96(1)\n\t"                             \
+    "  ld     4, 64(1)\n\t"                             \
+    "  ld     5, 72(1)\n\t"                             \
+    "  ld     6, 80(1)\n\t"                             \
+    "  ld     7, 88(1)\n\t"                             \
+    "  ld     8, 96(1)\n\t"                             \
+    "  ld     9, 104(1)\n\t"                            \
     "  ld     10, 112(1)\n\t"                           \
     "  ld     12, 128(1)\n\t"                           \
     "  addi   1, 1, 144\n\t"                            \
@@ -134,14 +140,15 @@ static const uint32_t ENTRY_TEMPLATE[] =
     // However, more work needs to be done for big-endian Linux because it
     // adheres to an older, AIX-compatible ABI that uses function descriptors.
     // 1000:
+    // 1000:
     0x7C0802A6,    // <ENTRY+000>:    mflr   0
     0xF8010010,    // <ENTRY+004>:    std    0, 16(1)
-    0xE96C0080,    // <ENTRY+008>:    ld     11, 9000f-1000b+0(12)
+    0xE96C0098,    // <ENTRY+008>:    ld     11, 9000f-1000b+0(12)
     0xE96B0000,    // <ENTRY+012>:    ld     11, 0(11)
     0x282B0000,    // <ENTRY+016>:    cmpldi 11, 0
     0x41820014,    // <ENTRY+020>:    beq    2000f
     // 1050:
-    0xE80C0090,    // <ENTRY+024>:    ld     0, 9000f-1000b+16(12)
+    0xE80C00A8,    // <ENTRY+024>:    ld     0, 9000f-1000b+16(12)
     0x7D8B002A,    // <ENTRY+028>:    ldx    12, 11, 0
     0x7D8903A6,    // <ENTRY+032>:    mtctr  12
     0x4E800420,    // <ENTRY+036>:    bctr
@@ -149,29 +156,35 @@ static const uint32_t ENTRY_TEMPLATE[] =
     0xF8410028,    // <ENTRY+040>:    std    2, 40(1)
     0xF821FF71,    // <ENTRY+044>:    stdu   1, -144(1)
     0xF8610038,    // <ENTRY+048>:    std    3, 56(1)
-    0xF8810042,    // <ENTRY+052>:    stq    4, 64(1)
-    0xF8C10052,    // <ENTRY+056>:    stq    6, 80(1)
-    0xF9010062,    // <ENTRY+060>:    stq    8, 96(1)
-    0xF9410070,    // <ENTRY+064>:    std    10, 112(1)
-    0xF9810080,    // <ENTRY+068>:    std    12, 128(1)
-    0xE98C0088,    // <ENTRY+072>:    ld     12, 9000f-1000b+8(12)
-    0x7D8903A6,    // <ENTRY+076>:    mtctr  12
-    0x4E800421,    // <ENTRY+080>:    bctrl
-    0xE9410070,    // <ENTRY+084>:    ld     10, 112(1)
-    0x7C6B1B78,    // <ENTRY+088>:    mr     11, 3
-    0xE8610038,    // <ENTRY+092>:    ld     3, 56(1)
-    0xE0810040,    // <ENTRY+096>:    lq     4, 64(1)
-    0xE0C10050,    // <ENTRY+100>:    lq     6, 80(1)
-    0xE1010060,    // <ENTRY+104>:    lq     8, 96(1)
-    0xE9810080,    // <ENTRY+108>:    ld     12, 128(1)
-    0x38210090,    // <ENTRY+112>:    addi   1, 1, 144
-    0xE8010010,    // <ENTRY+116>:    ld     0, 16(1)
-    0x7C0803A6,    // <ENTRY+120>:    mtlr   0
-    0x4BFFFF9C,    // <ENTRY+124>:    b      1050b
+    0xF8810040,    // <ENTRY+052>:    std    4, 64(1)
+    0xF8A10048,    // <ENTRY+056>:    std    5, 72(1)
+    0xF8C10050,    // <ENTRY+060>:    std    6, 80(1)
+    0xF8E10058,    // <ENTRY+064>:    std    7, 88(1)
+    0xF9010060,    // <ENTRY+068>:    std    8, 96(1)
+    0xF9210068,    // <ENTRY+072>:    std    9, 104(1)
+    0xF9410070,    // <ENTRY+076>:    std    10, 112(1)
+    0xF9810080,    // <ENTRY+080>:    std    12, 128(1)
+    0xE98C00A0,    // <ENTRY+084>:    ld     12, 9000f-1000b+8(12)
+    0x7D8903A6,    // <ENTRY+088>:    mtctr  12
+    0x4E800421,    // <ENTRY+092>:    bctrl
+    0xE9410070,    // <ENTRY+096>:    ld     10, 112(1)
+    0x7C6B1B78,    // <ENTRY+100>:    mr     11, 3
+    0xE8610038,    // <ENTRY+104>:    ld     3, 56(1)
+    0xE8810040,    // <ENTRY+108>:    ld     4, 64(1)
+    0xE8A10048,    // <ENTRY+112>:    ld     5, 72(1)
+    0xE8C10050,    // <ENTRY+116>:    ld     6, 80(1)
+    0xE8E10058,    // <ENTRY+120>:    ld     7, 88(1)
+    0xE9010060,    // <ENTRY+124>:    ld     8, 96(1)
+    0xE9210068,    // <ENTRY+128>:    ld     9, 104(1)
+    0xE9810080,    // <ENTRY+132>:    ld     12, 128(1)
+    0x38210090,    // <ENTRY+136>:    addi   1, 1, 144
+    0xE8010010,    // <ENTRY+140>:    ld     0, 16(1)
+    0x7C0803A6,    // <ENTRY+144>:    mtlr   0
+    0x4BFFFF84,    // <ENTRY+148>:    b      1050b
     // 9000:
-    0, 0,          // <ENTRY+128>:    .quad _glapi_Current
-    0, 0,          // <ENTRY+136>:    .quad _glapi_get_current
-    0, 0           // <ENTRY+144>:    .quad <slot>*8
+    0, 0,          // <ENTRY+152>:    .quad _glapi_Current
+    0, 0,          // <ENTRY+160>:    .quad _glapi_get_current
+    0, 0           // <ENTRY+168>:    .quad <slot>*8
 };
 
 // These are the offsets in ENTRY_TEMPLATE of the values that we have to patch.
