@@ -391,7 +391,7 @@ PUBLIC EGLDisplay EGLAPIENTRY eglGetPlatformDisplay(EGLenum platform, void *nati
         return EGL_NO_DISPLAY;
     }
 
-    return GetPlatformDisplayCommon(platform, native_display, NULL, "eglGetPlatformDisplay");
+    return GetPlatformDisplayCommon(platform, native_display, attrib_list, "eglGetPlatformDisplay");
 }
 
 EGLDisplay EGLAPIENTRY eglGetPlatformDisplayEXT(EGLenum platform, void *native_display, const EGLint *attrib_list)
