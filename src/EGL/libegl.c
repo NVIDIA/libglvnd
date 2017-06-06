@@ -102,6 +102,7 @@ static const struct {
    { EGL_PLATFORM_WAYLAND_KHR, "wayland" },
    { EGL_PLATFORM_ANDROID_KHR, "android" },
    { EGL_PLATFORM_GBM_KHR, "gbm" },
+   { EGL_PLATFORM_GBM_KHR, "drm" },
    { EGL_PLATFORM_DEVICE_EXT, "device" },
    { EGL_NONE, NULL }
 };
