@@ -155,6 +155,18 @@ static void *SafeDereference(void *ptr)
     return NULL;
 }
 
+static EGLBoolean IsGbmDisplay(void *native_display)
+{
+    void *first_pointer = SafeDereference(native_display);
+    Dl_info info;
+
+    if (dladdr(first_pointer, &info) == 0) {
+        return EGL_FALSE;
+    }
+
+    return !strcmp(info.dli_sname, "gbm_create_device");
+}
+
 static EGLBoolean IsX11Display(void *dpy)
 {
     void *alloc;
@@ -193,6 +205,7 @@ static EGLBoolean IsWaylandDisplay(void *native_display)
  */
 static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
 {
+    EGLBoolean gbmSupported = EGL_FALSE;
     EGLBoolean waylandSupported = EGL_FALSE;
     EGLBoolean x11Supported = EGL_FALSE;
     struct glvnd_list *vendorList = __eglLoadVendors();
@@ -205,6 +218,9 @@ static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
 
     // Check if any vendor supports EGL_KHR_platform_wayland.
     glvnd_list_for_each_entry(vendor, vendorList, entry) {
+        if (vendor->supportsPlatformGbm) {
+            gbmSupported = EGL_TRUE;
+        }
         if (vendor->supportsPlatformWayland) {
             waylandSupported = EGL_TRUE;
         }
@@ -213,6 +229,9 @@ static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
         }
     }
 
+    if (gbmSupported && IsGbmDisplay(display_id)) {
+        return EGL_PLATFORM_GBM_KHR;
+    }
     if (waylandSupported && IsWaylandDisplay(display_id)) {
         return EGL_PLATFORM_WAYLAND_KHR;
     }
