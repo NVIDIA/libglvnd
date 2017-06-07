@@ -1579,6 +1579,33 @@ PUBLIC GLXFBConfig *glXGetFBConfigs(Display *dpy, int screen, int *nelements)
 }
 
 
+PUBLIC int glXGetFBConfigAttribSGIX(Display *dpy, GLXFBConfigSGIX config,
+                         int attribute, int *value)
+{
+    return glXGetFBConfigAttrib(dpy, (GLXFBConfig)config, attribute, value);
+}
+
+PUBLIC GLXFBConfigSGIX *glXChooseFBConfigSGIX(Display *dpy, int screen,
+                                         const int *attrib_list, int *nelements)
+{
+    return glXChooseFBConfig(dpy, screen, attrib_list, nelements);
+}
+
+PUBLIC GLXContext glXCreateContextWithConfigSGIX (Display *dpy,
+                               GLXFBConfigSGIX config, int render_type,
+                               GLXContext share_list, Bool direct)
+{
+    return glXCreateNewContext(dpy, (GLXFBConfig)config, render_type,
+                               share_list, direct);
+}
+
+PUBLIC XVisualInfo *
+glXGetVisualFromFBConfigSGIX(Display *dpy, GLXFBConfigSGIX config)
+{
+   return glXGetVisualFromFBConfig(dpy, (GLXFBConfig)config);
+}
+
+
 PUBLIC void glXGetSelectedEvent(Display *dpy, GLXDrawable draw,
                          unsigned long *event_mask)
 {
@@ -1680,6 +1707,12 @@ const __GLXlocalDispatchFunction LOCAL_GLX_DISPATCH_FUNCTIONS[] =
 
         LOCAL_FUNC_TABLE_ENTRY(glXImportContextEXT)
         LOCAL_FUNC_TABLE_ENTRY(glXFreeContextEXT)
+
+        LOCAL_FUNC_TABLE_ENTRY(glXGetFBConfigAttribSGIX)
+        LOCAL_FUNC_TABLE_ENTRY(glXChooseFBConfigSGIX)
+        LOCAL_FUNC_TABLE_ENTRY(glXCreateContextWithConfigSGIX)
+        LOCAL_FUNC_TABLE_ENTRY(glXGetVisualFromFBConfigSGIX)
+
 #undef LOCAL_FUNC_TABLE_ENTRY
     { NULL, NULL }
 };
