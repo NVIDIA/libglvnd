@@ -31,6 +31,7 @@ struct __EGLvendorInfoRec {
 
     EGLBoolean supportsDevice;
     EGLBoolean supportsPlatformDevice;
+    EGLBoolean supportsPlatformGbm;
     EGLBoolean supportsPlatformX11;
     EGLBoolean supportsPlatformWayland;
 

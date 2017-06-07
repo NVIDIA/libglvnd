@@ -369,6 +369,8 @@ static void CheckVendorExtensionString(__EGLvendorInfo *vendor, const char *str)
     static const char NAME_DEVICE_BASE[] = "EGL_EXT_device_base";
     static const char NAME_DEVICE_ENUM[] = "EGL_EXT_device_enumeration";
     static const char NAME_PLATFORM_DEVICE[] = "EGL_EXT_platform_device";
+    static const char NAME_MESA_PLATFORM_GBM[] = "EGL_MESA_platform_gbm";
+    static const char NAME_KHR_PLATFORM_GBM[] = "EGL_KHR_platform_gbm";
     static const char NAME_EXT_PLATFORM_WAYLAND[] = "EGL_EXT_platform_wayland";
     static const char NAME_KHR_PLATFORM_WAYLAND[] = "EGL_KHR_platform_wayland";
     static const char NAME_EXT_PLATFORM_X11[] = "EGL_EXT_platform_x11";
@@ -388,6 +390,13 @@ static void CheckVendorExtensionString(__EGLvendorInfo *vendor, const char *str)
     if (!vendor->supportsPlatformDevice) {
         if (IsTokenInString(str, NAME_PLATFORM_DEVICE, sizeof(NAME_PLATFORM_DEVICE) - 1, " ")) {
             vendor->supportsPlatformDevice = EGL_TRUE;
+        }
+    }
+
+    if (!vendor->supportsPlatformGbm) {
+        if (IsTokenInString(str, NAME_MESA_PLATFORM_GBM, sizeof(NAME_MESA_PLATFORM_GBM) - 1, " ")
+                || IsTokenInString(str, NAME_KHR_PLATFORM_GBM, sizeof(NAME_KHR_PLATFORM_GBM) - 1, " ")) {
+            vendor->supportsPlatformGbm = EGL_TRUE;
         }
     }
 
