@@ -210,7 +210,7 @@ void entry_generate_default_code(char *entry, int slot)
                          "  sync\n\t"
                          "  icbi 0, %0\n\t"
                          "  isync\n"
-                         : "=r" (writeEntry)
+                         : : "r" (writeEntry)
                      );
 }
 

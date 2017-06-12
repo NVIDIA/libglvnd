@@ -327,7 +327,7 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
                          "  sync\n\t"
                          "  icbi 0, %0\n\t"
                          "  isync\n"
-                         : "=r" (code)
+                         : : "r" (code)
                      );
 #else
 #error "Can't happen -- not implemented"
