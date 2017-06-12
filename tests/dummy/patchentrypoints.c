@@ -204,7 +204,7 @@ static void patch_ppc64le(char *writeEntry, const char *execEntry,
                          "  sync\n\t"
                          "  icbi 0, %0\n\t"
                          "  isync\n"
-                         : "=r" (writeEntry)
+                         : : "r" (writeEntry)
                      );
 #else
     assert(0); // Should not be calling this
