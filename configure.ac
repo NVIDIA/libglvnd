@@ -19,8 +19,6 @@ AM_INIT_AUTOMAKE([1.11 foreign silent-rules])
 AM_SILENT_RULES([yes])
 
 dnl Checks for programs.
-AC_PROG_CXX
-
 AC_PROG_CC
 AC_PROG_CC_C99
 AM_PROG_AS
