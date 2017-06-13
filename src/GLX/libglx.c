@@ -1778,14 +1778,12 @@ PUBLIC __GLXextFuncPtr glXGetProcAddress(const GLubyte *procName)
     return addr;
 }
 
-PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
+static __GLXextFuncPtr loadOptionalGLXFunction(const char *name,
         __GLXextFuncPtr *ptr, glvnd_mutex_t *mutex)
 {
     __GLXextFuncPtr func;
 
-    if (mutex != NULL) {
-        __glvndPthreadFuncs.mutex_lock(mutex);
-    }
+    __glvndPthreadFuncs.mutex_lock(mutex);
 
     func = *ptr;
     if (func == NULL) {
@@ -1793,10 +1791,30 @@ PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
         *ptr = func;
     }
 
-    if (mutex != NULL) {
-        __glvndPthreadFuncs.mutex_unlock(mutex);
-    }
+    __glvndPthreadFuncs.mutex_unlock(mutex);
     return func;
+}
+
+static __GLXextFuncPtr loadABIGLXFunction(const char *name,
+        __GLXextFuncPtr *ptr)
+{
+    __GLXextFuncPtr func;
+
+    __glXThreadInitialize();
+
+    func = __glXGetGLXDispatchAddress((const GLubyte *) name);
+    *ptr = func;
+
+    return func;
+}
+
+PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
+        __GLXextFuncPtr *ptr, glvnd_mutex_t *mutex)
+{
+    if (mutex == NULL)
+        return loadABIGLXFunction(name, ptr);
+
+    return loadOptionalGLXFunction(name, ptr, mutex);
 }
 
 int AtomicIncrement(int volatile *val)
