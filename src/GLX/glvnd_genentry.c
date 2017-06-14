@@ -39,299 +39,157 @@
 
 #if defined(USE_DISPATCH_ASM)
 
-/// The maximum number of entrypoints that we can generate.
-#define GENERATED_ENTRYPOINT_MAX 4096
+#define _U_STRINGIFY(x) #x
+#define U_STRINGIFY(x) _U_STRINGIFY(x)
 
-/// The size of each generated entrypoint.
-static const int STUB_ENTRY_SIZE = 32;
+#define GLX_STUBS_COUNT
+#include "g_glx_dispatch_stub_list.h"
+
+static GLVNDentrypointStub entrypointFunctions[GENERATED_ENTRYPOINT_MAX];
+static char *entrypointNames[GENERATED_ENTRYPOINT_MAX] = {};
+static int entrypointCount = 0;
+
+extern char glx_entrypoint_start[];
+extern char glx_entrypoint_end[];
 
 #if defined(USE_X86_ASM)
-/// A template used to generate an entrypoint.
-static unsigned char STUB_TEMPLATE[] =
-{
-    0xe9, 0x78, 0x56, 0x34, 0x12, // jmp 0x12345678
-};
 
-static const int DISPATCH_FUNC_OFFSET = 1;
-static const int DISPATCH_FUNC_OFFSET_REL = 5;
+#define STUB_SIZE 32
+#define STUB_ASM_ARCH(slot) \
+    "push %ebx\n" \
+    "call 1f\n" \
+    "1:\n" \
+    "popl %ebx\n" \
+    "addl $_GLOBAL_OFFSET_TABLE_+[.-1b], %ebx\n" \
+    "movl entrypointFunctions@GOT(%ebx), %eax\n" \
+    "pop %ebx\n" \
+    "jmp *(4 * " slot ")(%eax)\n"
 
 #elif defined(USE_X86_64_ASM)
-// For x86_64, the offset from the entrypoint to the dispatch function might be
-// more than 2^31, and there's no JMP instruction that takes a 64-bit offset.
-// Note that the same stub also works for an x32 build. In that case, though, a
-// pointer is only 32 bits, so we have to make sure we expand it a 64-bit value
-// when we patch it in SetDispatchFuncPointer.
-static unsigned char STUB_TEMPLATE[] =
-{
-    0x48, 0xb8, 0xbd, 0xac, 0xcd, 0xab, 0x78, 0x56, 0x34, 0x12, // movabs 0x12345678abcdacbd,%rax
-    0xff, 0xe0, // jmp *%rax
-};
 
-static const int DISPATCH_FUNC_OFFSET = 2;
+#define STUB_SIZE 16
+#define STUB_ASM_ARCH(slot) \
+    "movq entrypointFunctions@GOTPCREL(%rip), %rax\n\t" \
+    "jmp *(8 * " slot ")(%rax)\n"
 
 #elif defined(USE_ARMV7_ASM)
-// Thumb bytecode
-static const uint16_t STUB_TEMPLATE[] =
-{
-    // ldr ip, 1f
-    0xf8df, 0xc004,
-    // bx ip
-    0x4760,
-    // nop
-    0xbf00,
-    // Offset that needs to be patched
-    // 1:
-    0x0000, 0x0000,
-};
 
-static const int DISPATCH_FUNC_OFFSET = 8;
+#define STUB_SIZE 64
+#define STUB_ASM_ARCH(slot) \
+    "ldr ip, 1f\n" \
+    "12:\n" \
+    "add ip, pc\n" \
+    "push { r0 }\n" \
+    "ldr r0, 1f+4\n" \
+    "add ip, r0\n" \
+    "pop { r0 }\n" \
+    "ldr ip, [ip]\n" \
+    "bx ip\n" \
+    "1:\n" \
+    ".word entrypointFunctions - (12b + 8)\n" \
+    ".word " slot " * 4\n"
 
 #elif defined(USE_AARCH64_ASM)
 
-static const uint32_t STUB_TEMPLATE[] =
-{
-    // ldr x16, 1f
-    0x58000070,
-    // br x16
-    0xd61f0200,
-    // nop
-    0xd503201f,
-    // Offset that needs to be patched
-    // 1:
-    0x00000000, 0x00000000,
-};
-
-static const int DISPATCH_FUNC_OFFSET = 12;
+#define STUB_SIZE 16
+#define STUB_ASM_ARCH(slot) \
+    "adrp x16, entrypointFunctions + " slot "*8\n" \
+    "ldr x16, [x16, #:lo12:(entrypointFunctions + " slot "*8)]\n" \
+    "br x16\n"
 
 #elif defined(USE_PPC64LE_ASM)
 
-static uint32_t STUB_TEMPLATE[] =
-{
-    // NOTE!!!  NOTE!!!  NOTE!!!
-    // This data is endian-reversed from the code you would see in an assembly
-    // listing!
-    // 1000:
-    0xE98C0010,     //   ld 12, 9000f-1000b(12)
-    0x7D8903A6,     //   mtctr 12
-    0x4E800420,     //   bctr
-    0x60000000,     //   nop
-    // 9000:
-    0, 0            //   .quad 0
-};
-
-static const int DISPATCH_FUNC_OFFSET = sizeof(STUB_TEMPLATE) - 8;
+#define STUB_SIZE 32
+#define STUB_ASM_ARCH(slot) \
+    "0:\n" \
+    "addis 2,12,.TOC.-0b@ha\n" \
+    "addi 2,2,.TOC.-0b@l\n" \
+    "addis  11, 2, entrypointFunctions@got@ha\n" \
+    "ld     11, entrypointFunctions@got@l(11)\n" \
+    "ld 12, (" slot " * 8)(11)\n" \
+    "mtctr 12\n" \
+    "bctr\n"
 
 #else
 #error "Can't happen -- not implemented"
 #endif
 
-typedef struct GLVNDGenEntrypointRec
+#define STUB_ASM(slot) \
+    ".balign " U_STRINGIFY(STUB_SIZE) "\n" \
+    STUB_ASM_ARCH(slot)
+
+__asm__(".globl glx_entrypoint_start\n"
+        ".hidden glx_entrypoint_start\n"
+        ".balign " U_STRINGIFY(STUB_SIZE) "\n" \
+        "glx_entrypoint_start:\n"
+
+#define GLX_STUBS_ASM
+#include "g_glx_dispatch_stub_list.h"
+
+        ".globl glx_entrypoint_end\n"
+        ".hidden glx_entrypoint_end\n"
+        ".balign " U_STRINGIFY(STUB_SIZE) "\n" \
+        "glx_entrypoint_end:\n"
+);
+
+static void *DefaultDispatchFunc(void)
 {
-    /// The name of the function.
-    char *procName;
+    // Print a warning message?
+    return NULL;
+}
 
-    /// The generated entrypoint function, mapped as read/write.
-    uint8_t *entrypointWrite;
-
-    /// The generated entrypoint function, mapped as read/exec.
-    GLVNDentrypointStub entrypointExec;
-
-    /// Set to 1 if we've assigned a dispatch function to this entrypoint.
-    int assigned;
-} GLVNDGenEntrypoint;
-
-/**
- * Allocates memory for all of the entrypoint functions.
- *
- * \return Zero on success, non-zero on failure.
- */
-static int InitEntrypoints(void);
-
-/**
- * Generates a new entrypoint.
- *
- * \param entry The entrypoint structure to fill in.
- * \param index The index of the dispatch function.
- */
-static void GenerateEntrypointFunc(GLVNDGenEntrypoint *entry, int index);
-
-/**
- * A default function plugged into the entrypoints. This is called if no vendor
- * library has supplied a dispatch function.
- */
-static void *DefaultDispatchFunc(void);
-
-/**
- * Patches an entrypoint to assign a dispatch function to it.
- */
-static void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
-        GLVNDentrypointStub dispatch);
-
-static GLVNDGenEntrypoint entrypoints[GENERATED_ENTRYPOINT_MAX] = {};
-static uint8_t *entrypointBufferWrite = NULL;
-static uint8_t *entrypointBufferExec = NULL;
-static int entrypointCount = 0;
+static GLVNDentrypointStub GetEntrypointStub(int index)
+{
+    return (GLVNDentrypointStub) (glx_entrypoint_start + (index * STUB_SIZE));
+}
 
 GLVNDentrypointStub glvndGenerateEntrypoint(const char *procName)
 {
     int i;
 
-    if (InitEntrypoints() != 0) {
+    for (i=0; i<entrypointCount; i++) {
+        if (strcmp(procName, entrypointNames[i]) == 0) {
+            // We already generated this function, so return it.
+            return GetEntrypointStub(i);
+        }
+    }
+
+    if (entrypointCount >= GENERATED_ENTRYPOINT_MAX) {
         return NULL;
     }
 
-    for (i=0; i<entrypointCount; i++) {
-        if (strcmp(procName, entrypoints[i].procName) == 0) {
-            // We already generated this function, so return it.
-            return entrypoints[i].entrypointExec;
-        }
+    entrypointNames[entrypointCount] = strdup(procName);
+    if (entrypointNames[entrypointCount] == NULL) {
+        return NULL;
     }
 
-    if (entrypointCount < GENERATED_ENTRYPOINT_MAX) {
-        GLVNDGenEntrypoint *entry = &entrypoints[entrypointCount];
-        entry->procName = strdup(procName);
-        if (entry->procName == NULL) {
-            return NULL;
-        }
-        entry->assigned = 0;
-        GenerateEntrypointFunc(entry, entrypointCount);
-
-        entrypointCount++;
-        return entry->entrypointExec;
-    }
-
-    return NULL;
-}
-
-void glvndUpdateEntrypoints(GLVNDentrypointUpdateCallback callback, void *param)
-{
-    int i;
-
-    for (i=0; i<entrypointCount; i++) {
-        if (!entrypoints[i].assigned) {
-            GLVNDentrypointStub addr = callback(entrypoints[i].procName, param);
-            if (addr != NULL) {
-                SetDispatchFuncPointer(&entrypoints[i], addr);
-                entrypoints[i].assigned = 1;
-            }
-        }
-    }
+    entrypointFunctions[entrypointCount] = (GLVNDentrypointStub) DefaultDispatchFunc;
+    entrypointCount++;
+    return GetEntrypointStub(entrypointCount - 1);
 }
 
 void glvndFreeEntrypoints(void)
 {
     int i;
     for (i=0; i<entrypointCount; i++) {
-        free(entrypoints[i].procName);
-        entrypoints[i].procName = NULL;
-        entrypoints[i].entrypointWrite = NULL;
-        entrypoints[i].entrypointExec = NULL;
-        entrypoints[i].assigned = 0;
+        free(entrypointNames[i]);
+        entrypointNames[i] = NULL;
+        entrypointFunctions[i] = NULL;
     }
     entrypointCount = 0;
-
-    if (entrypointBufferExec != NULL) {
-        FreeExecPages(STUB_ENTRY_SIZE * GENERATED_ENTRYPOINT_MAX,
-                entrypointBufferWrite, entrypointBufferExec);
-        entrypointBufferWrite = NULL;
-        entrypointBufferExec = NULL;
-    }
 }
 
-int InitEntrypoints(void)
+void glvndUpdateEntrypoints(GLVNDentrypointUpdateCallback callback, void *param)
 {
-    if (entrypointBufferExec == NULL) {
-        void *writeBuf, *execBuf;
-        if (AllocExecPages(STUB_ENTRY_SIZE * GENERATED_ENTRYPOINT_MAX,
-                &writeBuf, &execBuf) != 0) {
-            return -1;
+    int i;
+    for (i=0; i<entrypointCount; i++) {
+        if (entrypointFunctions[i] == (GLVNDentrypointStub) DefaultDispatchFunc) {
+            GLVNDentrypointStub addr = callback(entrypointNames[i], param);
+            if (addr != NULL) {
+                entrypointFunctions[i] = addr;
+            }
         }
-        entrypointBufferWrite = (uint8_t *) writeBuf;
-        entrypointBufferExec = (uint8_t *) execBuf;
     }
-    return 0;
-}
-
-void GenerateEntrypointFunc(GLVNDGenEntrypoint *entry, int index)
-{
-    entry->entrypointWrite = entrypointBufferWrite + (index * STUB_ENTRY_SIZE);
-    entry->entrypointExec = (GLVNDentrypointStub)
-        (entrypointBufferExec + (index * STUB_ENTRY_SIZE));
-
-    assert(STUB_ENTRY_SIZE >= sizeof(STUB_TEMPLATE));
-
-    // Copy the template into our buffer.
-    memcpy(entry->entrypointWrite, STUB_TEMPLATE, sizeof(STUB_TEMPLATE));
-
-#if defined(USE_ARMV7_ASM)
-    // Add 1 to the base address to force Thumb mode when jumping to the stub
-    entry->entrypointExec = (GLVNDentrypointStub)((char *)entry->entrypointExec + 1);
-#endif
-
-    // Assign DefaultDispatchFunc as the dispatch function.
-    SetDispatchFuncPointer(entry, (GLVNDentrypointStub) DefaultDispatchFunc);
-}
-
-void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
-        GLVNDentrypointStub dispatch)
-{
-    uint8_t *code = entry->entrypointWrite;
-
-#if defined(USE_X86_ASM)
-    // For x86, we use a JMP instruction with a PC-relative offset. Figure out
-    // the offset from the generated entrypoint to the dispatch function.
-    intptr_t offset = ((intptr_t) dispatch) - ((intptr_t) entry->entrypointExec) - DISPATCH_FUNC_OFFSET_REL;
-    *((intptr_t *) (code + DISPATCH_FUNC_OFFSET)) = offset;
-
-#elif defined(USE_X86_64_ASM)
-    // For x86_64, we have to use a movabs instruction, which needs the
-    // absolute address of the dispatch function. On an x32 build, pointers are
-    // 32 bits long, but the stub still uses a 64-bit address, so we cast it to
-    // a uint64_t value to make sure that we write a 64-bit value in both
-    // cases.
-    *((uint64_t *) (code + DISPATCH_FUNC_OFFSET)) = (uint64_t) ((uintptr_t) dispatch);
-
-#elif defined(USE_ARMV7_ASM)
-    *((uint32_t *)(code + DISPATCH_FUNC_OFFSET)) = (uint32_t)dispatch;
-
-    // Make sure the base address has the Thumb mode bit
-    assert((uintptr_t)entry->entrypointExec & (uintptr_t)0x1);
-
-    // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache((char *)entry->entrypointExec - 1,
-                            (char *)entry->entrypointExec - 1 + sizeof(STUB_TEMPLATE));
-#elif defined(USE_AARCH64_ASM)
-    *((uintptr_t *)(code + DISPATCH_FUNC_OFFSET)) = (uintptr_t)dispatch;
-
-    // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache((char *)entry->entrypointExec,
-                            (char *)entry->entrypointExec + sizeof(STUB_TEMPLATE));
-
-#elif defined(USE_PPC64LE_ASM)
-
-    // For PPC64LE, we need to patch in an absolute address.
-    *((uintptr_t *)(code + DISPATCH_FUNC_OFFSET)) = (uintptr_t)dispatch;
-
-    // This sequence is from the PowerISA Version 2.07B book.
-    // It may be a bigger hammer than we need, but it works;
-    // note that the __builtin___clear_cache intrinsic for
-    // PPC does not seem to generate any code.
-    __asm__ __volatile__(
-                         "  dcbst 0, %0\n\t"
-                         "  sync\n\t"
-                         "  icbi 0, %0\n\t"
-                         "  isync\n"
-                         : : "r" (code)
-                     );
-#else
-#error "Can't happen -- not implemented"
-#endif
-}
-
-void *DefaultDispatchFunc(void)
-{
-    // Print a warning message?
-    return NULL;
 }
 
 #else // defined(USE_DISPATCH_ASM)

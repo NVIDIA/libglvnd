@@ -64,11 +64,22 @@ libGLX_la_LIBADD += $(UTIL_DIR)/libwinsys_dispatch.la
 
 libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)
 
+GENERATE_DISPATCH_STUBS_SCRIPT = $(top_srcdir)/src/GLX/gen_glx_stubs.py
+EXTRA_DIST = $(GENERATE_DISPATCH_STUBS_SCRIPT)
+
+if HAVE_PYTHON
+g_glx_dispatch_stub_list.h: $(GENERATE_DISPATCH_STUBS_SCRIPT)
+	$(AM_V_GEN)$(PYTHON) $(GENERATE_DISPATCH_STUBS_SCRIPT) > $@
+BUILT_SOURCES = g_glx_dispatch_stub_list.h
+CLEANFILES = $(BUILT_SOURCES)
+endif
+
 libGLX_la_SOURCES = \
 	libglx.c \
 	libglxmapping.c \
 	libglxproto.c \
-	glvnd_genentry.c
+	glvnd_genentry.c \
+	g_glx_dispatch_stub_list.h
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = glx.pc
