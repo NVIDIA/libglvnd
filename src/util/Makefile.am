@@ -1,5 +1,4 @@
 noinst_HEADERS = \
-	glvnd_genentry.h \
 	utils_misc.h \
 	glvnd_pthread.h \
 	app_error_check.h \
@@ -21,9 +20,6 @@ libapp_error_check_la_SOURCES = app_error_check.c
 
 noinst_LTLIBRARIES += libutils_misc.la
 libutils_misc_la_SOURCES = utils_misc.c
-
-noinst_LTLIBRARIES += libglvnd_genentry.la
-libglvnd_genentry_la_SOURCES = glvnd_genentry.c
 
 noinst_LTLIBRARIES += libtrace.la
 libtrace_la_SOURCES = trace.c
