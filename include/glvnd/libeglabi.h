@@ -395,12 +395,18 @@ typedef struct __EGLapiImportsRec {
      * to determine which platform to use for a native display handle in
      * eglGetDisplay.
      *
+     * If no vendor library identifies the platform, then libglvnd will fall
+     * back to its own platform detection logic.
+     *
      * Libglvnd can call this function for any native display handle except
      * \c EGL_DEFAULT_DISPLAY.
      *
      * No matter what the value of \p native_display, the vendor library must
      * not crash, and must not return a false match. If the vendor library
      * can't identify the display, then it must return \c EGL_NONE.
+     *
+     * In particular, that means that a vendor library must not return any sort
+     * of default or fallback platform.
      *
      * \param native_display The native display handle passed to eglGetDisplay.
      * \return Either a platform type enum or EGL_NONE.
