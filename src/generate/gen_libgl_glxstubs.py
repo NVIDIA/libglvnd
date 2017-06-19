@@ -125,7 +125,7 @@ def generateLibGLXStubs(functions):
 #include <X11/Xlib.h>
 #include <GL/glx.h>
 #include "compiler.h"
-#include "libgl.h"
+#include "libglxgl.h"
 #include "glvnd_pthread.h"
 
 """.lstrip("\n")

@@ -30,7 +30,7 @@
 #include <dlfcn.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
-#include "libgl.h"
+#include "libglxgl.h"
 #include "compiler.h"
 #include "entry.h"
 #include "stub.h"
