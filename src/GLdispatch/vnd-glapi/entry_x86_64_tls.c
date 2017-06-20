@@ -38,41 +38,44 @@
 #include "glapi.h"
 #include "glvnd/GLdispatchABI.h"
 
-#define ENTRY_STUB_SIZE 32
+#define ENTRY_STUB_ALIGN 32
+#if !defined(GLDISPATCH_PAGE_SIZE)
+#define GLDISPATCH_PAGE_SIZE 4096
+#endif
 
 __asm__(".section wtext,\"ax\",@progbits\n");
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
         "public_entry_start:");
 
 #define STUB_ASM_ENTRY(func)                             \
-   ".globl " func "\n"                                   \
-   ".type " func ", @function\n"                         \
-   ".balign " U_STRINGIFY(ENTRY_STUB_SIZE) "\n" \
-   func ":"
+    ".globl " func "\n"                                   \
+    ".type " func ", @function\n"                         \
+    ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n" \
+    func ":"
 
 #ifdef __ILP32__
 
 #define STUB_ASM_CODE(slot)                              \
-   "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
-   "movl %fs:(%rax), %r11d\n\t"                          \
-   "movl 4*" slot "(%r11d), %r11d\n\t"                   \
-   "jmp *%r11"
+    "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
+    "movl %fs:(%rax), %r11d\n\t"                          \
+    "movl 4*" slot "(%r11d), %r11d\n\t"                   \
+    "jmp *%r11"
 
 #else // __ILP32__
 
 #define STUB_ASM_CODE(slot)                                 \
-   "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
-   "movq %fs:(%rax), %r11\n\t"                              \
-   "jmp *(8 * " slot ")(%r11)"
+    "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
+    "movq %fs:(%rax), %r11\n\t"                              \
+    "jmp *(8 * " slot ")(%r11)"
 
 #endif // __ILP32__
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:");
@@ -86,7 +89,7 @@ __asm__("x86_64_current_tls:\n\t"
 extern uint64_t
 x86_64_current_tls();
 
-const int entry_stub_size = ENTRY_STUB_SIZE;
+const int entry_stub_size = ENTRY_STUB_ALIGN;
 
 #ifdef __ILP32__
 
@@ -118,7 +121,7 @@ void entry_generate_default_code(char *entry, int slot)
     char *writeEntry = u_execmem_get_writable(entry);
     uint64_t tls_addr;
 
-    STATIC_ASSERT(ENTRY_STUB_SIZE >= sizeof(ENTRY_TEMPLATE));
+    STATIC_ASSERT(ENTRY_STUB_ALIGN >= sizeof(ENTRY_TEMPLATE));
 
     assert(slot >= 0);
 

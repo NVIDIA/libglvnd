@@ -36,17 +36,13 @@
 
 
 // NOTE: These must be powers of two:
-#define PPC64LE_ENTRY_SIZE 256
-#define PPC64LE_PAGE_ALIGN 65536
-#if ((PPC64LE_ENTRY_SIZE & (PPC64LE_ENTRY_SIZE - 1)) != 0)
-#error PPC64LE_ENTRY_SIZE must be a power of two!
-#endif
-#if ((PPC64LE_PAGE_ALIGN & (PPC64LE_PAGE_ALIGN - 1)) != 0)
-#error PPC64LE_PAGE_ALIGN must be a power of two!
+#define ENTRY_STUB_ALIGN 256
+#if !defined(GLDISPATCH_PAGE_SIZE)
+#define GLDISPATCH_PAGE_SIZE 65536
 #endif
 
 __asm__(".section wtext,\"ax\",@progbits\n");
-__asm__(".balign " U_STRINGIFY(PPC64LE_PAGE_ALIGN) "\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
         "public_entry_start:");
@@ -54,7 +50,7 @@ __asm__(".balign " U_STRINGIFY(PPC64LE_PAGE_ALIGN) "\n"
 #define STUB_ASM_ENTRY(func)                            \
     ".globl " func "\n"                                 \
     ".type " func ", @function\n"                       \
-    ".balign " U_STRINGIFY(PPC64LE_ENTRY_SIZE) "\n"     \
+    ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n"     \
     func ":\n\t"                                        \
     "  addis  2, 12, .TOC.-" func "@ha\n\t"             \
     "  addi   2, 2, .TOC.-" func "@l\n\t"               \
@@ -113,14 +109,14 @@ __asm__(".balign " U_STRINGIFY(PPC64LE_PAGE_ALIGN) "\n"
 #include "mapi_tmp.h"
 
 
-__asm__(".balign " U_STRINGIFY(PPC64LE_PAGE_ALIGN) "\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:");
 __asm__(".text\n");
 
 const int entry_type = __GLDISPATCH_STUB_PPC64LE;
-const int entry_stub_size = PPC64LE_ENTRY_SIZE;
+const int entry_stub_size = ENTRY_STUB_ALIGN;
 
 static const uint32_t ENTRY_TEMPLATE[] =
 {

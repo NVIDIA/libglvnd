@@ -39,30 +39,31 @@
 #include "glvnd/GLdispatchABI.h"
 
 #define ENTRY_STUB_ALIGN 16
-#define ENTRY_STUB_SIZE ENTRY_STUB_ALIGN
-#define ENTRY_STUB_ALIGN_DIRECTIVE ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n"
+#if !defined(GLDISPATCH_PAGE_SIZE)
+#define GLDISPATCH_PAGE_SIZE 4096
+#endif
 
 __asm__(".section wtext,\"ax\",@progbits\n");
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
         "public_entry_start:");
 
 #define STUB_ASM_ENTRY(func)     \
-   ".globl " func "\n"           \
-   ".type " func ", @function\n" \
-   ENTRY_STUB_ALIGN_DIRECTIVE    \
-   func ":"
+    ".globl " func "\n"           \
+    ".type " func ", @function\n" \
+    ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n" \
+    func ":\n"
 
 #define STUB_ASM_CODE(slot)      \
-   "call x86_current_tls\n\t"    \
-   "movl %gs:(%eax), %eax\n\t"   \
-   "jmp *(4 * " slot ")(%eax)"
+    "call x86_current_tls\n\t"    \
+    "movl %gs:(%eax), %eax\n\t"   \
+    "jmp *(4 * " slot ")(%eax)"
 
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:");
@@ -70,7 +71,7 @@ __asm__(".balign 4096\n"
 __asm__(".text\n");
 
 __asm__("x86_current_tls:\n\t"
-    ENTRY_STUB_ALIGN_DIRECTIVE
+    ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n"
     "call 1f\n"
         "1:\n\t"
         "popl %eax\n\t"
@@ -82,7 +83,7 @@ extern uint32_t
 x86_current_tls();
 
 const int entry_type = __GLDISPATCH_STUB_X86;
-const int entry_stub_size = ENTRY_STUB_SIZE;
+const int entry_stub_size = ENTRY_STUB_ALIGN;
 
 static const unsigned char ENTRY_TEMPLATE[] =
 {
