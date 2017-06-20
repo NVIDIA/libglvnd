@@ -86,7 +86,7 @@ extern "C" {
  * will still work.
  */
 #define EGL_VENDOR_ABI_MAJOR_VERSION ((uint32_t) 0)
-#define EGL_VENDOR_ABI_MINOR_VERSION ((uint32_t) 0)
+#define EGL_VENDOR_ABI_MINOR_VERSION ((uint32_t) 1)
 #define EGL_VENDOR_ABI_VERSION ((EGL_VENDOR_ABI_MAJOR_VERSION << 16) | EGL_VENDOR_ABI_MINOR_VERSION)
 static inline uint32_t EGL_VENDOR_ABI_GET_MAJOR_VERSION(uint32_t version)
 {
@@ -388,6 +388,30 @@ typedef struct __EGLapiImportsRec {
      */
     void (*patchThreadAttach)(void);
 
+    /*!
+     * (OPTIONAL) Tries to determine the platform type for a native display.
+     *
+     * If the vendor library provides this function, then libglvnd will call it
+     * to determine which platform to use for a native display handle in
+     * eglGetDisplay.
+     *
+     * If no vendor library identifies the platform, then libglvnd will fall
+     * back to its own platform detection logic.
+     *
+     * Libglvnd can call this function for any native display handle except
+     * \c EGL_DEFAULT_DISPLAY.
+     *
+     * No matter what the value of \p native_display, the vendor library must
+     * not crash, and must not return a false match. If the vendor library
+     * can't identify the display, then it must return \c EGL_NONE.
+     *
+     * In particular, that means that a vendor library must not return any sort
+     * of default or fallback platform.
+     *
+     * \param native_display The native display handle passed to eglGetDisplay.
+     * \return Either a platform type enum or EGL_NONE.
+     */
+    EGLenum (* findNativeDisplayPlatform) (void *native_display);
 } __EGLapiImports;
 
 /*****************************************************************************/

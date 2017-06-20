@@ -212,7 +212,17 @@ static EGLenum GuessPlatformType(EGLNativeDisplayType display_id)
     struct glvnd_list *vendorList = __eglLoadVendors();
     __EGLvendorInfo *vendor;
 
-    // First, see if this is a valid EGLDisplayEXT handle.
+    // First, see if any of the vendor libraries can identify the display.
+    glvnd_list_for_each_entry(vendor, vendorList, entry) {
+        if (vendor->eglvc.findNativeDisplayPlatform != NULL) {
+            EGLenum platform = vendor->eglvc.findNativeDisplayPlatform((void *) display_id);
+            if (platform != EGL_NONE) {
+                return platform;
+            }
+        }
+    }
+
+    // Next, see if this is a valid EGLDisplayEXT handle.
     if (__eglGetVendorFromDevice((EGLDeviceEXT) display_id)) {
         return EGL_PLATFORM_DEVICE_EXT;
     }
