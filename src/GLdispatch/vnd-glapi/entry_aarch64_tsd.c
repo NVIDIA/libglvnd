@@ -50,7 +50,9 @@
  */
 #define ENTRY_STUB_ALIGN 128
 #if !defined(GLDISPATCH_PAGE_SIZE)
-#define GLDISPATCH_PAGE_SIZE 4096
+// Note that on aarch64, the page size could be 4K or 64K. Pick 64K, since that
+// will work in either case.
+#define GLDISPATCH_PAGE_SIZE 65536
 #endif
 
 #define STUB_ASM_ENTRY(func)                        \
