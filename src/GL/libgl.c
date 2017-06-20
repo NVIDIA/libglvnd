@@ -30,7 +30,7 @@
 #include <dlfcn.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
-#include "libgl.h"
+#include "libglxgl.h"
 #include "compiler.h"
 #include "entry.h"
 #include "stub.h"
@@ -53,9 +53,6 @@ void _init(void)
     // Register these entrypoints with GLdispatch so they can be overwritten at
     // runtime
     patchStubId = __glDispatchRegisterStubCallbacks(stub_get_patch_callbacks());
-
-    // Lookup function pointers from libGLX for the GLX entrypoints
-    __glXWrapperInit();
 }
 
 #if defined(USE_ATTRIBUTE_CONSTRUCTOR)

@@ -32,7 +32,6 @@ MAPI = $(top_srcdir)/$(MAPI_PREFIX)
 GLAPI = $(MAPI)/glapi
 
 noinst_HEADERS =        \
-	libgl.h             \
 	g_glapi_mapi_gl_tmp.h
 
 include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk

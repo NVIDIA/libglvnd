@@ -84,19 +84,15 @@ _SKIP_GLX_FUNCTIONS = frozenset((
     "glXDestroyGLXVideoSourceSGIX",
 ))
 
-def generateGLXStubFunction(func):
+def generateGLXExtensionStubFunction(func):
     text = ""
     text += "typedef {f.rt} (*fn_{f.name}_ptr)({f.decArgs});\n"
     text += "static fn_{f.name}_ptr __real_{f.name};\n"
-    if (func.name not in _LIBGLX_FUNCTIONS):
-        text += "static glvnd_mutex_t __mutex_{f.name} = GLVND_MUTEX_INITIALIZER;\n"
+    text += "static glvnd_mutex_t __mutex_{f.name} = GLVND_MUTEX_INITIALIZER;\n"
     text += "PUBLIC {f.rt} {f.name}({f.decArgs})\n"
     text += "{{\n"
     text += "    fn_{f.name}_ptr _real = "
-    if (func.name not in _LIBGLX_FUNCTIONS):
-        text += "(fn_{f.name}_ptr) LOAD_GLX_FUNC({f.name});\n"
-    else:
-        text += "__real_{f.name};\n"
+    text += "(fn_{f.name}_ptr) LOAD_GLX_FUNC({f.name});\n"
 
     text += "    if(_real != NULL) {{\n"
     if (func.hasReturn()):
@@ -110,6 +106,16 @@ def generateGLXStubFunction(func):
 
     return text.format(f=func, retVal=getDefaultReturnValue(func))
 
+def generateGLXCoreStubFunction(func):
+    text = "PUBLIC {f.rt} {f.name}({f.decArgs})\n"
+    text += "{{\n"
+    text += "    "
+    if (func.hasReturn()):
+        text += "return "
+    text += "__GLXGL_CORE_FUNCTIONS.ptr_{f.name}({f.callArgs});\n"
+    text += "}}\n\n"
+    return text.format(f=func)
+
 def generateLibGLXStubs(functions):
     text = r"""
 /*
@@ -119,7 +125,7 @@ def generateLibGLXStubs(functions):
 #include <X11/Xlib.h>
 #include <GL/glx.h>
 #include "compiler.h"
-#include "libgl.h"
+#include "libglxgl.h"
 #include "glvnd_pthread.h"
 
 """.lstrip("\n")
@@ -127,15 +133,10 @@ def generateLibGLXStubs(functions):
     text += "#define LOAD_GLX_FUNC(name) __glXGLLoadGLXFunction(#name, (__GLXextFuncPtr *) &__real_##name, &__mutex_##name)\n\n"
 
     for func in functions:
-        text += generateGLXStubFunction(func)
-
-    text += "\n"
-    text += "void __glXWrapperInit(void)\n"
-    text += "{\n"
-    for func in functions:
         if (func.name in _LIBGLX_FUNCTIONS):
-            text += '    __glXGLLoadGLXFunction("{f.name}", (__GLXextFuncPtr *) &__real_{f.name}, NULL);\n'.format(f=func)
-    text += "}\n"
+            text += generateGLXCoreStubFunction(func)
+        else:
+            text += generateGLXExtensionStubFunction(func)
 
     return text
 

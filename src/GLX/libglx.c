@@ -1783,9 +1783,7 @@ PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
 {
     __GLXextFuncPtr func;
 
-    if (mutex != NULL) {
-        __glvndPthreadFuncs.mutex_lock(mutex);
-    }
+    __glvndPthreadFuncs.mutex_lock(mutex);
 
     func = *ptr;
     if (func == NULL) {
@@ -1793,9 +1791,7 @@ PUBLIC __GLXextFuncPtr __glXGLLoadGLXFunction(const char *name,
         *ptr = func;
     }
 
-    if (mutex != NULL) {
-        __glvndPthreadFuncs.mutex_unlock(mutex);
-    }
+    __glvndPthreadFuncs.mutex_unlock(mutex);
     return func;
 }
 
@@ -1974,6 +1970,48 @@ static void __glXResetOnFork(void)
     /* Reset all mapping state */
     __glXMappingTeardown(True);
 }
+
+PUBLIC const __glXGLCoreFunctions __GLXGL_CORE_FUNCTIONS = {
+    glXChooseFBConfig,
+    glXChooseVisual,
+    glXCopyContext,
+    glXCreateContext,
+    glXCreateGLXPixmap,
+    glXCreateNewContext,
+    glXCreatePbuffer,
+    glXCreatePixmap,
+    glXCreateWindow,
+    glXDestroyContext,
+    glXDestroyGLXPixmap,
+    glXDestroyPbuffer,
+    glXDestroyPixmap,
+    glXDestroyWindow,
+    glXGetClientString,
+    glXGetConfig,
+    glXGetCurrentContext,
+    glXGetCurrentDrawable,
+    glXGetCurrentReadDrawable,
+    glXGetFBConfigAttrib,
+    glXGetFBConfigs,
+    glXGetProcAddress,
+    glXGetProcAddressARB,
+    glXGetSelectedEvent,
+    glXGetVisualFromFBConfig,
+    glXIsDirect,
+    glXMakeContextCurrent,
+    glXMakeCurrent,
+    glXQueryContext,
+    glXQueryDrawable,
+    glXQueryExtension,
+    glXQueryExtensionsString,
+    glXQueryServerString,
+    glXQueryVersion,
+    glXSelectEvent,
+    glXSwapBuffers,
+    glXUseXFont,
+    glXWaitGL,
+    glXWaitX,
+};
 
 #if defined(USE_ATTRIBUTE_CONSTRUCTOR)
 void __attribute__ ((constructor)) __glXInit(void)
