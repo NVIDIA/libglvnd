@@ -37,11 +37,15 @@
 #include <sys/mman.h>
 #include <assert.h>
 
-#define USE_ASM (defined(USE_X86_ASM) ||    \
-                 defined(USE_X86_64_ASM) || \
-                 defined(USE_ARMV7_ASM) ||  \
-                 defined(USE_AARCH64_ASM) || \
-                 defined(USE_PPC64LE_ASM))
+#if defined(USE_X86_ASM) ||    \
+    defined(USE_X86_64_ASM) || \
+    defined(USE_ARMV7_ASM) ||  \
+    defined(USE_AARCH64_ASM) || \
+    defined(USE_PPC64LE_ASM)
+# define USE_ASM 1
+#else
+# define USE_ASM 0
+#endif
 
 #if defined(__GNUC__) && USE_ASM
 
