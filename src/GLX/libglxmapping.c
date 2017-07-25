@@ -198,6 +198,7 @@ __GLXextFuncPtr __glXGetGLXDispatchAddress(const GLubyte *procName)
         // it does, then that means this is really a GL function that happens
         // to start with "glX".
         HASH_ITER(hh, _LH(__glXVendorNameHash), pEntry, tmp) {
+            addr = pEntry->vendor.glxvc->getProcAddress((const GLubyte *) procName);
             if (addr != NULL) {
                 break;
             }
