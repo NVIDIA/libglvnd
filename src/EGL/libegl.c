@@ -870,7 +870,7 @@ static char *GetClientExtensionString(void)
         if (vendorString != NULL && vendorString[0] != '\0') {
             result = UnionExtensionStrings(result, vendorString);
             if (result == NULL) {
-                break;
+                return NULL;
             }
         }
     }
