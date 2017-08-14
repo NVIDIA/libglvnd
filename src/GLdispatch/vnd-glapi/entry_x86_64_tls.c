@@ -113,9 +113,9 @@ static const unsigned int SLOT_OFFSET = 12;
 
 #endif // __ILP32__
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
-    char *writeEntry = u_execmem_get_writable(entry);
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     uint64_t tls_addr;
 
     STATIC_ASSERT(ENTRY_STUB_SIZE >= sizeof(ENTRY_TEMPLATE));
@@ -124,8 +124,8 @@ void entry_generate_default_code(char *entry, int slot)
 
     tls_addr = x86_64_current_tls();
 
-    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
-    *((unsigned int *) &writeEntry[TLS_ADDR_OFFSET]) = (unsigned int) tls_addr;
-    *((unsigned int *) &writeEntry[SLOT_OFFSET]) = (unsigned int) (slot * sizeof(mapi_func));
+    memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+    *((unsigned int *) &entry[TLS_ADDR_OFFSET]) = (unsigned int) tls_addr;
+    *((unsigned int *) &entry[SLOT_OFFSET]) = (unsigned int) (slot * sizeof(mapi_func));
 }
 

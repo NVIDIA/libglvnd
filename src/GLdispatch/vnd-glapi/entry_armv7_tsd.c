@@ -47,7 +47,7 @@
 __asm__(".syntax unified\n\t");
 
 /*
- * u_execmem_alloc() allocates 64 bytes per stub.
+ * The size of each dispatch stub.
  */
 #define ARMV7_ENTRY_SIZE 128
 
@@ -189,26 +189,20 @@ entry_init_public(void)
     STATIC_ASSERT(ARMV7_BYTECODE_SIZE <= ARMV7_ENTRY_SIZE);
 }
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
-    char *writeEntry;
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
 
-    // Make sure the base address has the Thumb mode bit
-    assert((uintptr_t)entry & (uintptr_t)0x1);
+    memcpy(entry, BYTECODE_TEMPLATE, ARMV7_BYTECODE_SIZE);
 
-    // Get the pointer to the writable mapping.
-    writeEntry = (char *) u_execmem_get_writable(entry - 1);
-
-    memcpy(writeEntry, BYTECODE_TEMPLATE, ARMV7_BYTECODE_SIZE);
-
-    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_SLOT)) = slot;
-    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
+    *((uint32_t *)(entry + TEMPLATE_OFFSET_SLOT)) = slot;
+    *((uint32_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
         (uint32_t)_glapi_Current;
-    *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
+    *((uint32_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
         (uint32_t)_glapi_get_current;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache(writeEntry, writeEntry + ARMV7_BYTECODE_SIZE);
+    __builtin___clear_cache(entry, entry + ARMV7_BYTECODE_SIZE);
 }
 
 // Note: The rest of these functions could also be used for ARMv7 TLS stubs,
@@ -221,27 +215,3 @@ entry_get_public(int index)
     return (mapi_func)(public_entry_start + (index * entry_stub_size) + 1);
 }
 
-void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
-{
-    // Get the actual beginning of the stub allocation
-    void *entryBase = (void *) (((uintptr_t) entry) - 1);
-    *execPtr = (const void *) entryBase;
-    *writePtr = u_execmem_get_writable(entryBase);
-}
-
-#if !defined(STATIC_DISPATCH_ONLY)
-mapi_func entry_generate(int slot)
-{
-    void *code = u_execmem_alloc(entry_stub_size);
-    if (!code) {
-        return NULL;
-    }
-
-    // Add 1 to the base address to force Thumb mode when jumping to the stub
-    code = (void *)((char *)code + 1);
-
-    entry_generate_default_code(code, slot);
-
-    return (mapi_func) code;
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)

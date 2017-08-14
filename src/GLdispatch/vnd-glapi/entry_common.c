@@ -74,3 +74,7 @@ int entry_patch_finish(void)
     return entry_patch_mprotect(PROT_READ | PROT_EXEC);
 }
 
+void *entry_get_patch_address(int index)
+{
+    return (void *) (public_entry_start + (index * entry_stub_size));
+}
