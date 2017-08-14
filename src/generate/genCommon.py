@@ -44,7 +44,7 @@ _LIBRARY_FEATURE_NAMES = {
     )),
     "glesv1" : frozenset(("GL_VERSION_ES_CM_1_0", "GL_OES_point_size_array")),
     "glesv2" : frozenset(("GL_ES_VERSION_2_0", "GL_ES_VERSION_3_0",
-            "GL_ES_VERSION_3_1" "GL_ES_VERSION_3_2",
+            "GL_ES_VERSION_3_1", "GL_ES_VERSION_3_2",
     )),
 }
 
