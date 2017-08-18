@@ -48,10 +48,15 @@
 /*
  * u_execmem_alloc() allocates 128 bytes per stub.
  */
-#define AARCH64_ENTRY_SIZE 128
+#define ENTRY_STUB_ALIGN 128
+#if !defined(GLDISPATCH_PAGE_SIZE)
+// Note that on aarch64, the page size could be 4K or 64K. Pick 64K, since that
+// will work in either case.
+#define GLDISPATCH_PAGE_SIZE 65536
+#endif
 
 #define STUB_ASM_ENTRY(func)                        \
-    ".balign " U_STRINGIFY(AARCH64_ENTRY_SIZE) "\n\t" \
+    ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n\t" \
     ".global " func "\n\t"                          \
     ".type " func ", %function\n\t"                 \
     func ":\n\t"
@@ -97,7 +102,7 @@
 /*
  * Bytecode for STUB_ASM_CODE()
  */
-static const uint32_t BYTECODE_TEMPLATE[] =
+static const uint32_t ENTRY_TEMPLATE[] =
 {
     0xa9bf03e1, // <ENTRY>:	stp	x1, x0, [sp,#-16]!
     0x58000240, // <ENTRY+4>:	ldr	x0, <ENTRY+76>
@@ -125,10 +130,8 @@ static const uint32_t BYTECODE_TEMPLATE[] =
     0x00000000, 0x00000000, // <ENTRY+92>: slot * sizeof(void*)
 };
 
-#define AARCH64_BYTECODE_SIZE sizeof(BYTECODE_TEMPLATE)
-
 __asm__(".section wtext,\"ax\"\n"
-        ".balign 4096\n"
+        ".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
         "public_entry_start:\n");
@@ -136,19 +139,19 @@ __asm__(".section wtext,\"ax\"\n"
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:\n"
         ".text\n\t");
 
 const int entry_type = __GLDISPATCH_STUB_AARCH64;
-const int entry_stub_size = AARCH64_ENTRY_SIZE;
+const int entry_stub_size = ENTRY_STUB_ALIGN;
 
-// The offsets in BYTECODE_TEMPLATE that need to be patched.
-static const int TEMPLATE_OFFSET_CURRENT_TABLE     = AARCH64_BYTECODE_SIZE - 3*8;
-static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = AARCH64_BYTECODE_SIZE - 2*8;
-static const int TEMPLATE_OFFSET_SLOT              = AARCH64_BYTECODE_SIZE - 8;
+// The offsets in ENTRY_TEMPLATE that need to be patched.
+static const int TEMPLATE_OFFSET_CURRENT_TABLE     = sizeof(ENTRY_TEMPLATE) - 3*8;
+static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = sizeof(ENTRY_TEMPLATE) - 2*8;
+static const int TEMPLATE_OFFSET_SLOT              = sizeof(ENTRY_TEMPLATE) - 8;
 
 void entry_generate_default_code(char *entry, int slot)
 {
@@ -157,7 +160,7 @@ void entry_generate_default_code(char *entry, int slot)
     // Get the pointer to the writable mapping.
     writeEntry = (char *) u_execmem_get_writable(entry);
 
-    memcpy(writeEntry, BYTECODE_TEMPLATE, AARCH64_BYTECODE_SIZE);
+    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
     // Patch the slot number and whatever addresses need to be patched.
     *((uint64_t *)(writeEntry + TEMPLATE_OFFSET_SLOT)) = (uint64_t)(slot * sizeof(mapi_func));
@@ -167,5 +170,5 @@ void entry_generate_default_code(char *entry, int slot)
         (uint64_t)_glapi_get_current;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache(writeEntry, writeEntry + AARCH64_BYTECODE_SIZE);
+    __builtin___clear_cache(writeEntry, writeEntry + sizeof(ENTRY_TEMPLATE));
 }

@@ -49,7 +49,10 @@ __asm__(".syntax unified\n\t");
 /*
  * u_execmem_alloc() allocates 64 bytes per stub.
  */
-#define ARMV7_ENTRY_SIZE 128
+#define ENTRY_STUB_ALIGN 128
+#if !defined(GLDISPATCH_PAGE_SIZE)
+#define GLDISPATCH_PAGE_SIZE 4096
+#endif
 
 /*
  * This runs in Thumb mode.
@@ -60,7 +63,7 @@ __asm__(".syntax unified\n\t");
  * See: https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
  */
 #define STUB_ASM_ENTRY(func)                        \
-    ".balign " U_STRINGIFY(ARMV7_ENTRY_SIZE) "\n\t" \
+    ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n\t" \
     ".thumb_func\n\t"                               \
     ".global " func "\n\t"                          \
     ".type " func ", %function\n\t"                 \
@@ -125,7 +128,7 @@ __asm__(".syntax unified\n\t");
  * _glapi_Current and _glapi_get_current. In the generated stubs, we can just
  * plug the addresses in directly.
  */
-static const uint16_t BYTECODE_TEMPLATE[] =
+static const uint16_t ENTRY_TEMPLATE[] =
 {
     0xb40f, // push {r0-r3}
     0xf8df, 0x0028, // ldr r0, 1f
@@ -151,10 +154,8 @@ static const uint16_t BYTECODE_TEMPLATE[] =
     0x0000, 0x0000, // 3: .word " slot "
 };
 
-#define ARMV7_BYTECODE_SIZE sizeof(BYTECODE_TEMPLATE)
-
 __asm__(".section wtext,\"ax\"\n"
-        ".balign 4096\n"
+        ".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
         ".syntax unified\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
@@ -163,7 +164,7 @@ __asm__(".section wtext,\"ax\"\n"
 #define MAPI_TMP_STUB_ASM_GCC
 #include "mapi_tmp.h"
 
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:\n"
@@ -177,16 +178,16 @@ __asm__(".arm\n\t");
 #endif
 
 const int entry_type = __GLDISPATCH_STUB_ARMV7_THUMB;
-const int entry_stub_size = ARMV7_ENTRY_SIZE;
+const int entry_stub_size = ENTRY_STUB_ALIGN;
 
-static const int TEMPLATE_OFFSET_CURRENT_TABLE     = ARMV7_BYTECODE_SIZE - 3*4;
-static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = ARMV7_BYTECODE_SIZE - 2*4;
-static const int TEMPLATE_OFFSET_SLOT              = ARMV7_BYTECODE_SIZE - 4;
+static const int TEMPLATE_OFFSET_CURRENT_TABLE     = sizeof(ENTRY_TEMPLATE) - 3*4;
+static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = sizeof(ENTRY_TEMPLATE) - 2*4;
+static const int TEMPLATE_OFFSET_SLOT              = sizeof(ENTRY_TEMPLATE) - 4;
 
 void
 entry_init_public(void)
 {
-    STATIC_ASSERT(ARMV7_BYTECODE_SIZE <= ARMV7_ENTRY_SIZE);
+    STATIC_ASSERT(sizeof(ENTRY_TEMPLATE) <= ENTRY_STUB_ALIGN);
 }
 
 void entry_generate_default_code(char *entry, int slot)
@@ -199,7 +200,7 @@ void entry_generate_default_code(char *entry, int slot)
     // Get the pointer to the writable mapping.
     writeEntry = (char *) u_execmem_get_writable(entry - 1);
 
-    memcpy(writeEntry, BYTECODE_TEMPLATE, ARMV7_BYTECODE_SIZE);
+    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
     *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_SLOT)) = slot;
     *((uint32_t *)(writeEntry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
@@ -208,7 +209,7 @@ void entry_generate_default_code(char *entry, int slot)
         (uint32_t)_glapi_get_current;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache(writeEntry, writeEntry + ARMV7_BYTECODE_SIZE);
+    __builtin___clear_cache(writeEntry, writeEntry + sizeof(ENTRY_TEMPLATE));
 }
 
 // Note: The rest of these functions could also be used for ARMv7 TLS stubs,

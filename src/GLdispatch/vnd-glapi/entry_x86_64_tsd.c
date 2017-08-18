@@ -40,19 +40,22 @@
 #include "glapi.h"
 #include "glvnd/GLdispatchABI.h"
 
-#define X86_64_ENTRY_SIZE 64
+#define ENTRY_STUB_ALIGN 64
+#if !defined(GLDISPATCH_PAGE_SIZE)
+#define GLDISPATCH_PAGE_SIZE 4096
+#endif
 
 __asm__(".section wtext,\"ax\",@progbits\n");
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_start\n"
        ".hidden public_entry_start\n"
         "public_entry_start:");
 
 #define STUB_ASM_ENTRY(func)        \
-   ".globl " func "\n"              \
-   ".type " func ", @function\n"    \
-   ".balign " U_STRINGIFY(X86_64_ENTRY_SIZE) "\n"                   \
-   func ":"
+    ".globl " func "\n"              \
+    ".type " func ", @function\n"    \
+    ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n"                   \
+    func ":"
 
 /*
  * Note that this stub does not exactly match the machine code in
@@ -87,14 +90,14 @@ __asm__(".balign 4096\n"
 #include "mapi_tmp.h"
 
 
-__asm__(".balign 4096\n"
+__asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_end\n"
        ".hidden public_entry_end\n"
         "public_entry_end:");
 __asm__(".text\n");
 
 const int entry_type = __GLDISPATCH_STUB_X86_64;
-const int entry_stub_size = X86_64_ENTRY_SIZE;
+const int entry_stub_size = ENTRY_STUB_ALIGN;
 
 static const unsigned char ENTRY_TEMPLATE[] =
 {
