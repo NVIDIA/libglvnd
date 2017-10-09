@@ -121,6 +121,7 @@ void LoadVendorsFromConfigDir(const char *dirName)
         } else {
             fprintf(stderr, "ERROR: Could not allocate vendor library path name\n");
         }
+        free(entries[i]);
     }
 
     free(entries);

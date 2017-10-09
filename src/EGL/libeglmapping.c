@@ -259,6 +259,8 @@ void __eglMappingTeardown(EGLBoolean doReset)
         /* Tear down all hashtables used in this file */
         LKDHASH_TEARDOWN(__EGLdisplayInfoHash,
                          __eglDisplayInfoHash, NULL, NULL, EGL_FALSE);
+
+       __glvndWinsysDispatchCleanup();
     }
 }
 
