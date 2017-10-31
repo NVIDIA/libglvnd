@@ -1,15 +1,15 @@
-libglvnd: the GL Vendor-Neutral Dispatch library
+libglvnd: the Graphics Library (GL) Vendor-Neutral Dispatch library
 ================================================
 
 Introduction
 ------------
 
-libglvnd is a vendor-neutral dispatch layer for arbitrating OpenGL API calls
+libglvnd is a vendor-neutral dispatch layer for arbitrating [Open Graphics Library (OpenGL)](https://en.wikipedia.org/wiki/OpenGL) API calls
 between multiple vendors. It allows multiple drivers from different vendors to
 coexist on the same filesystem, and determines which vendor to dispatch each
 API call to at runtime.
 
-Both GLX and EGL are supported, in any combination with OpenGL and OpenGL ES.
+Both [OpenGL Extension to the X Window System (GLX)](https://en.wikipedia.org/wiki/GLX) and [Embedded-System Graphics Library (EGL)](https://en.wikipedia.org/wiki/EGL_(API)) are supported, in any combination with OpenGL and [OpenGL ES](https://en.wikipedia.org/wiki/OpenGL_ES).
 
 libglvnd was originally described in Andy Ritger's OpenGL ABI proposal [1].
 
