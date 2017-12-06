@@ -58,12 +58,20 @@ typedef struct __GLXcontextRec {
 
 static const int FBCONFIGS_PER_SCREEN = 10;
 
+static GLXContext dummy_glXCreateContextVendorDUMMY(Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list);
+static GLXContext dispatch_glXCreateContextVendorDUMMY(Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list);
+
 static void dummy_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
 static void dispatch_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
 
 enum
 {
     DI_glXExampleExtensionFunction,
+    DI_glXCreateContextVendorDUMMY,
     DI_COUNT,
 };
 static struct {
@@ -74,6 +82,7 @@ static struct {
 } glxExtensionProcs[] = {
 #define PROC_ENTRY(name) { #name, dummy_##name, dispatch_##name, -1 }
     PROC_ENTRY(glXExampleExtensionFunction),
+    PROC_ENTRY(glXCreateContextVendorDUMMY),
 #undef PROC_ENTRY
 };
 
@@ -189,6 +198,59 @@ static GLXContext dummy_glXCreateContextAttribsARB(Display *dpy,
         }
     }
     return CommonCreateContext(dpy, screen);
+}
+
+static GLXContext dummy_glXCreateContextVendorDUMMY(Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list)
+{
+    return dummy_glXCreateContextAttribsARB(dpy, config, share_list, direct, attrib_list);
+}
+
+/*
+ * glXCreateContextVendorDUMMY is used to test creating a context with a
+ * vendor-provided "extension" function.
+ *
+ * Note that even though libGLX.so provides a dispatch stub for
+ * glXCreateContextAttribsARB now, real vendor libraries should also provide a
+ * stub to ensure compatibility with older versions of libglvnd.
+ *
+ * glXCreateContextVendorDUMMY takes the same parameters as
+ * glXCreateContextAttribsARB so that it can serve as an example of how to
+ * implement a dispatch stub for glXCreateContextAttribsARB.
+ */
+static GLXContext dispatch_glXCreateContextVendorDUMMY(Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list)
+{
+    PFNGLXCREATECONTEXTVENDORDUMMYPROC ptr_glXCreateContextVendorDUMMY = NULL;
+    const int index = glxExtensionProcs[DI_glXCreateContextVendorDUMMY].index;
+    __GLXvendorInfo *vendor = NULL;
+    GLXContext ret = NULL;
+
+    if (config != NULL) {
+        vendor = apiExports->vendorFromFBConfig(dpy, config);
+    } else if (attrib_list != NULL) {
+        int i;
+        for (i=0; attrib_list[i] != None; i += 2) {
+            if (attrib_list[i] == GLX_SCREEN) {
+                vendor = apiExports->getDynDispatch(dpy, attrib_list[i + 1]);
+                break;
+            }
+        }
+    }
+
+    if (vendor != NULL) {
+        ptr_glXCreateContextVendorDUMMY = (PFNGLXCREATECONTEXTVENDORDUMMYPROC)
+            apiExports->fetchDispatchEntry(vendor, index);
+        if (ptr_glXCreateContextVendorDUMMY != NULL) {
+            ret = ptr_glXCreateContextVendorDUMMY(dpy, config, share_list, direct, attrib_list);
+            if (ret != NULL) {
+                apiExports->addVendorContextMapping(dpy, ret, vendor);
+            }
+        }
+    }
+    return ret;
 }
 
 static GLXPixmap     dummy_glXCreateGLXPixmap       (Display *dpy,
