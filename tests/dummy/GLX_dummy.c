@@ -407,7 +407,12 @@ static int           dummy_glXQueryContext          (Display *dpy,
                                                  int attribute,
                                                  int *value)
 {
-    return 0;
+    if (attribute == GLX_CONTEX_ATTRIB_DUMMY) {
+        *value = 1;
+        return Success;
+    } else {
+        return GLX_BAD_ATTRIBUTE;
+    }
 }
 
 static void          dummy_glXQueryDrawable         (Display *dpy,

@@ -57,6 +57,14 @@ enum {
     GL_MC_LAST_REQ
 } GLmakeCurrentTestRequest;
 
+/**
+ * This is an attribute to query using glXQueryContext to test dispatching by
+ * GLXContext.
+ *
+ * The dummy vendor library will just return 1 for this attribute.
+ */
+#define GLX_CONTEX_ATTRIB_DUMMY 0x10000
+
 /*
  * glMakeCurrentTestResults(): perform queries on vendor library state.
  *
