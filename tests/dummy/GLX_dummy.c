@@ -175,7 +175,20 @@ static GLXContext dummy_glXCreateContextAttribsARB(Display *dpy,
         GLXFBConfig config, GLXContext share_list, Bool direct,
         const int *attrib_list)
 {
-    return CommonCreateContext(dpy, GetScreenFromFBConfig(dpy, config));
+    int screen = -1;
+    if (config != NULL) {
+        screen = GetScreenFromFBConfig(dpy, config);
+    } else {
+        if (attrib_list != NULL) {
+            int i;
+            for (i=0; attrib_list[i] != None; i += 2) {
+                if (attrib_list[i] == GLX_SCREEN) {
+                    screen = attrib_list[i + 1];
+                }
+            }
+        }
+    }
+    return CommonCreateContext(dpy, screen);
 }
 
 static GLXPixmap     dummy_glXCreateGLXPixmap       (Display *dpy,
