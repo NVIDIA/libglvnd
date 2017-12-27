@@ -370,6 +370,7 @@ static GLboolean LookupVendorEntrypoints(__GLXvendorInfo *vendor)
     } while(0)
     LOADENTRYPOINT(importContextEXT,            "glXImportContextEXT"           );
     LOADENTRYPOINT(freeContextEXT,              "glXFreeContextEXT"             );
+    LOADENTRYPOINT(createContextAttribsARB,     "glXCreateContextAttribsARB"    );
 #undef LOADENTRYPOINT
 
     return GL_TRUE;

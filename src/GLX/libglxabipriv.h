@@ -171,6 +171,7 @@ typedef struct __GLXdispatchTableStaticRec {
 
     PFNGLXIMPORTCONTEXTEXTPROC importContextEXT;
     PFNGLXFREECONTEXTEXTPROC freeContextEXT;
+    PFNGLXCREATECONTEXTATTRIBSARBPROC createContextAttribsARB;
 } __GLXdispatchTableStatic;
 
 #endif

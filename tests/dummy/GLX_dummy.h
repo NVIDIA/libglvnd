@@ -30,7 +30,9 @@
 #ifndef __GLX_MAKECURRENT_H__
 #define __GLX_MAKECURRENT_H__
 
+#include <X11/Xlib.h>
 #include <GL/gl.h>
+#include <GL/glx.h>
 
 /*
  * Contains definition of the fake GL extension functions exported by the
@@ -57,6 +59,14 @@ enum {
     GL_MC_LAST_REQ
 } GLmakeCurrentTestRequest;
 
+/**
+ * This is an attribute to query using glXQueryContext to test dispatching by
+ * GLXContext.
+ *
+ * The dummy vendor library will just return 1 for this attribute.
+ */
+#define GLX_CONTEX_ATTRIB_DUMMY 0x10000
+
 /*
  * glMakeCurrentTestResults(): perform queries on vendor library state.
  *
@@ -80,5 +90,15 @@ typedef void (*PFNGLMAKECURRENTTESTRESULTSPROC)(
     GLboolean *saw,
     void **ret
 );
+
+/**
+ * glXCreateContextVendorDUMMY(): Dummy extension function to create a context.
+ *
+ * This tests using a vendor-provided dispach stub to create a context and add
+ * it to GLVND's tracking.
+ */
+typedef GLXContext (* PFNGLXCREATECONTEXTVENDORDUMMYPROC) (Display *dpy,
+        GLXFBConfig config, GLXContext share_list, Bool direct,
+        const int *attrib_list);
 
 #endif

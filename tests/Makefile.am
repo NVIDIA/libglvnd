@@ -76,6 +76,7 @@ testgldispatch_LDADD += $(top_builddir)/src/util/libutils_misc.la
 # the scripts would be missing when you run "make dist" or "make distcheck".
 
 TESTS_GLX =
+TESTS_GLX += testglxcreatecontext.sh
 TESTS_GLX += testglxmcbasic.sh
 TESTS_GLX += testglxmcloop.sh
 TESTS_GLX += testglxmcthreads.sh
@@ -90,6 +91,15 @@ TESTS_GLX += testpatchentrypoints.sh
 if ENABLE_GLX
 
 TESTS += $(TESTS_GLX)
+
+check_PROGRAMS += testglxcreatecontext
+testglxcreatecontext_LDADD = -lX11
+testglxcreatecontext_LDADD += $(top_builddir)/src/GLX/libGLX.la
+testglxcreatecontext_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
+testglxcreatecontext_SOURCES = \
+	testglxcreatecontext.c \
+	test_utils.c
+
 
 TESTGLXMAKECURRENT_SOURCES_COMMON = \
 	testglxmakecurrent.c \

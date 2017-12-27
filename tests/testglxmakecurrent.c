@@ -46,19 +46,10 @@
 // For glMakeCurrentTestResults()
 #include "dummy/GLX_dummy.h"
 
-enum
-{
-    TEST_VISUAL,
-    TEST_CONFIG,
-    TEST_CONTEXT_ATTRIBS,
-    TEST_MAX
-};
-
 typedef struct TestOptionsRec {
     int iterations;
     int threads;
     GLboolean late;
-    int testType;
 } TestOptions;
 
 static void print_help(void)
@@ -182,35 +173,13 @@ void *MakeCurrentThread(void *arg)
         }
     }
 
-    if (t->testType == TEST_VISUAL) {
-        success = testUtilsCreateWindow(dpy, &wi, 0);
-    } else {
-        success = testUtilsCreateWindowConfig(dpy, &wi, 0);
-    }
+    success = testUtilsCreateWindow(dpy, &wi, 0);
     if (!success) {
         printError("Failed to create window!\n");
         goto fail;
     }
 
-    // TODO: Might be a good idea to try sharing contexts/windows between
-    // threads
-    if (t->testType == TEST_VISUAL) {
-        ctx = glXCreateContext(dpy, wi.visinfo, NULL, True);
-    } else if (t->testType == TEST_CONFIG) {
-        ctx = glXCreateNewContext(dpy, wi.config, GLX_RGBA_TYPE, NULL, True);
-    } else if (t->testType == TEST_CONTEXT_ATTRIBS) {
-        PFNGLXCREATECONTEXTATTRIBSARBPROC ptr_glXCreateContextAttribsARB;
-        ptr_glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)
-            glXGetProcAddress((const GLubyte *) "glXCreateContextAttribsARB");
-        if (ptr_glXCreateContextAttribsARB == NULL) {
-            printError("Can't find function glXCreateContextAttribsARB!\n");
-            goto fail;
-        }
-        ctx = ptr_glXCreateContextAttribsARB(dpy, wi.config, NULL, True, NULL);
-    } else {
-        printf("Invalid test type %d\n", t->testType);
-        abort();
-    }
+    ctx = glXCreateContext(dpy, wi.visinfo, NULL, True);
     if (!ctx) {
         printError("Failed to create a context!\n");
         goto fail;
@@ -332,32 +301,29 @@ int main(int argc, char **argv)
         }
     }
 
-    for (t.testType = 0; t.testType < TEST_MAX; t.testType++) {
-        fprintf(stderr, "Testing with method %d\n", (int) t.testType);
-        if (t.threads == 1) {
-            ret = MakeCurrentThread((void *)&t);
+    if (t.threads == 1) {
+        ret = MakeCurrentThread((void *)&t);
+        if (!ret) {
+            all_ret = 1;
+        }
+    } else {
+        glvnd_thread_t *threads = malloc(t.threads * sizeof(glvnd_thread_t));
+
+        for (i = 0; i < t.threads; i++) {
+            if (__glvndPthreadFuncs.create(&threads[i], NULL, MakeCurrentThread, (void *)&t)
+                != 0) {
+                printError("Error in pthread_create(): %s\n", strerror(errno));
+                exit(1);
+            }
+        }
+
+        for (i = 0; i < t.threads; i++) {
+            if (__glvndPthreadFuncs.join(threads[i], &ret) != 0) {
+                printError("Error in pthread_join(): %s\n", strerror(errno));
+                exit(1);
+            }
             if (!ret) {
                 all_ret = 1;
-            }
-        } else {
-            glvnd_thread_t *threads = malloc(t.threads * sizeof(glvnd_thread_t));
-
-            for (i = 0; i < t.threads; i++) {
-                if (__glvndPthreadFuncs.create(&threads[i], NULL, MakeCurrentThread, (void *)&t)
-                    != 0) {
-                    printError("Error in pthread_create(): %s\n", strerror(errno));
-                    exit(1);
-                }
-            }
-
-            for (i = 0; i < t.threads; i++) {
-                if (__glvndPthreadFuncs.join(threads[i], &ret) != 0) {
-                    printError("Error in pthread_join(): %s\n", strerror(errno));
-                    exit(1);
-                }
-                if (!ret) {
-                    all_ret = 1;
-                }
             }
         }
     }
