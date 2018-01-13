@@ -68,7 +68,7 @@ static unsigned char *exec_mem = NULL;
 static unsigned char *write_mem = NULL;
 
 
-#if defined(__linux__) || defined(__OpenBSD__) || defined(_NetBSD__) || defined(__sun) || defined(__HAIKU__)
+#if defined(__linux__) || defined(__OpenBSD__) || defined(_NetBSD__) || defined(__sun) || defined(__HAIKU__) || defined(__FreeBSD_kernel__) || defined(__GNU__)
 
 #include <unistd.h>
 #include <sys/mman.h>
