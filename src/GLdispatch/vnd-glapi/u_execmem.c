@@ -67,17 +67,6 @@ static unsigned int head = 0;
 static unsigned char *exec_mem = NULL;
 static unsigned char *write_mem = NULL;
 
-
-#if defined(__linux__) || defined(__OpenBSD__) || defined(_NetBSD__) || defined(__sun) || defined(__HAIKU__)
-
-#include <unistd.h>
-#include <sys/mman.h>
-
-#ifndef MAP_ANONYMOUS
-#define MAP_ANONYMOUS MAP_ANON
-#endif
-
-
 /*
  * Dispatch stubs are of fixed size and never freed. Thus, we do not need to
  * overlay a heap, we just mmap a page and manage through an index.
@@ -106,41 +95,6 @@ void u_execmem_free(void)
         exec_mem = NULL;
     }
 }
-
-#elif defined(_WIN32)
-
-#include <windows.h>
-
-
-/*
- * Avoid Data Execution Prevention.
- */
-
-static int
-init_map(void)
-{
-   exec_mem = VirtualAlloc(NULL, EXEC_MAP_SIZE, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-   write_mem = exec_mem;
-
-   return (exec_mem != NULL);
-}
-
-
-#else
-
-#include <stdlib.h>
-
-static int
-init_map(void)
-{
-   exec_mem = malloc(EXEC_MAP_SIZE);
-   write_mem = exec_mem;
-
-   return (exec_mem != NULL);
-}
-
-
-#endif
 
 void *
 u_execmem_alloc(unsigned int size)
