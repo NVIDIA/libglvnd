@@ -38,27 +38,8 @@
 #include "u_execmem.h"
 #include "utils_misc.h"
 #include "glvnd_pthread.h"
-
-
-/*
- * Allocate 64 bytes for each stub so that they're large enough to hold the
- * x86-64 TSD stubs. The x86 TSD and x86-64 TLS stubs both take 32 bytes each.
- *
- * The x86-64 TSD stubs are larger than the others because it has to deal with
- * 64-bit addresses and preserving the function arguments.
- *
- * The generated stubs may not be within 2GB of u_current or
- * u_current_get_internal, so we can't use RIP-relative addressing for them.
- * Instead we have to use movabs instructions to load the 64-bit absolute
- * addresses, which take 10 bytes each.
- *
- * In addition, x86-64 passes the first 6 parameters in registers, which the
- * callee does not have to preserve. Since the stub has to pass those same
- * parameters to the real function, we have to preserve them across the call to
- * u_current_get_internal. Pushing and popping those registers takes another 24
- * bytes.
- */
-#define EXEC_MAP_SIZE (64*4096) // DISPATCH_FUNCTION_SIZE * MAPI_TABLE_NUM_DYNAMIC
+#include "entry.h"
+#include "table.h"
 
 static glvnd_mutex_t exec_mutex = GLVND_MUTEX_INITIALIZER;
 
@@ -66,17 +47,6 @@ static unsigned int head = 0;
 
 static unsigned char *exec_mem = NULL;
 static unsigned char *write_mem = NULL;
-
-
-#if defined(__linux__) || defined(__OpenBSD__) || defined(_NetBSD__) || defined(__sun) || defined(__HAIKU__)
-
-#include <unistd.h>
-#include <sys/mman.h>
-
-#ifndef MAP_ANONYMOUS
-#define MAP_ANONYMOUS MAP_ANON
-#endif
-
 
 /*
  * Dispatch stubs are of fixed size and never freed. Thus, we do not need to
@@ -86,9 +56,13 @@ static unsigned char *write_mem = NULL;
 static int
 init_map(void)
 {
+    if (entry_stub_size == 0) {
+        return 0;
+    }
+
     if (exec_mem == NULL) {
         void *writePtr, *execPtr;
-        if (AllocExecPages(EXEC_MAP_SIZE, &writePtr, &execPtr) == 0) {
+        if (AllocExecPages(entry_stub_size * MAPI_TABLE_NUM_DYNAMIC, &writePtr, &execPtr) == 0) {
             exec_mem = (unsigned char *) execPtr;
             write_mem = (unsigned char *) writePtr;
             head = 0;
@@ -101,46 +75,11 @@ init_map(void)
 void u_execmem_free(void)
 {
     if (exec_mem != NULL) {
-        FreeExecPages(EXEC_MAP_SIZE, write_mem, exec_mem);
+        FreeExecPages(entry_stub_size * MAPI_TABLE_NUM_DYNAMIC, write_mem, exec_mem);
         write_mem = NULL;
         exec_mem = NULL;
     }
 }
-
-#elif defined(_WIN32)
-
-#include <windows.h>
-
-
-/*
- * Avoid Data Execution Prevention.
- */
-
-static int
-init_map(void)
-{
-   exec_mem = VirtualAlloc(NULL, EXEC_MAP_SIZE, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-   write_mem = exec_mem;
-
-   return (exec_mem != NULL);
-}
-
-
-#else
-
-#include <stdlib.h>
-
-static int
-init_map(void)
-{
-   exec_mem = malloc(EXEC_MAP_SIZE);
-   write_mem = exec_mem;
-
-   return (exec_mem != NULL);
-}
-
-
-#endif
 
 void *
 u_execmem_alloc(unsigned int size)
@@ -153,7 +92,7 @@ u_execmem_alloc(unsigned int size)
       goto bail;
 
    /* free space check, assumes no integer overflow */
-   if (head + size > EXEC_MAP_SIZE)
+   if (head + size > entry_stub_size * MAPI_TABLE_NUM_DYNAMIC)
       goto bail;
 
    /* allocation, assumes proper addr and size alignement */
@@ -173,7 +112,7 @@ void *u_execmem_get_writable(void *execPtr)
     if (((uintptr_t) execPtr) >= ((uintptr_t) exec_mem))
     {
         uintptr_t offset = ((uintptr_t) execPtr) - ((uintptr_t) exec_mem);
-        if (offset < EXEC_MAP_SIZE)
+        if (offset < entry_stub_size * MAPI_TABLE_NUM_DYNAMIC)
         {
             return (void *) (((uintptr_t) write_mem) + offset);
         }
