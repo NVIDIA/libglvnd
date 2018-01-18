@@ -63,7 +63,9 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     "  cmpldi 11, 0\n\t"                                \
     "  beq    2000f\n"                                  \
     "1050:\n\t"                                         \
-    "  ld     12, " slot "*8(11)\n\t"                   \
+    "  addis  12, 0, (" slot "*8)@h\n\t"                \
+    "  ori    12, 12, (" slot "*8)@l\n"                 \
+    "  ldx    12, 11, 12\n"                             \
     "  mtctr  12\n\t"                                   \
     "  bctr\n"                                          \
     "2000:\n\t"                                         \

@@ -62,7 +62,9 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     "  ld     11, _glapi_tls_Current@got@tprel@l(11)\n\t"       \
     "  add    11, 11,_glapi_tls_Current@tls\n\t"                \
     "  ld     11, 0(11)\n\t"                                    \
-    "  ld     12, " slot "*8(11)\n\t"                           \
+    "  addis  12, 0, (" slot "*8)@h\n\t"                        \
+    "  ori    12, 12, (" slot "*8)@l\n"                         \
+    "  ldx    12, 11, 12\n"                                     \
     "  mtctr  12\n\t"                                           \
     "  bctr\n"                                                  \
     // Conceptually, this is:
