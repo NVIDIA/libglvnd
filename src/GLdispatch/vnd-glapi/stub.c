@@ -110,8 +110,7 @@ stub_add_dynamic(const char *name)
    int idx;
 
    idx = num_dynamic_stubs;
-   /* minus 1 to make sure we can never reach the last slot */
-   if (idx >= MAPI_TABLE_NUM_DYNAMIC - 1)
+   if (idx >= MAPI_TABLE_NUM_DYNAMIC)
       return -1;
 
    // Make sure that we have a dispatch stub for this index. If the stubs are
