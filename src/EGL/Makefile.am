@@ -66,7 +66,7 @@ libEGL_la_LIBADD += $(UTIL_DIR)/libcJSON.la
 libEGL_la_LIBADD += $(UTIL_DIR)/libwinsys_dispatch.la
 libEGL_la_LIBADD += libEGL_dispatch_stubs.la
 
-libEGL_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 1 $(LINKER_FLAG_NO_UNDEFINED)
+libEGL_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 2:0:1 $(LINKER_FLAG_NO_UNDEFINED)
 
 libEGL_la_SOURCES = \
 	libegl.c \

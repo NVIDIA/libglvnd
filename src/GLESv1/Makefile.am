@@ -33,7 +33,7 @@ libGLESv1_CM_la_SOURCES =
 libGLESv1_CM_la_LDFLAGS = -shared \
 	$(LINKER_FLAG_NO_UNDEFINED) \
 	-export-symbols $(builddir)/g_glesv1_exports.sym \
-	-version-info 1
+	-version-info 3:0:2
 
 libGLESv1_CM_la_LIBADD = \
 	../OpenGL/libopengl_main.la \
