@@ -53,7 +53,7 @@ g_libglglxwrapper.c : $(glapi_gen_libglglxstubs_deps)
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
 
-libGL_la_LDFLAGS = -shared -version-info 1 $(LINKER_FLAG_NO_UNDEFINED)
+libGL_la_LDFLAGS = -shared -version-info 8:0:7 $(LINKER_FLAG_NO_UNDEFINED)
 
 AM_CPPFLAGS = \
 	-I$(TOP)/src/GLdispatch/vnd-glapi \
