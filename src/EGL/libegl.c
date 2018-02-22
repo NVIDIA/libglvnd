@@ -642,6 +642,15 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
 
     __eglEntrypointCommon();
 
+    // According to the EGL spec, the display handle must be valid, even if
+    // the context is NULL.
+    newDpy = __eglLookupDisplay(dpy);
+    if (newDpy == NULL) {
+        __eglReportError(EGL_BAD_DISPLAY, "eglMakeCurrent", NULL,
+                "Invalid display %p", dpy);
+        return EGL_FALSE;
+    }
+
     if (context == EGL_NO_CONTEXT && (draw != EGL_NO_SURFACE || read != EGL_NO_SURFACE)) {
         __eglReportError(EGL_BAD_MATCH, "eglMakeCurrent", NULL,
                 "Got an EGLSurface but no EGLContext");
@@ -691,15 +700,8 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
     }
 
     if (context != EGL_NO_CONTEXT) {
-        newDpy = __eglLookupDisplay(dpy);
-        if (newDpy == NULL) {
-            __eglReportError(EGL_BAD_DISPLAY, "eglMakeCurrent", NULL,
-                    "Invalid display %p", dpy);
-            return EGL_FALSE;
-        }
         newVendor = newDpy->vendor;
     } else {
-        newDpy = NULL;
         newVendor = NULL;
     }
 

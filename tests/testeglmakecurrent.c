@@ -188,7 +188,7 @@ void checkIsCurrent(const TestContextInfo *ci)
 
 void testSwitchContext(const TestContextInfo *oldCi, const TestContextInfo *newCi)
 {
-    EGLDisplay newDpy = (newCi != NULL ? newCi->dpy : EGL_NO_DISPLAY);
+    EGLDisplay newDpy = (newCi != NULL ? newCi->dpy : oldCi->dpy);
     EGLContext newCtx = (newCi != NULL ? newCi->ctx : EGL_NO_CONTEXT);
 
     if (!eglMakeCurrent(newDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, newCtx)) {
@@ -212,7 +212,7 @@ void testSwitchContext(const TestContextInfo *oldCi, const TestContextInfo *newC
 void testSwitchContextFail(const TestContextInfo *oldCi,
         const TestContextInfo *newCi, const TestContextInfo *failCi)
 {
-    EGLDisplay newDpy = (newCi != NULL ? newCi->dpy : EGL_NO_DISPLAY);
+    EGLDisplay newDpy = (newCi != NULL ? newCi->dpy : oldCi->dpy);
     EGLContext newCtx = (newCi != NULL ? newCi->ctx : EGL_NO_CONTEXT);
     EGLint error;
 
