@@ -165,6 +165,10 @@ static EGLBoolean IsGbmDisplay(void *native_display)
         return EGL_FALSE;
     }
 
+    if (!info.dli_sname) {
+        return EGL_FALSE;
+    }
+
     return !strcmp(info.dli_sname, "gbm_create_device");
 }
 
@@ -194,6 +198,10 @@ static EGLBoolean IsWaylandDisplay(void *native_display)
     Dl_info info;
 
     if (dladdr(first_pointer, &info) == 0) {
+        return EGL_FALSE;
+    }
+
+    if (!info.dli_sname) {
         return EGL_FALSE;
     }
 
