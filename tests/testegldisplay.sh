@@ -1,5 +1,5 @@
-#!/bin/bash
+#!/bin/sh
 
-source $TOP_SRCDIR/tests/eglenv.sh
+. $TOP_SRCDIR/tests/eglenv.sh
 
 ./testegldisplay
