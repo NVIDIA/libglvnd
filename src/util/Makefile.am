@@ -13,7 +13,7 @@ noinst_LTLIBRARIES =
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
 noinst_LTLIBRARIES += libglvnd_pthread.la
-libglvnd_pthread_la_LIBADD = -ldl
+libglvnd_pthread_la_LIBADD = @LIB_DL@
 libglvnd_pthread_la_SOURCES = glvnd_pthread.c
 
 noinst_LTLIBRARIES += libapp_error_check.la

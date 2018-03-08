@@ -51,7 +51,7 @@ libGLX_la_CFLAGS += $(GLPROTO_CFLAGS)
 libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)
 
 # Required libraries
-libGLX_la_LIBADD = -ldl
+libGLX_la_LIBADD = @LIB_DL@
 libGLX_la_LIBADD += $(X11_LIBS)
 libGLX_la_LIBADD += $(XEXT_LIBS)
 libGLX_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
