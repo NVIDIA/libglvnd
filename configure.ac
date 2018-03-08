@@ -83,7 +83,7 @@ if test "x$enable_asm" = xyes; then
             ;;
         esac
         ;;
-    x86_64)
+    x86_64 | amd64)
         case "$host_os" in
         linux* | *freebsd* | dragonfly* | *netbsd*)
             asm_arch=x86_64
