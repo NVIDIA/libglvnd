@@ -53,6 +53,16 @@
 #define GLX_MINOR_VERSION 4
 #define GLX_VERSION_STRING "1.4"
 
+/*
+ * Older versions of glxproto.h contained a typo where "Attribs" was misspelled.
+ * The typo was fixed in the xorgproto version of glxproto.h, breaking the API.
+ * Work around that here.
+ */
+#if !defined(X_GLXCreateContextAttribsARB) && \
+    defined(X_GLXCreateContextAtrribsARB)
+#define X_GLXCreateContextAttribsARB X_GLXCreateContextAtrribsARB
+#endif
+
 static glvnd_mutex_t clientStringLock = GLVND_MUTEX_INITIALIZER;
 
 /**
@@ -279,7 +289,7 @@ static GLXContext glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
                 vendor = __glXGetDynDispatch(dpy, screen);
                 if (vendor == NULL) {
                     __glXSendError(dpy, BadValue, 0,
-                            X_GLXCreateContextAtrribsARB, True);
+                            X_GLXCreateContextAttribsARB, True);
                     return None;
                 }
             }
@@ -288,7 +298,7 @@ static GLXContext glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
 
     if (vendor == NULL) {
         // We didn't get a GLX_SCREEN attribute, so look at the config instead.
-        vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreateContextAtrribsARB);
+        vendor = CommonDispatchFBConfig(dpy, config, X_GLXCreateContextAttribsARB);
     }
 
     if (vendor != NULL && vendor->staticDispatch.createContextAttribsARB != NULL) {
