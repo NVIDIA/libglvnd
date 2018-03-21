@@ -34,21 +34,6 @@ $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_mapi_script) \
 	$(1) $(glapi_gen_gl_xml) > $@
 endef
 
-# glapi_gen_libopengl_exports:
-# Generates an export list for an entrypoint library.
-# $(1) specifies which library we're building, using the same names as
-# glapi_gen_mapi.
-glapi_gen_libopengl_exports_script := $(top_srcdir)/src/generate/gen_libOpenGL_exports.py
-glapi_gen_libopengl_exports_deps := \
-	$(glapi_gen_libopengl_exports_script) \
-	$(glapi_gen_gl_deps)
-
-define glapi_gen_libopengl_exports
-$(AM_V_at)$(MKDIR_P) $(@D)
-$(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_libopengl_exports_script) \
-	$(1) $(top_srcdir)/src/generate/xml/gl.xml > $@
-endef
-
 glapi_gen_libglglxstubs_script := $(top_srcdir)/src/generate/gen_libgl_glxstubs.py
 glapi_gen_libglglxstubs_deps := \
 	$(glapi_gen_libglglxstubs_script) \
