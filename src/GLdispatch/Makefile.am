@@ -50,6 +50,6 @@ libGLdispatch_la_LIBADD = vnd-glapi/libglapi.la
 libGLdispatch_la_LIBADD += ../util/libtrace.la
 libGLdispatch_la_LIBADD += ../util/libglvnd_pthread.la
 libGLdispatch_la_LIBADD += ../util/libapp_error_check.la
-libGLdispatch_la_LIBADD += -ldl
+libGLdispatch_la_LIBADD += @LIB_DL@
 
 EXTRA_DIST = export_list.sym

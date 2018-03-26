@@ -31,24 +31,27 @@ TOP = $(top_srcdir)
 MAPI = $(top_srcdir)/$(MAPI_PREFIX)
 GLAPI = $(MAPI)/glapi
 
-noinst_HEADERS =        \
-	g_glapi_mapi_gl_tmp.h
-
 include $(top_srcdir)/src/GLdispatch/vnd-glapi/entry_files.mk
 
 libGL_la_SOURCES =      \
 	libgl.c             \
 	g_libglglxwrapper.c
 
-BUILT_SOURCES = g_glapi_mapi_gl_tmp.h g_libglglxwrapper.c
+BUILT_SOURCES = g_libglglxwrapper.c
 CLEANFILES = $(BUILT_SOURCES)
 
-include $(top_srcdir)/src/generate/glvnd_gen.mk
-g_glapi_mapi_gl_tmp.h : $(glapi_gen_mapi_deps)
-	$(call glapi_gen_mapi, gl)
+glapi_gen_glx_xml := \
+	$(top_srcdir)/src/generate/xml/glx.xml \
+	$(top_srcdir)/src/generate/xml/glx_other.xml
+glapi_gen_libglglxstubs_script = $(top_srcdir)/src/generate/gen_libgl_glxstubs.py
+glapi_gen_libglglxstubs_deps = \
+	$(glapi_gen_libglglxstubs_script) \
+	$(top_srcdir)/src/generate/genCommon.py \
+	$(glapi_gen_glx_xml)
 
 g_libglglxwrapper.c : $(glapi_gen_libglglxstubs_deps)
-	$(call glapi_gen_libglglxstubs)
+	$(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) \
+	$(glapi_gen_libglglxstubs_script) $(glapi_gen_glx_xml) > $@
 
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
@@ -59,12 +62,10 @@ AM_CPPFLAGS = \
 	-I$(TOP)/src/GLdispatch/vnd-glapi \
 	-I$(TOP)/src/GLX \
 	-I$(TOP)/src/GLdispatch \
-	-I$(TOP)/src/util \
-	-DMAPI_ABI_HEADER=\"$(builddir)/g_glapi_mapi_gl_tmp.h\" \
-	-DSTATIC_DISPATCH_ONLY
+	-I$(TOP)/src/util
 
 libGL_la_LIBADD  = ../GLX/libGLX.la
 libGL_la_LIBADD += ../GLdispatch/libGLdispatch.la
 libGL_la_LIBADD += ../GLdispatch/vnd-glapi/libglapi_gl.la
 libGL_la_LIBADD += ../util/libutils_misc.la
-libGL_la_LIBADD += -ldl
+libGL_la_LIBADD += @LIB_DL@

@@ -107,7 +107,7 @@ TESTGLXMAKECURRENT_SOURCES_COMMON = \
 
 check_PROGRAMS += testglxmakecurrent
 testglxmakecurrent_SOURCES = $(TESTGLXMAKECURRENT_SOURCES_COMMON)
-testglxmakecurrent_LDADD = -lX11 -ldl
+testglxmakecurrent_LDADD = -lX11 @LIB_DL@
 testglxmakecurrent_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
@@ -116,7 +116,7 @@ testglxmakecurrent_LDADD += $(top_builddir)/src/util/libtrace.la
 
 check_PROGRAMS += testglxmakecurrent_oldlink
 testglxmakecurrent_oldlink_SOURCES = $(TESTGLXMAKECURRENT_SOURCES_COMMON)
-testglxmakecurrent_oldlink_LDADD = -lX11 -ldl
+testglxmakecurrent_oldlink_LDADD = -lX11 @LIB_DL@
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libtrace.la
@@ -145,7 +145,7 @@ testpatchentrypoints_SOURCES = \
 	testpatchentrypoints.c \
 	test_utils.c
 
-testpatchentrypoints_LDADD = -lX11 -ldl
+testpatchentrypoints_LDADD = -lX11 @LIB_DL@
 testpatchentrypoints_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/util/libtrace.la

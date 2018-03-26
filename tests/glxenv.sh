@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-export __GLX_VENDOR_LIBRARY_NAME=dummy
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TOP_BUILDDIR/tests/dummy/.libs
+__GLX_VENDOR_LIBRARY_NAME=dummy
+export __GLX_VENDOR_LIBRARY_NAME
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TOP_BUILDDIR/tests/dummy/.libs
+export LD_LIBRARY_PATH

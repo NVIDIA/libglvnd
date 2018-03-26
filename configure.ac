@@ -83,7 +83,7 @@ if test "x$enable_asm" = xyes; then
             ;;
         esac
         ;;
-    x86_64)
+    x86_64 | amd64)
         case "$host_os" in
         linux* | *freebsd* | dragonfly* | *netbsd*)
             asm_arch=x86_64
@@ -270,6 +270,9 @@ AS_IF([test "x$HAVE_SYNC_INTRINSICS" = "xyes"],
 
 AC_CHECK_FUNC(mincore, [AC_DEFINE([HAVE_MINCORE], [1],
     [Define to 1 if mincore is available.])])
+
+AC_CHECK_FUNC(dlopen, [],
+    [AC_SUBST([LIB_DL], [-ldl])])
 
 AC_MSG_CHECKING([for RTLD_NOLOAD])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([

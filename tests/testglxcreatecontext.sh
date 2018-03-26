@@ -1,5 +1,5 @@
-#!/bin/bash
+#!/bin/sh
 
-source $TOP_SRCDIR/tests/glxenv.sh
+. $TOP_SRCDIR/tests/glxenv.sh
 
 ./testglxcreatecontext

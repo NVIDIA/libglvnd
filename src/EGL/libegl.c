@@ -142,8 +142,12 @@ static EGLBoolean _eglPointerIsDereferencable(void *p)
      * [addr, addr + length) is not mapped into the process, so all that needs
      * to be checked there is whether the mincore call succeeds or not, as it
      * can only succeed on dereferenceable memory ranges.
+     *
+     * Also note that the third parameter might be char or unsigned char
+     * depending on what system we're building on. Since we don't actually need
+     * that result, just cast it to a void* so that it works either way.
      */
-    return (mincore((void *) addr, page_size, &unused) >= 0);
+    return (mincore((void *) addr, page_size, (void *) &unused) >= 0);
 #else
     return EGL_FALSE;
 #endif
