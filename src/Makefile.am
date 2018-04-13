@@ -17,7 +17,18 @@ SUBDIRS += GLESv1
 SUBDIRS += GLESv2
 endif
 
-EXTRA_DIST = generate
+EXTRA_DIST = \
+	generate/eglFunctionList.py \
+	generate/genCommon.py \
+	generate/gen_egl_dispatch.py \
+	generate/gen_gldispatch_mapi.py \
+	generate/gen_libOpenGL_exports.py \
+	generate/gen_libgl_glxstubs.py \
+	generate/xml/egl.xml \
+	generate/xml/gl.xml \
+	generate/xml/gl_other.xml \
+	generate/xml/glx.xml \
+	generate/xml/glx_other.xml
 
 clean-local:
 	rm -f generate/*.pyc

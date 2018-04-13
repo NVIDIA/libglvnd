@@ -49,6 +49,7 @@ glapi_mapi_tmp.h : $(glapi_gen_mapi_deps)
 	$(glapi_gen_mapi) gldispatch $(glapi_gen_gl_xml) > $@
 
 BUILT_SOURCES = glapi_mapi_tmp.h
+noinst_HEADERS += glapi_mapi_tmp.h
 
 COMMON_CPPFLAGS = \
 	$(DEFINES) \

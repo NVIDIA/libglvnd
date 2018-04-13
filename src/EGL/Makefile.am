@@ -34,7 +34,8 @@ noinst_HEADERS = egldispatchstubs.h \
 	libeglcurrent.h \
 	libeglmapping.h \
 	libeglvendor.h \
-	libeglerror.h
+	libeglerror.h \
+	g_egldispatchstubs.h
 
 lib_LTLIBRARIES = libEGL.la
 
