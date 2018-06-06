@@ -12,28 +12,6 @@ static const __EGLapiExports *exports;
 const int __EGL_DISPATCH_FUNC_COUNT = __EGL_DISPATCH_COUNT;
 int __EGL_DISPATCH_FUNC_INDICES[__EGL_DISPATCH_COUNT + 1];
 
-static int FindProcIndex(const char *name)
-{
-    unsigned first = 0;
-    unsigned last = __EGL_DISPATCH_COUNT - 1;
-
-    while (first <= last) {
-        unsigned middle = (first + last) / 2;
-        int comp = strcmp(name,
-                          __EGL_DISPATCH_FUNC_NAMES[middle]);
-
-        if (comp > 0)
-            first = middle + 1;
-        else if (comp < 0)
-            last = middle - 1;
-        else
-            return middle;
-    }
-
-    /* Just point to the dummy entry at the end of the respective table */
-    return __EGL_DISPATCH_COUNT;
-}
-
 void __eglInitDispatchStubs(const __EGLapiExports *exportsTable)
 {
     int i;
@@ -41,18 +19,6 @@ void __eglInitDispatchStubs(const __EGLapiExports *exportsTable)
     for (i=0; i<__EGL_DISPATCH_FUNC_COUNT; i++) {
         __EGL_DISPATCH_FUNC_INDICES[i] = -1;
     }
-}
-
-void __eglSetDispatchIndex(const char *name, int dispatchIndex)
-{
-    int index = FindProcIndex(name);
-    __EGL_DISPATCH_FUNC_INDICES[index] = dispatchIndex;
-}
-
-__eglMustCastToProperFunctionPointerType __eglDispatchFindDispatchFunction(const char *name)
-{
-    int index = FindProcIndex(name);
-    return __EGL_DISPATCH_FUNCS[index];
 }
 
 static __eglMustCastToProperFunctionPointerType FetchVendorFunc(__EGLvendorInfo *vendor,
