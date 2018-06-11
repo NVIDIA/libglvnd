@@ -38,6 +38,10 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <syscall.h>
+#ifdef __NR_memfd_create
+#include <linux/memfd.h>
+#endif
 
 #define TEMP_FILENAME_ARRAY_SIZE 4
 
@@ -160,6 +164,13 @@ void FreeExecPages(size_t size, void *writePtr, void *execPtr)
 int OpenTempFile(const char *tempdir)
 {
     int fd = -1;
+
+#ifdef __NR_memfd_create
+    fd = syscall(__NR_memfd_create, "glvnd", 0);
+    if (fd >= 0) {
+        return fd;
+    }
+#endif
 
 #if defined(O_TMPFILE)
     // If it's available, then try creating a file with O_TMPFILE first.
