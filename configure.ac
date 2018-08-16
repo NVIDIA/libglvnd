@@ -27,7 +27,15 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_PROG_MKDIR_P
-AM_PATH_PYTHON([2.7])
+
+# The tarball from "make dist" already contains all of the generated files. If
+# we're building from that, then we won't need Python.
+if test -e "$srcdir/src/GLdispatch/vnd-glapi/g_glapi_mapi_gl_tmp.h" ; then
+    AM_PATH_PYTHON([2.7],, [:])
+else
+    AM_PATH_PYTHON([2.7])
+fi
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 if test "x$ac_cv_prog_cc_c99" = xno; then
         AC_MSG_ERROR([Building libglvnd requires a C99-enabled compiler])

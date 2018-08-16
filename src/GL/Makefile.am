@@ -37,6 +37,7 @@ libGL_la_SOURCES =      \
 	libgl.c             \
 	g_libglglxwrapper.c
 
+if HAVE_PYTHON
 BUILT_SOURCES = g_libglglxwrapper.c
 CLEANFILES = $(BUILT_SOURCES)
 
@@ -51,6 +52,7 @@ glapi_gen_libglglxstubs_deps = \
 
 g_libglglxwrapper.c : $(glapi_gen_libglglxstubs_deps)
 	$(AM_V_GEN)$(PYTHON) $(PYTHON_FLAGS) $(glapi_gen_libglglxstubs_script) $(glapi_gen_glx_xml) > $@
+endif
 
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
