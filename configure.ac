@@ -27,7 +27,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_PROG_MKDIR_P
-AC_CHECK_PROGS([PYTHON2], [python2.7 python2 python])
+AM_PATH_PYTHON([2.7])
 
 if test "x$ac_cv_prog_cc_c99" = xno; then
         AC_MSG_ERROR([Building libglvnd requires a C99-enabled compiler])

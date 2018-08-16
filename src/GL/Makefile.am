@@ -50,8 +50,7 @@ glapi_gen_libglglxstubs_deps = \
 	$(glapi_gen_glx_xml)
 
 g_libglglxwrapper.c : $(glapi_gen_libglglxstubs_deps)
-	$(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) \
-	$(glapi_gen_libglglxstubs_script) $(glapi_gen_glx_xml) > $@
+	$(AM_V_GEN)$(PYTHON) $(PYTHON_FLAGS) $(glapi_gen_libglglxstubs_script) $(glapi_gen_glx_xml) > $@
 
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
