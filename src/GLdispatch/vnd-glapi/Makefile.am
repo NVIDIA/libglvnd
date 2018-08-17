@@ -12,7 +12,7 @@ glapi_gen_mapi_deps = \
 	$(glapi_gen_mapi_script) \
 	$(top_srcdir)/src/generate/genCommon.py \
 	$(glapi_gen_gl_xml)
-glapi_gen_mapi = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS) $(glapi_gen_mapi_script)
+glapi_gen_mapi = $(AM_V_GEN)$(PYTHON) $(PYTHON_FLAGS) $(glapi_gen_mapi_script)
 
 noinst_HEADERS = \
 	glapi.h \
