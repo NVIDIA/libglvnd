@@ -1,10 +1,11 @@
 prefix=@prefix@
 includedir=@includedir@
+libdir=@libdir@
 datarootdir=@datarootdir@
 datadir=@datadir@
 
 Name: libglvnd
 Description: Vendor-neutral OpenGL dispatch library vendor interface
 Version: @PACKAGE_VERSION@
-Libs:
+Libs: -L${libdir} -lOpenGL
 Cflags: -I${includedir}
