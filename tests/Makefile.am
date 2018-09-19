@@ -57,18 +57,23 @@ AM_CFLAGS =                                  \
 
 
 TESTS += testgldispatch_static.sh
+TESTS += testgldispatch_static_thr.sh
 TESTS += testgldispatch_generated.sh
+TESTS += testgldispatch_generated_thr.sh
 TESTS += testgldispatch_patched.sh
+TESTS += testgldispatch_patched_thr.sh
 check_PROGRAMS += testgldispatch
 testgldispatch_SOURCES = \
 	testgldispatch.c
 testgldispatch_CFLAGS = \
 	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src/GLdispatch
+	-I$(top_srcdir)/src/GLdispatch \
+	$(PTHREAD_CFLAGS)
 testgldispatch_LDADD = $(top_builddir)/src/GLdispatch/libGLdispatch.la
 testgldispatch_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testgldispatch_LDADD += dummy/libpatchentrypoints.la
 testgldispatch_LDADD += $(top_builddir)/src/util/libutils_misc.la
+testgldispatch_LDADD += $(PTHREAD_LIBS)
 
 # Start of GLX-specific tests.
 # Notes that the TESTS_GLX variable must be defined outside the conditional, so

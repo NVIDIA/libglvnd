@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <pthread.h>
 #include <GL/gl.h>
 
 #include <GLdispatch.h>
@@ -68,6 +69,8 @@ typedef struct DummyVendorLibRec {
 static void InitDummyVendors(void);
 static void CleanupDummyVendors(void);
 
+static void *ForceMultiThreadedProc(void *param);
+
 static GLboolean TestDispatch(int vendorIndex,
         GLboolean testStatic, GLboolean testGenerated);
 
@@ -103,13 +106,14 @@ static pfn_glVertex3fv ptr_glDummyTestProc;
 static GLboolean enableStaticTest = GL_FALSE;
 static GLboolean enableGeneratedTest = GL_FALSE;
 static GLboolean enablePatching = GL_FALSE;
+static GLboolean forceMultiThreaded = GL_FALSE;
 
 int main(int argc, char **argv)
 {
     int i;
 
     while (1) {
-        int opt = getopt(argc, argv, "sgp");
+        int opt = getopt(argc, argv, "sgpt");
         if (opt == -1) {
             break;
         }
@@ -123,6 +127,9 @@ int main(int argc, char **argv)
         case 'p':
             enablePatching = GL_TRUE;
             break;
+        case 't':
+            forceMultiThreaded = GL_TRUE;
+            break;
         default:
             return 1;
         }
@@ -130,6 +137,15 @@ int main(int argc, char **argv)
 
     __glDispatchInit();
     InitDummyVendors();
+
+    if (forceMultiThreaded) {
+        pthread_t thr;
+
+        printf("Forcing libGLdispatch into multi-threaded mode.\n");
+        __glDispatchCheckMultithreaded();
+        pthread_create(&thr, NULL, ForceMultiThreadedProc, NULL);
+        pthread_join(thr, NULL);
+    }
 
     ptr_glVertex3fv = (pfn_glVertex3fv) __glDispatchGetProcAddress("glVertex3fv");
     if (ptr_glVertex3fv == NULL) {
@@ -152,6 +168,12 @@ int main(int argc, char **argv)
     CleanupDummyVendors();
     __glDispatchFini();
     return 0;
+}
+
+static void *ForceMultiThreadedProc(void *param)
+{
+    __glDispatchCheckMultithreaded();
+    return NULL;
 }
 
 static void InitDummyVendors(void)
