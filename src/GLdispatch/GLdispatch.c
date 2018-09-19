@@ -764,11 +764,11 @@ void __glDispatchCheckMultithreaded(void)
                 _glapi_set_multithread();
             }
         }
-        UnlockDispatch();
 
         if (stubCurrentPatchCb != NULL && stubCurrentPatchCb->threadAttach != NULL) {
             stubCurrentPatchCb->threadAttach();
         }
+        UnlockDispatch();
     }
 }
 
