@@ -69,7 +69,7 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     "2000:\n\t"                                         \
     "  mflr   0\n\t"                                    \
     "  std    0, 16(1)\n\t"                             \
-    "  std    2, 40(1)\n\t"                             \
+    "  std    2, 24(1)\n\t"                             \
     "  stdu   1, -144(1)\n\t"                           \
     "  std    3, 56(1)\n\t"                             \
     "  std    4, 64(1)\n\t"                             \
@@ -149,7 +149,7 @@ static const uint32_t ENTRY_TEMPLATE[] =
     0x7D8903A6,    // <ENTRY+032>:    mtctr  12
     0x4E800420,    // <ENTRY+036>:    bctr
     // 2000:
-    0xF8410028,    // <ENTRY+040>:    std    2, 40(1)
+    0xF8410018,    // <ENTRY+040>:    std    2, 24(1)
     0xF821FF71,    // <ENTRY+044>:    stdu   1, -144(1)
     0xF8610038,    // <ENTRY+048>:    std    3, 56(1)
     0xF8810040,    // <ENTRY+052>:    std    4, 64(1)
