@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh 
 
-./testgldispatch -s -g -p
+./testgldispatch -s -g -p -t
 
