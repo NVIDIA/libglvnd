@@ -26,12 +26,14 @@ libpatchentrypoints = static_library(
 )
 
 if build_glx
-  libGLX_dummy = shared_module(
+  libGLX_dummy = shared_library(
     'GLX_dummy',
     ['GLX_dummy.c'],
     include_directories : [inc_include, inc_util, inc_glx, inc_gldispatch],
     link_with : [libpatchentrypoints, libutils_misc, libtrace],
+    dependencies : [dep_x11],
     gnu_symbol_visibility : 'hidden',
+    version : '0',
   )
 endif
 
