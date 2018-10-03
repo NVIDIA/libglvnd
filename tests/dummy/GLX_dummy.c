@@ -27,8 +27,6 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
-#include <config.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
