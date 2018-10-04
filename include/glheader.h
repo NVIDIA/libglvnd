@@ -65,11 +65,6 @@ extern "C" {
 typedef int GLclampx;
 
 
-#ifndef GL_OES_EGL_image
-typedef void *GLeglImageOES;
-#endif
-
-
 #ifndef GL_OES_EGL_image_external
 #define GL_TEXTURE_EXTERNAL_OES                                 0x8D65
 #define GL_SAMPLER_EXTERNAL_OES                                 0x8D66
