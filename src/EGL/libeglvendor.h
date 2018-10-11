@@ -35,6 +35,8 @@ struct __EGLvendorInfoRec {
     EGLBoolean supportsPlatformX11;
     EGLBoolean supportsPlatformWayland;
 
+    EGLBoolean invalidateContextOnDestroy;
+
     struct glvnd_list entry;
 };
 

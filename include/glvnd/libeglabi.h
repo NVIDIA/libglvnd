@@ -412,6 +412,22 @@ typedef struct __EGLapiImportsRec {
      * \return Either a platform type enum or EGL_NONE.
      */
     EGLenum (* findNativeDisplayPlatform) (void *native_display);
+
+    /*!
+     * (OPTIONAL) Checks if the vendor library immediately invalidates a Context
+     * after eglDestryContext has been called on it.
+     * Due to ambiguity in how sections 3.7.4 and 3.2 of the EGL 1.5 spec are
+     * written it appears that some vendor drivers behave differently to eglGetCurrent*
+     * functions after a context has been destroyed.  This differing behaviour breaks
+     * the context state that libglvnd maintains.
+     *
+     * The solution is to let the vendor glvnd implementation note this behaviour
+     * which allows libglvnd to pass these calls back into the binary driver, rather
+     * than reporting the cached state, which is now considered invalid.
+     *
+     * \return Either EGL_TRUE or EGL_FALSE.
+     */
+    EGLBoolean (* invalidateContextOnDestroy) (void);
 } __EGLapiImports;
 
 /*****************************************************************************/

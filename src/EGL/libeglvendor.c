@@ -489,6 +489,10 @@ static __EGLvendorInfo *LoadVendor(const char *filename)
         vendor->patchSupported = EGL_TRUE;
     }
 
+    if (vendor->eglvc.invalidateContextOnDestroy != NULL) {
+         vendor->invalidateContextOnDestroy = vendor->eglvc.invalidateContextOnDestroy();
+    }
+
     if (!LookupVendorEntrypoints(vendor)) {
         goto fail;
     }
