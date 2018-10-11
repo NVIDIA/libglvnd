@@ -559,6 +559,79 @@ static EGLBoolean InternalLoseCurrent(void)
 }
 
 /**
+ * Calls into the vendor library to destroy the context, and then if
+ * the vendor has specified invalidateContextOnDestroy to be true, updates
+ * the API state fields to match the values returned by the vendor driver.
+ *
+ * If this function succeeds, then it will delete the specified context,
+ * and if the vendor specifies update the Context, Draw and Read  \p apiState.
+ *
+ * If it fails, then it will leave \p apiState unmodified.
+ */
+static EGLBoolean InternalDestroyContext(
+        __EGLdisplayInfo *dpy,
+        EGLContext context,
+        __EGLdispatchThreadState *apiState)
+{
+    EGLBoolean ret;
+
+    assert(apiState->vendor == dpy->vendor);
+
+    ret = dpy->vendor->staticDispatch.destroyContext(dpy->dpy, context);
+    if (ret && apiState->currentVendor->invalidateContextOnDestroy) {
+        apiState->currentContext = dpy->vendor->staticDispatch.getCurrentContext();
+        apiState->currentDraw = dpy->vendor->staticDispatch.getCurrentSurface(EGL_DRAW);
+        apiState->currentRead = dpy->vendor->staticDispatch.getCurrentSurface(EGL_READ);
+    }
+
+    return ret;
+}
+
+PUBLIC EGLBoolean EGLAPIENTRY eglDestroyContext(EGLDisplay dpy, EGLContext context)
+{
+    __GLdispatchThreadState *glas;
+    __EGLdispatchThreadState *apiState;
+    __EGLdisplayInfo *newDpy;
+    EGLBoolean ret;
+
+    __eglEntrypointCommon();
+
+    // According to the EGL spec, the display handle must be valid, even if
+    // the context is NULL.
+    newDpy = __eglLookupDisplay(dpy);
+    if (newDpy == NULL) {
+        __eglReportError(EGL_BAD_DISPLAY, "eglDestroyContext", NULL,
+                "Invalid display %p", dpy);
+        return EGL_FALSE;
+    }
+
+    if (context == EGL_NO_CONTEXT) {
+        __eglReportError(EGL_BAD_MATCH, "eglDestroyContext", NULL,
+                "Did not get an EGLContext");
+        return EGL_FALSE;
+    }
+
+    glas = __glDispatchGetCurrentThreadState();
+    if (glas != NULL) {
+        if (glas->tag != GLDISPATCH_API_EGL) {
+            // Another API (probably GLX) already has a current context. Just
+            // return failure.
+            // TODO: What error should this generate?
+            __eglReportError(EGL_BAD_ACCESS, "eglDestroyContext", NULL,
+                    "Another window API already has a current context");
+            return EGL_FALSE;
+        }
+
+        apiState = (__EGLdispatchThreadState *) glas;
+        ret = InternalDestroyContext(newDpy, context, apiState);
+    } else {
+        ret = EGL_FALSE;
+    }
+
+    return ret;
+}
+
+/**
  * Calls into the vendor library to set the current context, and then updates
  * the API state fields to match.
  *
@@ -687,7 +760,9 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
         oldRead = apiState->currentRead;
         oldContext = apiState->currentContext;
 
-        assert(oldContext != EGL_NO_CONTEXT);
+        if (!apiState->currentVendor->invalidateContextOnDestroy) {
+            assert(oldContext != EGL_NO_CONTEXT);
+        }
 
         if (dpy == oldDpy->dpy && context == oldContext
                 && draw == oldDraw && read == oldRead) {

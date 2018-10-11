@@ -220,6 +220,8 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
     LOADENTRYPOINT(swapInterval,                  "eglSwapInterval"                  );
     LOADENTRYPOINT(createPbufferFromClientBuffer, "eglCreatePbufferFromClientBuffer" );
     LOADENTRYPOINT(releaseThread,                 "eglReleaseThread"                 );
+    LOADENTRYPOINT(getCurrentContext,             "eglGetCurrentContext"             );
+    LOADENTRYPOINT(getCurrentSurface,             "eglGetCurrentSurface"             );
     LOADENTRYPOINT(waitClient,                    "eglWaitClient"                    );
     LOADENTRYPOINT(getError,                      "eglGetError"                      );
 #undef LOADENTRYPOINT

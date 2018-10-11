@@ -54,6 +54,8 @@ typedef struct __EGLdispatchTableStaticRec {
     EGLBoolean (* destroySurface) (EGLDisplay dpy, EGLSurface surface);
     EGLBoolean (* getConfigAttrib) (EGLDisplay dpy, EGLConfig config, EGLint attribute, EGLint *value);
     EGLBoolean (* getConfigs) (EGLDisplay dpy, EGLConfig *configs, EGLint config_size, EGLint *num_config);
+    EGLContext (* getCurrentContext) (void);
+    EGLSurface (* getCurrentSurface) (EGLint readdraw);
     EGLBoolean (* makeCurrent) (EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
     EGLBoolean (* queryContext) (EGLDisplay dpy, EGLContext ctx, EGLint attribute, EGLint *value);
     const char *(* queryString) (EGLDisplay dpy, EGLint name);
@@ -76,9 +78,7 @@ typedef struct __EGLdispatchTableStaticRec {
 
 #if 0
     EGLDisplay (* getCurrentDisplay) (void);
-    EGLSurface (* getCurrentSurface) (EGLint readdraw);
     EGLDisplay (* getDisplay) (EGLNativeDisplayType display_id);
-    EGLContext (* getCurrentContext) (void);
 #endif
 
     // EGL 1.5 functions. A vendor library is not requires to implement these.
