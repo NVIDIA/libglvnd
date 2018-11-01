@@ -64,7 +64,7 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     "  bne    1000f\n" \
     "  mflr   0\n" \
     "  std    0, 16(1)\n" \
-    "  stdu   1, -144(1)\n" \
+    "  stdu   1, -120(1)\n" \
     "  std    3, 56(1)\n" \
     "  std    4, 64(1)\n" \
     "  std    5, 72(1)\n" \
@@ -73,7 +73,6 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     "  std    8, 96(1)\n" \
     "  std    9, 104(1)\n" \
     "  std    10, 112(1)\n" \
-    "  std    12, 128(1)\n" \
     "  bl _glapi_get_current\n" \
     "  nop\n" \
     "  mr     11, 3\n" \
@@ -85,8 +84,7 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     "  ld     8, 96(1)\n" \
     "  ld     9, 104(1)\n" \
     "  ld     10, 112(1)\n" \
-    "  ld     12, 128(1)\n" \
-    "  addi   1, 1, 144\n" \
+    "  addi   1, 1, 120\n" \
     "  ld     0, 16(1)\n" \
     "  mtlr   0\n" \
     "1000:\n" \
