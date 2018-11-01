@@ -90,7 +90,8 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     "  ld     0, 16(1)\n" \
     "  mtlr   0\n" \
     "1000:\n" \
-    "  ld     12, " slot "*8(11)\n" \
+    "  addis  11, 11, (" slot "*8)@ha\n" \
+    "  ld     12, (" slot "*8)@l (11)\n" \
     "  mtctr  12\n" \
     "  bctr\n" \
 
