@@ -57,48 +57,42 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     "  .localentry  " func ", .-" func "\n\t"
 
 #define STUB_ASM_CODE(slot)                             \
-    "  addis  11, 2, _glapi_Current@got@ha\n\t"         \
-    "  ld     11, _glapi_Current@got@l(11)\n\t"         \
-    "  ld     11, 0(11)\n\t"                            \
-    "  cmpldi 11, 0\n\t"                                \
-    "  beq    2000f\n"                                  \
-    "1050:\n\t"                                         \
-    "  ld     12, " slot "*8(11)\n\t"                   \
-    "  mtctr  12\n\t"                                   \
-    "  bctr\n"                                          \
-    "2000:\n\t"                                         \
-    "  mflr   0\n\t"                                    \
-    "  std    0, 16(1)\n\t"                             \
-    "  std    2, 40(1)\n\t"                             \
-    "  stdu   1, -144(1)\n\t"                           \
-    "  std    3, 56(1)\n\t"                             \
-    "  std    4, 64(1)\n\t"                             \
-    "  std    5, 72(1)\n\t"                             \
-    "  std    6, 80(1)\n\t"                             \
-    "  std    7, 88(1)\n\t"                             \
-    "  std    8, 96(1)\n\t"                             \
-    "  std    9, 104(1)\n\t"                            \
-    "  std    10, 112(1)\n\t"                           \
-    "  std    12, 128(1)\n\t"                           \
-    "  addis  12, 2, _glapi_get_current@got@ha\n\t"     \
-    "  ld     12, _glapi_get_current@got@l(12)\n\t"     \
-    "  mtctr  12\n\t"                                   \
-    "  bctrl\n\t"                                       \
-    "  ld     2, 144+40(1)\n\t"                         \
-    "  mr     11, 3\n\t"                                \
-    "  ld     3, 56(1)\n\t"                             \
-    "  ld     4, 64(1)\n\t"                             \
-    "  ld     5, 72(1)\n\t"                             \
-    "  ld     6, 80(1)\n\t"                             \
-    "  ld     7, 88(1)\n\t"                             \
-    "  ld     8, 96(1)\n\t"                             \
-    "  ld     9, 104(1)\n\t"                            \
-    "  ld     10, 112(1)\n\t"                           \
-    "  ld     12, 128(1)\n\t"                           \
-    "  addi   1, 1, 144\n\t"                            \
-    "  ld     0, 16(1)\n\t"                             \
-    "  mtlr   0\n\t"                                    \
-    "  b      1050b\n"
+    "  addis  11, 2, _glapi_Current@got@ha\n" \
+    "  ld     11, _glapi_Current@got@l(11)\n" \
+    "  ld     11, 0(11)\n" \
+    "  cmpldi 11, 0\n" \
+    "  bne    1000f\n" \
+    "  mflr   0\n" \
+    "  std    0, 16(1)\n" \
+    "  stdu   1, -120(1)\n" \
+    "  std    3, 56(1)\n" \
+    "  std    4, 64(1)\n" \
+    "  std    5, 72(1)\n" \
+    "  std    6, 80(1)\n" \
+    "  std    7, 88(1)\n" \
+    "  std    8, 96(1)\n" \
+    "  std    9, 104(1)\n" \
+    "  std    10, 112(1)\n" \
+    "  bl _glapi_get_current\n" \
+    "  nop\n" \
+    "  mr     11, 3\n" \
+    "  ld     3, 56(1)\n" \
+    "  ld     4, 64(1)\n" \
+    "  ld     5, 72(1)\n" \
+    "  ld     6, 80(1)\n" \
+    "  ld     7, 88(1)\n" \
+    "  ld     8, 96(1)\n" \
+    "  ld     9, 104(1)\n" \
+    "  ld     10, 112(1)\n" \
+    "  addi   1, 1, 120\n" \
+    "  ld     0, 16(1)\n" \
+    "  mtlr   0\n" \
+    "1000:\n" \
+    "  addis  11, 11, (" slot "*8)@ha\n" \
+    "  ld     12, (" slot "*8)@l (11)\n" \
+    "  mtctr  12\n" \
+    "  bctr\n" \
+
     // Conceptually, this is:
     // {
     //     void **dispatchTable = _glapi_Current[GLAPI_CURRENT_DISPATCH];
@@ -135,52 +129,52 @@ static const uint32_t ENTRY_TEMPLATE[] =
     // This representation is correct for both little- and big-endian systems.
     // However, more work needs to be done for big-endian Linux because it
     // adheres to an older, AIX-compatible ABI that uses function descriptors.
-    // 1000:
-    // 1000:
-    0x7C0802A6,    // <ENTRY+000>:    mflr   0
-    0xF8010010,    // <ENTRY+004>:    std    0, 16(1)
-    0xE96C0098,    // <ENTRY+008>:    ld     11, 9000f-1000b+0(12)
-    0xE96B0000,    // <ENTRY+012>:    ld     11, 0(11)
-    0x282B0000,    // <ENTRY+016>:    cmpldi 11, 0
-    0x41820014,    // <ENTRY+020>:    beq    2000f
-    // 1050:
-    0xE80C00A8,    // <ENTRY+024>:    ld     0, 9000f-1000b+16(12)
-    0x7D8B002A,    // <ENTRY+028>:    ldx    12, 11, 0
-    0x7D8903A6,    // <ENTRY+032>:    mtctr  12
-    0x4E800420,    // <ENTRY+036>:    bctr
-    // 2000:
-    0xF8410028,    // <ENTRY+040>:    std    2, 40(1)
-    0xF821FF71,    // <ENTRY+044>:    stdu   1, -144(1)
-    0xF8610038,    // <ENTRY+048>:    std    3, 56(1)
-    0xF8810040,    // <ENTRY+052>:    std    4, 64(1)
-    0xF8A10048,    // <ENTRY+056>:    std    5, 72(1)
-    0xF8C10050,    // <ENTRY+060>:    std    6, 80(1)
-    0xF8E10058,    // <ENTRY+064>:    std    7, 88(1)
-    0xF9010060,    // <ENTRY+068>:    std    8, 96(1)
-    0xF9210068,    // <ENTRY+072>:    std    9, 104(1)
-    0xF9410070,    // <ENTRY+076>:    std    10, 112(1)
-    0xF9810080,    // <ENTRY+080>:    std    12, 128(1)
-    0xE98C00A0,    // <ENTRY+084>:    ld     12, 9000f-1000b+8(12)
-    0x7D8903A6,    // <ENTRY+088>:    mtctr  12
-    0x4E800421,    // <ENTRY+092>:    bctrl
-    0xE9410070,    // <ENTRY+096>:    ld     10, 112(1)
-    0x7C6B1B78,    // <ENTRY+100>:    mr     11, 3
-    0xE8610038,    // <ENTRY+104>:    ld     3, 56(1)
-    0xE8810040,    // <ENTRY+108>:    ld     4, 64(1)
-    0xE8A10048,    // <ENTRY+112>:    ld     5, 72(1)
-    0xE8C10050,    // <ENTRY+116>:    ld     6, 80(1)
-    0xE8E10058,    // <ENTRY+120>:    ld     7, 88(1)
-    0xE9010060,    // <ENTRY+124>:    ld     8, 96(1)
-    0xE9210068,    // <ENTRY+128>:    ld     9, 104(1)
-    0xE9810080,    // <ENTRY+132>:    ld     12, 128(1)
-    0x38210090,    // <ENTRY+136>:    addi   1, 1, 144
-    0xE8010010,    // <ENTRY+140>:    ld     0, 16(1)
-    0x7C0803A6,    // <ENTRY+144>:    mtlr   0
-    0x4BFFFF84,    // <ENTRY+148>:    b      1050b
-    // 9000:
-    0, 0,          // <ENTRY+152>:    .quad _glapi_Current
-    0, 0,          // <ENTRY+160>:    .quad _glapi_get_current
-    0, 0           // <ENTRY+168>:    .quad <slot>*8
+                //              1000:
+    0x7c0802a6, // <ENTRY+000>: mflr   0
+    0xf8010010, // <ENTRY+004>: std    0, 16(1)
+    0xe96c009c, // <ENTRY+008>: ld     11, 9000f-1000b+0(12)
+    0xe96b0000, // <ENTRY+012>: ld     11, 0(11)
+    0x282b0000, // <ENTRY+016>: cmpldi 11, 0
+    0x41820014, // <ENTRY+020>: beq    2000f
+                //              1050:
+    0xe80c00ac, // <ENTRY+024>: ld     0, 9000f-1000b+16(12)
+    0x7d8b002a, // <ENTRY+028>: ldx    12, 11, 0
+    0x7d8903a6, // <ENTRY+032>: mtctr  12
+    0x4e800420, // <ENTRY+036>: bctr
+                //              2000:
+    0xf821ff71, // <ENTRY+040>: stdu   1, -144(1)
+    0xf8410018, // <ENTRY+044>: std    2, 24(1)
+    0xf8610038, // <ENTRY+048>: std    3, 56(1)
+    0xf8810040, // <ENTRY+052>: std    4, 64(1)
+    0xf8a10048, // <ENTRY+056>: std    5, 72(1)
+    0xf8c10050, // <ENTRY+060>: std    6, 80(1)
+    0xf8e10058, // <ENTRY+064>: std    7, 88(1)
+    0xf9010060, // <ENTRY+068>: std    8, 96(1)
+    0xf9210068, // <ENTRY+072>: std    9, 104(1)
+    0xf9410070, // <ENTRY+076>: std    10, 112(1)
+    0xf9810080, // <ENTRY+080>: std    12, 128(1)
+    0xe98c00a4, // <ENTRY+084>: ld     12, 9000f-1000b+8(12)
+    0x7d8903a6, // <ENTRY+088>: mtctr  12
+    0x4e800421, // <ENTRY+092>: bctrl
+    0xe8410018, // <ENTRY+096>: ld     2, 24(1)
+    0xe9410070, // <ENTRY+100>: ld     10, 112(1)
+    0x7c6b1b78, // <ENTRY+104>: mr     11, 3
+    0xe8610038, // <ENTRY+108>: ld     3, 56(1)
+    0xe8810040, // <ENTRY+112>: ld     4, 64(1)
+    0xe8a10048, // <ENTRY+116>: ld     5, 72(1)
+    0xe8c10050, // <ENTRY+120>: ld     6, 80(1)
+    0xe8e10058, // <ENTRY+124>: ld     7, 88(1)
+    0xe9010060, // <ENTRY+128>: ld     8, 96(1)
+    0xe9210068, // <ENTRY+132>: ld     9, 104(1)
+    0xe9810080, // <ENTRY+136>: ld     12, 128(1)
+    0x38210090, // <ENTRY+140>: addi   1, 1, 144
+    0xe8010010, // <ENTRY+144>: ld     0, 16(1)
+    0x7c0803a6, // <ENTRY+148>: mtlr   0
+    0x4bffff80, // <ENTRY+152>: b      1050b
+                //              9000:
+    0, 0,       // <ENTRY+156>: .quad _glapi_Current
+    0, 0,       // <ENTRY+164>: .quad _glapi_get_current
+    0, 0,       // <ENTRY+172>: .quad <slot>*8
 };
 
 // These are the offsets in ENTRY_TEMPLATE of the values that we have to patch.
