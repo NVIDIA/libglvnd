@@ -314,8 +314,8 @@ void SetDispatchFuncPointer(GLVNDGenEntrypoint *entry,
     *((uintptr_t *)(code + DISPATCH_FUNC_OFFSET)) = (uintptr_t)dispatch;
 
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache((char *)entry->entrypointExec - 1,
-                            (char *)entry->entrypointExec - 1 + sizeof(STUB_TEMPLATE));
+    __builtin___clear_cache((char *)entry->entrypointExec,
+                            (char *)entry->entrypointExec + sizeof(STUB_TEMPLATE));
 
 #elif defined(USE_PPC64LE_ASM)
 
