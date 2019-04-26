@@ -296,6 +296,21 @@ AS_IF([test "x$HAVE_RTLD_NOLOAD" = "xyes"],
       [AC_DEFINE([HAVE_RTLD_NOLOAD], 1,
       [Define to 1 if the compiler supports RTLD_NOLOAD.])])
 
+AC_MSG_CHECKING([for dirent.d_type])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+#include <dirent.h>
+void foo(struct dirent *ent)
+{
+    (void) ent->d_type;
+}
+])],
+[HAVE_DIRENT_DTYPE=yes],[HAVE_DIRENT_DTYPE=no])
+AC_MSG_RESULT($HAVE_DIRENT_DTYPE)
+AS_IF([test "x$HAVE_DIRENT_DTYPE" = "xyes"],
+      [AC_DEFINE([HAVE_DIRENT_DTYPE], 1,
+      [Define to 1 if struct dirent has a d_type member.])])
+
+
 # See if the linker supports the --no-undefined flag.
 AX_CHECK_LINK_FLAG([-Xlinker --no-undefined],
       [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], ["-Xlinker --no-undefined"])],

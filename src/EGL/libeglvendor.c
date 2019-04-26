@@ -73,10 +73,12 @@ void LoadVendors(void)
 
 static int ScandirFilter(const struct dirent *ent)
 {
+#if defined(HAVE_DIRENT_DTYPE)
     // Ignore the entry if we know that it's not a regular file or symlink.
     if (ent->d_type != DT_REG && ent->d_type != DT_LNK && ent->d_type != DT_UNKNOWN) {
         return 0;
     }
+#endif
 
     // Otherwise, select any JSON files.
     if (fnmatch("*.json", ent->d_name, 0) == 0) {
