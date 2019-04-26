@@ -34,6 +34,7 @@
 #include <stdarg.h>
 
 #include "trace.h"
+#include "utils_misc.h"
 
 static int debugPrintfInitialized = 0;
 static int debugPrintfLevel = -1;
@@ -67,7 +68,7 @@ void __glvnd_dbg_printf(
 
     if (level < debugPrintfLevel) {
         va_start(ap, fmt);
-        ret = vasprintf(&tmp, fmt, ap);
+        ret = glvnd_vasprintf(&tmp, fmt, ap);
         va_end(ap);
         if (ret == -1 || !tmp) {
             return;
