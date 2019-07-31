@@ -117,6 +117,7 @@ testglxmakecurrent_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/util/libtrace.la
+testglxmakecurrent_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 
 check_PROGRAMS += testglxmakecurrent_oldlink
@@ -125,6 +126,7 @@ testglxmakecurrent_oldlink_LDADD = -lX11 @LIB_DL@
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libtrace.la
+testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 
 check_PROGRAMS += testglxgetprocaddress
@@ -137,6 +139,7 @@ testglxgetclientstr_LDADD = -lX11
 testglxgetclientstr_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxgetclientstr_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testglxgetclientstr_LDADD += $(top_builddir)/src/util/libtrace.la
+testglxgetclientstr_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 
 check_PROGRAMS += testglxqueryversion
@@ -154,6 +157,7 @@ testpatchentrypoints_LDADD = -lX11 @LIB_DL@
 testpatchentrypoints_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/util/libtrace.la
+testpatchentrypoints_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 endif # ENABLE_GLX
 
