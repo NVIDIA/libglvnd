@@ -39,25 +39,25 @@ EGL_HEADER_FILES = \
 	EGL/eglext.h \
 	EGL/eglplatform.h
 
-if ENABLE_EGL
+if ENABLE_EGL_HEADERS
 nobase_include_HEADERS += $(GL_HEADER_FILES)
 else
 noinst_HEADERS += $(GL_HEADER_FILES)
 endif
 
-if ENABLE_GLES
+if ENABLE_GLES_HEADERS
 nobase_include_HEADERS += $(GLES_HEADER_FILES)
 else
 noinst_HEADERS += $(GLES_HEADER_FILES)
 endif
 
-if ENABLE_GLX
+if ENABLE_GLX_HEADERS
 nobase_include_HEADERS += $(GLX_HEADER_FILES)
 else
 noinst_HEADERS += $(GLX_HEADER_FILES)
 endif
 
-if ENABLE_EGL
+if ENABLE_EGL_HEADERS
 nobase_include_HEADERS += $(EGL_HEADER_FILES)
 else
 noinst_HEADERS += $(EGL_HEADER_FILES)

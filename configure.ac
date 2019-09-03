@@ -65,6 +65,17 @@ AC_ARG_ENABLE([gles],
 )
 AM_CONDITIONAL([ENABLE_GLES], [test "x$enable_gles" = "xyes"])
 
+AC_ARG_ENABLE([headers],
+    [AS_HELP_STRING([--disable-headers],
+        [Do not install the GL/GLES/GLX/EGL header files @<:@default=enabled@:>@])],
+    [enable_headers="$enableval"],
+    [enable_headers=yes]
+)
+AM_CONDITIONAL([ENABLE_GL_HEADERS], [test "x$enable_headers" = "xyes"])
+AM_CONDITIONAL([ENABLE_EGL_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_egl" = "xyes"])
+AM_CONDITIONAL([ENABLE_GLX_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_glx" = "xyes"])
+AM_CONDITIONAL([ENABLE_GLES_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_gles" = "xyes"])
+
 dnl
 dnl Arch/platform-specific settings. Copied from mesa
 dnl
