@@ -47,3 +47,5 @@ libOpenGL_la_LIBADD = \
 	../GLdispatch/vnd-glapi/libglapi_opengl.la \
 	../util/libutils_misc.la
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = opengl.pc

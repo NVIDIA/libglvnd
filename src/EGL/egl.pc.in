@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=@libdir@
+includedir=@includedir@
+
+Name: egl
+Description: EGL library and headers
+Version: 1.5
+Libs: -L${libdir} -lEGL
+Cflags: -I${includedir}

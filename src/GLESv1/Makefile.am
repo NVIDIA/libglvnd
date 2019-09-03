@@ -38,3 +38,5 @@ libGLESv1_CM_la_LIBADD = \
 	../GLdispatch/vnd-glapi/libglapi_glesv1.la \
 	../util/libutils_misc.la
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = glesv1_cm.pc
