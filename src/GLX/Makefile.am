@@ -69,3 +69,5 @@ libGLX_la_SOURCES = \
 	libglxmapping.c \
 	libglxproto.c
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = glx.pc

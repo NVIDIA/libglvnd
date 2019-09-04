@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=@libdir@
+includedir=@includedir@
+
+Name: gles2
+Description: OpenGL ES v2/v3 library and headers
+Version: 3.2
+Libs: -L${libdir} -lGLESv2
+Cflags: -I${includedir}

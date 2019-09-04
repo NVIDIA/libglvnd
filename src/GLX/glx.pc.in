@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=@libdir@
+includedir=@includedir@
+
+Name: glx
+Description: GLX library and headers
+Version: 1.4
+Libs: -L${libdir} -lGLX
+Cflags: -I${includedir}

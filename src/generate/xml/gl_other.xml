@@ -51,11 +51,6 @@
         <command>
             <proto>void <name>glResumeTransformFeedbackEXT</name></proto>
         </command>
-        <command>
-            <proto>void <name>glDrawTransformFeedbackEXT</name></proto>
-            <param><ptype>GLenum</ptype> <name>mode</name></param>
-            <param><ptype>GLuint</ptype> <name>name</name></param>
-        </command>
 
         <!-- GL_NVX_sysmem_buffer -->
         <command>
@@ -447,16 +442,6 @@
             <param><ptype>GLint</ptype> <name>y</name></param>
             <param><ptype>GLsizei</ptype> <name>width</name></param>
             <param><ptype>GLsizei</ptype> <name>height</name></param>
-        </command>
-
-        <!-- GL_NV_viewport_swizzle -->
-        <command>
-            <proto>void <name>glViewportSwizzleNV</name></proto>
-            <param><ptype>GLuint</ptype> <name>index</name></param>
-            <param><ptype>GLenum</ptype> <name>swizzlex</name></param>
-            <param><ptype>GLenum</ptype> <name>swizzley</name></param>
-            <param><ptype>GLenum</ptype> <name>swizzlez</name></param>
-            <param><ptype>GLenum</ptype> <name>swizzlew</name></param>
         </command>
 
         <!-- Other functions -->

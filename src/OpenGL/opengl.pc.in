@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=@libdir@
+includedir=@includedir@
+
+Name: opengl
+Description: OpenGL (without GLX) headers and interface
+Version: 4.5
+Libs: -L${libdir} -lOpenGL
+Cflags: -I${includedir}

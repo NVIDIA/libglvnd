@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=@libdir@
+includedir=@includedir@
+
+Name: gl
+Description: Legacy OpenGL and GLX library and headers
+Version: 1.2
+Libs: -L${libdir} -lGL
+Cflags: -I${includedir}
