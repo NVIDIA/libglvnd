@@ -67,10 +67,13 @@ static GLXContext dispatch_glXCreateContextVendorDUMMY(Display *dpy,
 
 static void dummy_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
 static void dispatch_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
+static void dummy_glXExampleExtensionFunction2(Display *dpy, int screen, int *retval);
+static void dispatch_glXExampleExtensionFunction2(Display *dpy, int screen, int *retval);
 
 enum
 {
     DI_glXExampleExtensionFunction,
+    DI_glXExampleExtensionFunction2,
     DI_glXCreateContextVendorDUMMY,
     DI_COUNT,
 };
@@ -82,6 +85,7 @@ static struct {
 } glxExtensionProcs[] = {
 #define PROC_ENTRY(name) { #name, dummy_##name, dispatch_##name, -1 }
     PROC_ENTRY(glXExampleExtensionFunction),
+    PROC_ENTRY(glXExampleExtensionFunction2),
     PROC_ENTRY(glXCreateContextVendorDUMMY),
 #undef PROC_ENTRY
 };
@@ -560,27 +564,50 @@ static void dummy_glXExampleExtensionFunction(Display *dpy, int screen, int *ret
     *retval = 1;
 }
 
-static void dispatch_glXExampleExtensionFunction(Display *dpy,
+static void commonDispatch_glXExampleExtensionFunction(Display *dpy,
                                                 int screen,
-                                                int *retval)
+                                                int *retval,
+                                                int funcIndex)
 {
-    typedef void (*ExampleExtensionFunctionPtr)(Display *dpy,
-                                                int screen,
-                                                int *retval);
     __GLXvendorInfo *dynDispatch;
-    ExampleExtensionFunctionPtr func;
-    const int index = glxExtensionProcs[DI_glXExampleExtensionFunction].index;
+    PFNGLXEXAMPLEEXTENSIONFUNCTION func;
+    const int index = glxExtensionProcs[funcIndex].index;
 
     dynDispatch = apiExports->getDynDispatch(dpy, screen);
     if (!dynDispatch) {
         return;
     }
 
-    func = (ExampleExtensionFunctionPtr)
+    func = (PFNGLXEXAMPLEEXTENSIONFUNCTION)
         apiExports->fetchDispatchEntry(dynDispatch, index);
     if (func) {
         func(dpy, screen, retval);
     }
+}
+
+static void dispatch_glXExampleExtensionFunction(Display *dpy,
+                                                int screen,
+                                                int *retval)
+{
+    // Set a different value here. That way, if a test fails, you can easily
+    // tell if it got as far as the dispatch function.
+    *retval = -1;
+    commonDispatch_glXExampleExtensionFunction(dpy, screen, retval,
+            DI_glXExampleExtensionFunction);
+}
+
+static void dummy_glXExampleExtensionFunction2(Display *dpy, int screen, int *retval)
+{
+    *retval = 2;
+}
+
+static void dispatch_glXExampleExtensionFunction2(Display *dpy,
+                                                int screen,
+                                                int *retval)
+{
+    *retval = -2;
+    commonDispatch_glXExampleExtensionFunction(dpy, screen, retval,
+            DI_glXExampleExtensionFunction2);
 }
 
 /*
