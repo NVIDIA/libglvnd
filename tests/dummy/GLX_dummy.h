@@ -67,6 +67,14 @@ enum {
  */
 #define GLX_CONTEX_ATTRIB_DUMMY 0x10000
 
+/**
+ * glXExampleExtensionFunction(): Dummy GLX extension function.
+ *
+ * This function just assigns 1 to *retval. It's used to test dispatching
+ * through a venodr-supplied dispatch function.
+ */
+typedef void (* PFNGLXEXAMPLEEXTENSIONFUNCTION) (Display *dpy, int screen, int *retval);
+
 /*
  * glMakeCurrentTestResults(): perform queries on vendor library state.
  *

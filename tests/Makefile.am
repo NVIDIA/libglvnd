@@ -144,6 +144,11 @@ testglxgetprocaddress_LDADD = -lX11
 testglxgetprocaddress_LDADD += $(top_builddir)/src/GLX/libGLX.la
 
 
+check_PROGRAMS += testglxgetprocaddress_genentry
+testglxgetprocaddress_genentry_LDADD = -lX11
+testglxgetprocaddress_genentry_LDADD += $(top_builddir)/src/GLX/libGLX.la
+
+
 check_PROGRAMS += testglxgetclientstr
 testglxgetclientstr_LDADD = -lX11
 testglxgetclientstr_LDADD += $(top_builddir)/src/GLX/libGLX.la
