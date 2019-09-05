@@ -271,6 +271,9 @@ AM_CONDITIONAL([GLDISPATCH_TYPE_ARMV7_TSD], [test "x$gldispatch_entry_type" = "x
 AM_CONDITIONAL([GLDISPATCH_TYPE_AARCH64_TSD], [test "x$gldispatch_entry_type" = "xaarch64_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_PURE_C], [test "x$gldispatch_entry_type" = "xpure_c"])
 
+AS_IF([test "x$gldispatch_entry_type" != "xpure_c"],
+      [AC_DEFINE([USE_DISPATCH_ASM], 1,
+      [Define to 1 if libGLdispatch and libGLX should use assembly dispatch functions.])])
 
 AC_MSG_CHECKING([for constructor attributes])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([
