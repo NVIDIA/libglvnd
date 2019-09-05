@@ -37,17 +37,7 @@
 #include <sys/mman.h>
 #include <assert.h>
 
-#if defined(USE_X86_ASM) ||    \
-    defined(USE_X86_64_ASM) || \
-    defined(USE_ARMV7_ASM) ||  \
-    defined(USE_AARCH64_ASM) || \
-    defined(USE_PPC64LE_ASM)
-# define USE_ASM 1
-#else
-# define USE_ASM 0
-#endif
-
-#if defined(__GNUC__) && USE_ASM
+#if defined(USE_DISPATCH_ASM)
 
 /// The maximum number of entrypoints that we can generate.
 #define GENERATED_ENTRYPOINT_MAX 4096
@@ -344,7 +334,7 @@ void *DefaultDispatchFunc(void)
     return NULL;
 }
 
-#else // defined(__GNUC__) && USE_ASM
+#else // defined(USE_DISPATCH_ASM)
 
 GLVNDentrypointStub glvndGenerateEntrypoint(const char *procName)
 {
@@ -359,4 +349,4 @@ void glvndUpdateEntrypoints(GLVNDentrypointUpdateCallback callback, void *param)
 {
 }
 
-#endif // defined(__GNUC__) && USE_ASM
+#endif // defined(USE_DISPATCH_ASM)
