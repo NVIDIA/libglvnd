@@ -140,8 +140,12 @@ testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 
 check_PROGRAMS += testglxgetprocaddress
+testglxgetprocaddress_CFLAGS = \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src/GLdispatch
 testglxgetprocaddress_LDADD = -lX11
 testglxgetprocaddress_LDADD += $(top_builddir)/src/GLX/libGLX.la
+testglxgetprocaddress_LDADD += $(top_builddir)/src/GLdispatch/libGLdispatch.la
 
 
 check_PROGRAMS += testglxgetprocaddress_genentry
