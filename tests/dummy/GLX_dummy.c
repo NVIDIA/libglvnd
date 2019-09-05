@@ -69,12 +69,15 @@ static void dummy_glXExampleExtensionFunction(Display *dpy, int screen, int *ret
 static void dispatch_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
 static void dummy_glXExampleExtensionFunction2(Display *dpy, int screen, int *retval);
 static void dispatch_glXExampleExtensionFunction2(Display *dpy, int screen, int *retval);
+static void dummy_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void **ret);
+static void dispatch_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void **ret);
 
 enum
 {
     DI_glXExampleExtensionFunction,
     DI_glXExampleExtensionFunction2,
     DI_glXCreateContextVendorDUMMY,
+    DI_glXMakeCurrentTestResults,
     DI_COUNT,
 };
 static struct {
@@ -87,6 +90,7 @@ static struct {
     PROC_ENTRY(glXExampleExtensionFunction),
     PROC_ENTRY(glXExampleExtensionFunction2),
     PROC_ENTRY(glXCreateContextVendorDUMMY),
+    PROC_ENTRY(glXMakeCurrentTestResults),
 #undef PROC_ENTRY
 };
 
@@ -524,9 +528,7 @@ static void dummy_glEnd (void)
     ctx->endHit++;
 }
 
-static void dummy_glMakeCurrentTestResults(GLint req,
-                                        GLboolean *saw,
-                                        void **ret)
+static void dummy_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void **ret)
 {
     GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
@@ -542,19 +544,28 @@ static void dummy_glMakeCurrentTestResults(GLint req,
             *ret = (void *)data;
         }
         break;
-    case GL_MC_VENDOR_STRING:
-        {
-            // FIXME: This is used from testglxnscreens to check that the
-            // correct vendor library is loaded from each display. Originally,
-            // it used the vendor name passed to __glx_Main, but libGLX doesn't
-            // provide the vendor name anymore.
-            *ret = NULL;
-        }
-        break;
     case GL_MC_LAST_REQ:
     default:
         *ret = NULL;
         break;
+    }
+}
+
+static void dispatch_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void **ret)
+{
+    __GLXvendorInfo *dynDispatch;
+    PFNGLXMAKECURRENTTESTRESULTSPROC func;
+    const int index = glxExtensionProcs[DI_glXMakeCurrentTestResults].index;
+
+    dynDispatch = apiExports->getCurrentDynDispatch();
+    if (!dynDispatch) {
+        return;
+    }
+
+    func = (PFNGLXMAKECURRENTTESTRESULTSPROC)
+        apiExports->fetchDispatchEntry(dynDispatch, index);
+    if (func) {
+        func(req, saw, ret);
     }
 }
 
@@ -622,7 +633,6 @@ static const struct {
     PROC_ENTRY(glBegin),
     PROC_ENTRY(glEnd),
     PROC_ENTRY(glVertex3fv),
-    PROC_ENTRY(glMakeCurrentTestResults),
 
     PROC_ENTRY(glXChooseVisual),
     PROC_ENTRY(glXCopyContext),

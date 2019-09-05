@@ -49,7 +49,6 @@
 typedef struct TestOptionsRec {
     int iterations;
     int threads;
-    GLboolean late;
 } TestOptions;
 
 static void print_help(void)
@@ -58,8 +57,7 @@ static void print_help(void)
         "Options: \n"
         " -h, --help              Print this help message.\n"
         " -i<N>, --iterations=<N> Run N make current iterations in each thread \n"
-        " -t<N>, --threads=<N>    Run with N threads.\n"
-        " -l, --late              Call GetProcAddress() after MakeCurrent()\n";
+        " -t<N>, --threads=<N>    Run with N threads.\n";
     printf("%s", help_string);
 }
 
@@ -71,17 +69,15 @@ void init_options(int argc, char **argv, TestOptions *t)
         { "help", no_argument, NULL, 'h'},
         { "iterations", required_argument, NULL, 'i'},
         { "threads", required_argument, NULL, 't'},
-        { "late", no_argument, NULL, 'l' },
         { NULL, no_argument, NULL, 0 }
     };
 
     // Initialize defaults
     t->iterations = 1;
     t->threads = 1;
-    t->late = GL_FALSE;
 
     do {
-        c = getopt_long(argc, argv, "hi:t:l", long_options, NULL);
+        c = getopt_long(argc, argv, "hi:t:", long_options, NULL);
         switch (c) {
         case -1:
         default:
@@ -106,36 +102,15 @@ void init_options(int argc, char **argv, TestOptions *t)
                 exit(1);
             }
             break;
-        case 'l':
-            t->late = GL_TRUE;
-            break;
         }
     } while (c != -1);
 
 }
 
-static PFNGLMAKECURRENTTESTRESULTSPROC GetMakeCurrentTestResults(void)
-{
-    int i;
-    PFNGLMAKECURRENTTESTRESULTSPROC proc = NULL, old_proc = NULL;
-    // Call this multiple times to verify address caching works correctly.
-    for (i = 0; i < 3; i++) {
-        proc = (PFNGLMAKECURRENTTESTRESULTSPROC)
-            glXGetProcAddress((GLubyte *)"glMakeCurrentTestResults");
-        if ((i != 0) && (proc != old_proc))
-        {
-            printError("Got different addresses for glMakeCurrentTestResults: %p, %p\n", proc, old_proc);
-            return NULL;
-        }
-        old_proc = proc;
-    }
-    return proc;
-}
-
 void *MakeCurrentThread(void *arg)
 {
     struct window_info wi;
-    PFNGLMAKECURRENTTESTRESULTSPROC pMakeCurrentTestResults = NULL;
+    PFNGLXMAKECURRENTTESTRESULTSPROC pMakeCurrentTestResults = NULL;
     GLXContext ctx = NULL;
     const GLfloat v[] = { 0, 0, 0 };
     struct {
@@ -162,15 +137,16 @@ void *MakeCurrentThread(void *arg)
         goto fail;
     }
 
+    // Make sure that libGLX has loaded the vendor library.
+    glXGetClientString(dpy, GLX_EXTENSIONS);
+
     // Test the robustness of GetProcAddress() by calling this separately for
     // each thread.
-    if (!t->late) {
-        pMakeCurrentTestResults = GetMakeCurrentTestResults();
-
-        if (!pMakeCurrentTestResults) {
-            printError("Failed to get glMakeCurrentTestResults() function!\n");
-            goto fail;
-        }
+    pMakeCurrentTestResults = (PFNGLXMAKECURRENTTESTRESULTSPROC)
+            glXGetProcAddress((const GLubyte *) "glXMakeCurrentTestResults");
+    if (pMakeCurrentTestResults == NULL) {
+        printError("Failed to get glXMakeCurrentTestResults() function!\n");
+        goto fail;
     }
 
     success = testUtilsCreateWindow(dpy, &wi, 0);
@@ -192,22 +168,13 @@ void *MakeCurrentThread(void *arg)
             goto fail;
         }
 
-        if (t->late) {
-            pMakeCurrentTestResults = GetMakeCurrentTestResults();
-
-            if (!pMakeCurrentTestResults) {
-                printError("Failed to get glMakeCurrentTestResults() function!\n");
-                goto fail;
-            }
-        }
-
         glBegin(GL_TRIANGLES); BeginCount++;
         glVertex3fv(v); Vertex3fvCount++;
         glVertex3fv(v); Vertex3fvCount++;
         glVertex3fv(v); Vertex3fvCount++;
         glEnd(); EndCount++;
 
-        // Make a call to glMakeCurrentTestResults() to get the function counts.
+        // Make a call to glXMakeCurrentTestResults() to get the function counts.
         makeCurrentTestResultsParams.req = GL_MC_FUNCTION_COUNTS;
         makeCurrentTestResultsParams.saw = GL_FALSE;
         makeCurrentTestResultsParams.ret = NULL;
@@ -217,12 +184,12 @@ void *MakeCurrentThread(void *arg)
                                 &makeCurrentTestResultsParams.ret);
 
         if (!makeCurrentTestResultsParams.saw) {
-            printError("Failed to dispatch glMakeCurrentTestResults()!\n");
+            printError("Failed to dispatch glXMakeCurrentTestResults()!\n");
             goto fail;
         }
 
         if (!makeCurrentTestResultsParams.ret) {
-            printError("Internal glMakeCurrentTestResults() error!\n");
+            printError("Internal glXMakeCurrentTestResults() error!\n");
             goto fail;
         }
 
@@ -248,7 +215,7 @@ void *MakeCurrentThread(void *arg)
         glVertex3fv(NULL);
         glEnd();
 
-        // Similarly the call to the dynamic function glMakeCurrentTestResults()
+        // Similarly the call to the dynamic function glXMakeCurrentTestResults()
         // should be a no-op.
         makeCurrentTestResultsParams.req = GL_MC_FUNCTION_COUNTS;
         makeCurrentTestResultsParams.saw = GL_FALSE;
@@ -259,7 +226,7 @@ void *MakeCurrentThread(void *arg)
                                 &makeCurrentTestResultsParams.ret);
 
         if (makeCurrentTestResultsParams.saw) {
-            printError("Dynamic function glMakeCurrentTestResults() dispatched "
+            printError("Dynamic function glXMakeCurrentTestResults() dispatched "
                        "to vendor library even though no context was current!\n");
             goto fail;
         }
