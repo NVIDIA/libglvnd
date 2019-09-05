@@ -95,7 +95,6 @@ TESTS_GLX += testglxcreatecontext.sh
 TESTS_GLX += testglxmcbasic.sh
 TESTS_GLX += testglxmcloop.sh
 TESTS_GLX += testglxmcthreads.sh
-TESTS_GLX += testglxmclate.sh
 TESTS_GLX += testglxmcoldlink.sh
 TESTS_GLX += testglxgetprocaddress.sh
 TESTS_GLX += testglxgetprocaddress_genentry.sh
