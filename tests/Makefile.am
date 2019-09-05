@@ -71,6 +71,16 @@ testgldispatch_LDADD += dummy/libpatchentrypoints.la
 testgldispatch_LDADD += $(top_builddir)/src/util/libutils_misc.la
 testgldispatch_LDADD += $(PTHREAD_LIBS)
 
+TESTS += testgldispatchthread.sh
+check_PROGRAMS += testgldispatchthread
+testgldispatchthread_SOURCES = \
+	testgldispatchthread.c
+testgldispatchthread_CFLAGS = \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src/GLdispatch \
+	$(PTHREAD_CFLAGS)
+testgldispatchthread_LDADD = $(top_builddir)/src/GLdispatch/libGLdispatch.la
+
 # Start of GLX-specific tests.
 # Notes that the TESTS_GLX variable must be defined outside the conditional, so
 # that we can include the test scripts in the EXTRA_DIST package. Otherwise,
