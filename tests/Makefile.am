@@ -96,7 +96,6 @@ TESTS_GLX += testglxgetprocaddress.sh
 TESTS_GLX += testglxgetprocaddress_genentry.sh
 TESTS_GLX += testglxgetclientstr.sh
 TESTS_GLX += testglxqueryversion.sh
-TESTS_GLX += testpatchentrypoints.sh
 
 if ENABLE_GLX
 
@@ -167,19 +166,6 @@ testglxqueryversion_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
 testglxqueryversion_LDADD = $(X11_LIBS)
 testglxqueryversion_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxqueryversion_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-
-
-check_PROGRAMS += testpatchentrypoints
-testpatchentrypoints_SOURCES = \
-	testpatchentrypoints.c \
-	test_utils.c
-
-testpatchentrypoints_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
-testpatchentrypoints_LDADD = $(X11_LIBS) @LIB_DL@
-testpatchentrypoints_LDADD += $(top_builddir)/src/GLX/libGLX.la
-testpatchentrypoints_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
-testpatchentrypoints_LDADD += $(top_builddir)/src/util/libtrace.la
-testpatchentrypoints_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 endif # ENABLE_GLX
 
