@@ -135,6 +135,16 @@ int main(int argc, char **argv)
         }
     };
 
+#if !defined(USE_DISPATCH_ASM)
+    // If the assembly dispatch stubs aren't enabled, then generating and
+    // patching entrypoints won't work. In that case, exit with 77 to tell
+    // automake to skip the test instead of failing.
+    if (enablePatching || enableGeneratedTest)
+    {
+        return 77;
+    }
+#endif
+
     __glDispatchInit();
     InitDummyVendors();
 
