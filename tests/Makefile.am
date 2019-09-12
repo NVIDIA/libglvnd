@@ -45,16 +45,12 @@ EXTRA_DIST = $(TESTS) \
 	eglenv.sh \
 	json
 
-# The *_oldlink variant tests that linking against legacy libGL.so works
-
-# Disable annoying "unused" errors
-AM_CFLAGS =                                  \
-	-Wno-error=unused-variable               \
-	-Wno-error=unused-label                  \
+CFLAGS_COMMON = \
 	-I$(top_srcdir)/include                  \
 	-I$(top_srcdir)/src/util                 \
 	-I$(top_srcdir)/src/util/glvnd_pthread
 
+AM_CFLAGS = $(CFLAGS_COMMON)
 
 TESTS += testgldispatch_static.sh
 TESTS += testgldispatch_static_thr.sh
@@ -98,7 +94,7 @@ if ENABLE_GLX
 TESTS += $(TESTS_GLX)
 
 check_PROGRAMS += testglxcreatecontext
-testglxcreatecontext_CFLAGS = $(X11_CFLAGS)
+testglxcreatecontext_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
 testglxcreatecontext_LDADD = $(X11_LIBS)
 testglxcreatecontext_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxcreatecontext_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
@@ -113,7 +109,7 @@ TESTGLXMAKECURRENT_SOURCES_COMMON = \
 
 check_PROGRAMS += testglxmakecurrent
 testglxmakecurrent_SOURCES = $(TESTGLXMAKECURRENT_SOURCES_COMMON)
-testglxmakecurrent_CFLAGS = $(X11_CFLAGS)
+testglxmakecurrent_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
 testglxmakecurrent_LDADD = $(X11_LIBS) @LIB_DL@
 testglxmakecurrent_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
@@ -124,7 +120,7 @@ testglxmakecurrent_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 check_PROGRAMS += testglxmakecurrent_oldlink
 testglxmakecurrent_oldlink_SOURCES = $(TESTGLXMAKECURRENT_SOURCES_COMMON)
-testglxmakecurrent_oldlink_CFLAGS = $(X11_CFLAGS)
+testglxmakecurrent_oldlink_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
 testglxmakecurrent_oldlink_LDADD = $(X11_LIBS) @LIB_DL@
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/GL/libGL.la
 testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libglvnd_pthread.la
@@ -133,13 +129,13 @@ testglxmakecurrent_oldlink_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 
 check_PROGRAMS += testglxgetprocaddress
-testglxgetprocaddress_CFLAGS = $(X11_CFLAGS)
+testglxgetprocaddress_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
 testglxgetprocaddress_LDADD = $(X11_LIBS)
 testglxgetprocaddress_LDADD += $(top_builddir)/src/GLX/libGLX.la
 
 
 check_PROGRAMS += testglxgetclientstr
-testglxgetclientstr_CFLAGS = $(X11_CFLAGS)
+testglxgetclientstr_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
 testglxgetclientstr_LDADD = $(X11_LIBS)
 testglxgetclientstr_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxgetclientstr_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
@@ -148,7 +144,7 @@ testglxgetclientstr_LDADD += $(top_builddir)/src/util/libutils_misc.la
 
 
 check_PROGRAMS += testglxqueryversion
-testglxqueryversion_CFLAGS = $(X11_CFLAGS)
+testglxqueryversion_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
 testglxqueryversion_LDADD = $(X11_LIBS)
 testglxqueryversion_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testglxqueryversion_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
@@ -159,7 +155,7 @@ testpatchentrypoints_SOURCES = \
 	testpatchentrypoints.c \
 	test_utils.c
 
-testpatchentrypoints_CFLAGS = $(X11_CFLAGS)
+testpatchentrypoints_CFLAGS = $(CFLAGS_COMMON) $(X11_CFLAGS)
 testpatchentrypoints_LDADD = $(X11_LIBS) @LIB_DL@
 testpatchentrypoints_LDADD += $(top_builddir)/src/GLX/libGLX.la
 testpatchentrypoints_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
