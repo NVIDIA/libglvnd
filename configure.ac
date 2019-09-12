@@ -27,6 +27,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_PROG_MKDIR_P
+PKG_PROG_PKG_CONFIG
 
 # The tarball from "make dist" already contains all of the generated files. If
 # we're building from that, then we won't need Python.
@@ -49,13 +50,25 @@ AC_ARG_ENABLE([egl],
 )
 AM_CONDITIONAL([ENABLE_EGL], [test "x$enable_egl" = "xyes"])
 
+AC_ARG_ENABLE([x11],
+    [AS_HELP_STRING([--disable-x11],
+        [Disable X11 support. Implies --disable-glx @<:@default=enabled@:>@])],
+    [enable_x11="$enableval"],
+    [enable_x11=yes]
+)
+AM_CONDITIONAL([ENABLE_X11], [test "x$enable_x11" = "xyes"])
+
 AC_ARG_ENABLE([glx],
     [AS_HELP_STRING([--disable-glx],
         [Disable GLX support @<:@default=enabled@:>@])],
     [enable_glx="$enableval"],
-    [enable_glx=yes]
+    [enable_glx="$enable_x11"]
 )
 AM_CONDITIONAL([ENABLE_GLX], [test "x$enable_glx" = "xyes"])
+
+if test "x$enable_x11" != "xyes" -a "x$enable_glx" = "xyes" ; then
+    AC_MSG_ERROR([Can't build GLX without X11.])
+fi
 
 AC_ARG_ENABLE([gles],
     [AS_HELP_STRING([--disable-gles],
@@ -154,9 +167,19 @@ dnl
 dnl Checks for libraries.
 AX_PTHREAD()
 
-PKG_CHECK_MODULES([X11], [x11])
-PKG_CHECK_MODULES([XEXT], [xext])
-PKG_CHECK_MODULES([GLPROTO], [glproto])
+if test "x$enable_x11" = "xyes" ; then
+    PKG_CHECK_MODULES([X11], [x11])
+    AC_DEFINE([USE_X11], 1,
+        [Define to 1 if X11 support is enabled.])
+fi
+if test "x$enable_glx" = "xyes" ; then
+    PKG_CHECK_MODULES([XEXT], [xext])
+    PKG_CHECK_MODULES([GLPROTO], [glproto])
+fi
+
+AS_IF([test "x$gldispatch_use_tls" = "xyes"],
+      [AC_DEFINE([GLDISPATCH_USE_TLS], 1,
+      [Define to 1 if libGLdispatch should use a TLS variable for the dispatch table.])])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_TYPEOF
