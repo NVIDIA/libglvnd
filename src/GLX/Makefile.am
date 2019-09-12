@@ -45,7 +45,7 @@ libGLX_la_CFLAGS =  -I$(srcdir)/$(UTHASH_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(UTIL_DIR)
 libGLX_la_CFLAGS += -I$(srcdir)/$(GL_DISPATCH_DIR)
 libGLX_la_CFLAGS += -I$(top_srcdir)/include
-libGLX_la_CFLAGS += $(GLPROTO_CFLAGS)
+libGLX_la_CFLAGS += $(GLPROTO_CFLAGS) $(X11_CFLAGS) $(XEXT_CFLAGS)
 
 # Required library flags
 libGLX_la_CFLAGS += $(PTHREAD_CFLAGS)
