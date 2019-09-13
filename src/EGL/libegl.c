@@ -621,7 +621,7 @@ static EGLBoolean InternalMakeCurrentDispatch(
 
     apiState = __eglCreateAPIState();
     if (apiState == NULL) {
-        return False;
+        return 0; // False
     }
 
     ret = __glDispatchMakeCurrent(
