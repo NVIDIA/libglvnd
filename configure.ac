@@ -350,6 +350,13 @@ AX_CHECK_LINK_FLAG([-Xlinker --no-undefined],
       [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], ["-Xlinker --no-undefined"])],
       [AC_SUBST([LINKER_FLAG_NO_UNDEFINED], [""])])
 
+AC_ARG_VAR([GLDISPATCH_PAGE_SIZE],
+    [Page size to align static dispatch stubs])
+AS_IF([test "x$GLDISPATCH_PAGE_SIZE" != "x"],
+      [AC_DEFINE_UNQUOTED([GLDISPATCH_PAGE_SIZE], [$GLDISPATCH_PAGE_SIZE],
+      [Page size to align static dispatch stubs.])])
+
+
 dnl default CFLAGS
 CFLAGS="$CFLAGS -Wall -Werror -include config.h -fvisibility=hidden $DEFINES"
 
