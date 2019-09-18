@@ -210,6 +210,7 @@ EGL\_EXT\_device\_enumeration.
 
 In order to find the available vendor libraries, each vendor provides a JSON
 file in a well-known directory, similar to how Vulkan ICD's are loaded.
+Please see [EGL ICD enumeration](src/EGL/icd_enumeration.md) for more details.
 
 When the application calls eglGetPlatformDisplay, EGL will simply call into
 each vendor library until it finds one that succeeds. After that, whichever
