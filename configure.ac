@@ -70,13 +70,19 @@ if test "x$enable_x11" != "xyes" -a "x$enable_glx" = "xyes" ; then
     AC_MSG_ERROR([Can't build GLX without X11.])
 fi
 
-AC_ARG_ENABLE([gles],
-    [AS_HELP_STRING([--disable-gles],
-        [Do not build the libGLES*.so libraries @<:@default=enabled@:>@])],
-    [enable_gles="$enableval"],
-    [enable_gles=yes]
-)
-AM_CONDITIONAL([ENABLE_GLES], [test "x$enable_gles" = "xyes"])
+AC_ARG_ENABLE([gles1],
+    [AS_HELP_STRING([--disable-gles1],
+        [disable support for OpenGL ES 1.x API @<:@default=enabled@:>@])],
+    [enable_gles1="$enableval"],
+    [enable_gles1=yes])
+AM_CONDITIONAL([ENABLE_GLES1], [test "x$enable_gles1" = "xyes"])
+
+AC_ARG_ENABLE([gles2],
+    [AS_HELP_STRING([--disable-gles2],
+        [disable support for OpenGL ES 2.x and 3.x API @<:@default=enabled@:>@])],
+    [enable_gles2="$enableval"],
+    [enable_gles2=yes])
+AM_CONDITIONAL([ENABLE_GLES2], [test "x$enable_gles2" = "xyes"])
 
 AC_ARG_ENABLE([headers],
     [AS_HELP_STRING([--disable-headers],
@@ -87,7 +93,8 @@ AC_ARG_ENABLE([headers],
 AM_CONDITIONAL([ENABLE_GL_HEADERS], [test "x$enable_headers" = "xyes"])
 AM_CONDITIONAL([ENABLE_EGL_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_egl" = "xyes"])
 AM_CONDITIONAL([ENABLE_GLX_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_glx" = "xyes"])
-AM_CONDITIONAL([ENABLE_GLES_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_gles" = "xyes"])
+AM_CONDITIONAL([ENABLE_GLES1_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_gles1" = "xyes"])
+AM_CONDITIONAL([ENABLE_GLES2_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_gles2" = "xyes"])
 
 dnl
 dnl Arch/platform-specific settings. Copied from mesa
