@@ -1002,6 +1002,9 @@
         <enum value="0x3490" name="EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT"/>
             <unused start="0x3491" end="0x349F"/>
     </enums>
+    <enums namespace="EGL" start="0x34A0" end="0x34AF" vendor="ANGLE" comment="Reserved for Ken Russell - ANGLE (via github pull request)">
+            <unused start="0x34A0" end="0x34AF"/>
+    </enums>
 
 <!-- Please remember that new enumerant allocations must be obtained by
      request to the Khronos API registrar (see comments at the top of this
@@ -1012,8 +1015,8 @@
 
 <!-- Reservable for future use. To generate a new range, allocate multiples
      of 16 starting at the lowest available point in this block. -->
-    <enums namespace="EGL" start="0x34A0" end="0x3FFF" vendor="KHR" comment="Reserved for future use">
-            <unused start="0x34A0" end="0x3FFF"/>
+    <enums namespace="EGL" start="0x34B0" end="0x3FFF" vendor="KHR" comment="Reserved for future use">
+            <unused start="0x34B0" end="0x3FFF"/>
     </enums>
 
     <enums namespace="EGL" start="0x8F70" end="0x8F7F" vendor="HI" comment="For Mark Callow, Khronos bug 4055. Shared with GL.">
