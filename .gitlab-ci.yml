@@ -1,0 +1,68 @@
+# vim: set expandtab shiftwidth=2 tabstop=2 textwidth=0:
+
+variables:
+  UBUNTU_TAG: "2019-10-28-01"
+  UBUNTU_VERSION: "18.04"
+  UBUNTU_CONTAINER_IMAGE: "$CI_REGISTRY_IMAGE/ubuntu/$UBUNTU_VERSION:$UBUNTU_TAG"
+  UBUNTU_EXEC: "bash .gitlab-ci/ubuntu_install.sh"
+
+# Include the templates to create an image to run the tests.
+include:
+  - project: 'wayland/ci-templates'
+    ref: 1f7f57c64ff4ebbf7292e3b7a13600518b8cb24c
+    file: '/templates/ubuntu.yml'
+
+stages:
+  - containers-build
+  - build
+
+# CONTAINERS creation stage
+container_build:
+  extends: .ubuntu@container-ifnot-exists
+  stage: containers-build
+  variables:
+    GIT_STRATEGY: none # no need to pull the whole tree for rebuilding the image
+
+build-distcheck:
+  stage: build
+  image: $UBUNTU_CONTAINER_IMAGE
+  script:
+    - bash .gitlab-ci/run_distcheck.sh
+  artifacts:
+    paths:
+      - build/libglvnd-*.tar.gz
+
+# This is a common definition for testing the other types of dispatch stubs.
+# We only need to do these for changes that might affect something specific to
+# those stub types.
+.build-check:
+  stage: build
+  image: $UBUNTU_CONTAINER_IMAGE
+  script:
+    - bash .gitlab-ci/run_build.sh
+  only:
+    changes:
+      - src/GLdispatch/vnd-glapi/**
+      - src/util/glvnd_genentry.*
+      - tests/**
+      - .gitlab-ci.yml
+      - .gitlab-ci/**
+
+build-i386:
+  extends:
+    - .build-check
+  variables:
+    CONFIGURE_OPTIONS: --build=i686-pc-linux-gnu CFLAGS=-m32
+
+build-x86-64-tsd:
+  extends:
+    - .build-check
+  variables:
+    CONFIGURE_OPTIONS: --disable-tls
+
+build-i386-tsd:
+  extends:
+    - .build-check
+  variables:
+    CONFIGURE_OPTIONS: --build=i686-pc-linux-gnu CFLAGS=-m32 --disable-tls
+
