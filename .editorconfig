@@ -7,3 +7,7 @@ indent_style = space
 [{Makefile.am,*.mk}]
 indent_size = 8
 indent_style = tab
+
+[{meson.build,meson_options.txt}]
+indent_size = 2
+indent_style = space

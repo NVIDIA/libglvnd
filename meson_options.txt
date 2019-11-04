@@ -1,0 +1,77 @@
+# Copyright © 2019 Intel Corporation
+
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and/or associated documentation files (the
+# "Materials"), to deal in the Materials without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Materials, and to
+# permit persons to whom the Materials are furnished to do so, subject to
+# the following conditions:
+
+# The above copyright notice and this permission notice shall be included
+# unaltered in all copies or substantial portions of the Materials.
+# Any additions, deletions, or changes to the original source files
+# must be clearly indicated in accompanying documentation.
+
+# If only executable code is distributed, then the accompanying
+# documentation must state that "this software is based in part on the
+# work of the Khronos Group."
+
+# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+
+option(
+  'asm',
+  type : 'feature',
+  description : 'Use ASM when compiling.'
+)
+option(
+  'x11',
+  type : 'feature',
+  description : 'Support the X11 window system.'
+)
+option(
+  'egl',
+  type : 'boolean',
+  value : true,
+  description : 'Support the EGL platform.'
+)
+option(
+  'glx',
+  type : 'feature',
+  description : 'Support the GLX platform.'
+)
+option(
+  'gles1',
+  type : 'boolean',
+  value : true,
+  description : 'Support OpenGL ES 1.x.'
+)
+option(
+  'gles2',
+  type : 'boolean',
+  value : true,
+  description : 'Support OpenGL ES 2.x and 3.x.'
+)
+option(
+  'tls',
+  type : 'feature',
+  description : 'Use Thread Local Storage.'
+)
+option(
+  'dispatch-page-size',
+  type : 'integer',
+  value : 0,
+  description : 'Page size to align static dispatch stubs.'
+)
+option(
+  'headers',
+  type : 'boolean',
+  value : true,
+  description : 'Install headers for enabled APIs.'
+)
