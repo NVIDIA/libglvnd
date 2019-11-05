@@ -59,4 +59,5 @@ TESTS = ogl-symbol-check.sh
 
 EXTRA_DIST = \
 	ogl-symbol-check.sh \
-	ogl.symbols
+	ogl.symbols \
+	meson.build

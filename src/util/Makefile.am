@@ -6,7 +6,7 @@ noinst_HEADERS = \
 	trace.h \
 	cJSON.h
 
-EXTRA_DIST = uthash cJSON
+EXTRA_DIST = uthash cJSON meson.build
 
 noinst_LTLIBRARIES =
 AM_CPPFLAGS = -I$(top_srcdir)/include

@@ -119,7 +119,9 @@ TESTS = egl-symbol-check.sh
 
 EXTRA_DIST = \
 	egl-symbol-check.sh \
-	egl.symbols
+	egl.symbols \
+	meson.build
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = egl.pc
+

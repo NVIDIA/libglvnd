@@ -43,7 +43,8 @@ check_PROGRAMS =
 EXTRA_DIST = $(TESTS) \
 	glxenv.sh \
 	eglenv.sh \
-	json
+	json \
+	meson.build
 
 CFLAGS_COMMON = \
 	-I$(top_srcdir)/include                  \

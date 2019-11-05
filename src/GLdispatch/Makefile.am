@@ -56,4 +56,7 @@ libGLdispatch_la_LIBADD += ../util/libglvnd_pthread.la
 libGLdispatch_la_LIBADD += ../util/libapp_error_check.la
 libGLdispatch_la_LIBADD += @LIB_DL@
 
-EXTRA_DIST = export_list_tls.ver export_list_tsd.ver
+EXTRA_DIST = \
+	export_list_tls.ver \
+	export_list_tsd.ver \
+	meson.build

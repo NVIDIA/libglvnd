@@ -4,7 +4,7 @@ noinst_HEADERS = \
 	EGL_dummy.h
 
 check_LTLIBRARIES =
- 
+
 check_LTLIBRARIES += libpatchentrypoints.la
 libpatchentrypoints_la_CFLAGS = \
 	-I$(top_srcdir)/src/GLdispatch \
@@ -65,3 +65,5 @@ libEGL_dummy1_la_LIBADD = $(EGL_DUMMY_LIBADD_COMMON)
 libEGL_dummy1_la_LDFLAGS = $(EGL_DUMMY_LDFLAGS_COMMON)
 
 endif # ENABLE_EGL
+
+EXTRA_DIST = meson.build
