@@ -24,6 +24,16 @@ On Debian and derivatives, run:
 
 Run `./autogen.sh`, then run `./configure` and `make`.
 
+Alternatively you can use meson and ninja, which is much faster but should be
+otherwise the same (You will need packages from above too):
+
+    sudo apt-get install ninja-build meson
+    meson builddir 
+    ninja -C builddir
+
+Meson 0.48.0 is currently required, if your distro doesn't have meson 0.48 in
+the repos you can try the methods suggested
+[here](https://mesonbuild.com/Getting-meson.html).
 
 Code overview
 -------------
