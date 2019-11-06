@@ -110,5 +110,16 @@ g_egldispatchstubs.h : $(GENERATE_DEPS)
 	$(AM_V_GEN)$(PYTHON) $(GENERATE_DISPATCH_SCRIPT) header $(GENERATE_LIST_FILES) > $@
 endif
 
+AM_TESTS_ENVIRONMENT = \
+	TOP_SRCDIR='$(top_srcdir)' \
+	TOP_BUILDDIR='$(top_builddir)' \
+	NM='$(NM)' \
+	PYTHON='$(PYTHON)'
+TESTS = egl-symbol-check.sh
+
+EXTRA_DIST = \
+	egl-symbol-check.sh \
+	egl.symbols
+
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = egl.pc

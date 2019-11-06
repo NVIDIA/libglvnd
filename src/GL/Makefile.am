@@ -54,6 +54,13 @@ g_libglglxwrapper.c : $(glapi_gen_libglglxstubs_deps)
 	$(AM_V_GEN)$(PYTHON) $(PYTHON_FLAGS) $(glapi_gen_libglglxstubs_script) $(glapi_gen_glx_xml) > $@
 endif
 
+AM_TESTS_ENVIRONMENT = \
+	TOP_SRCDIR='$(top_srcdir)' \
+	TOP_BUILDDIR='$(top_builddir)' \
+	NM='$(NM)' \
+	PYTHON='$(PYTHON)'
+TESTS = gl-symbol-check.sh
+
 libGL_la_CFLAGS = \
 	-I$(top_srcdir)/include
 
@@ -73,3 +80,7 @@ libGL_la_LIBADD += @LIB_DL@
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gl.pc
+
+EXTRA_DIST = \
+	gl-symbol-check.sh \
+	gl.symbols

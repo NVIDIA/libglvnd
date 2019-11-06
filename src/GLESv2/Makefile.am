@@ -27,7 +27,7 @@
 
 lib_LTLIBRARIES = libGLESv2.la
 
-libGLESv2_la_SOURCES = 
+libGLESv2_la_SOURCES =
 libGLESv2_la_LDFLAGS = -shared \
 	$(LINKER_FLAG_NO_UNDEFINED) \
 	-version-info 3:0:1
@@ -40,3 +40,14 @@ libGLESv2_la_LIBADD = \
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = glesv2.pc
+
+AM_TESTS_ENVIRONMENT = \
+	TOP_SRCDIR='$(top_srcdir)' \
+	TOP_BUILDDIR='$(top_builddir)' \
+	NM='$(NM)' \
+	PYTHON='$(PYTHON)'
+TESTS = glesv2-symbol-check.sh
+
+EXTRA_DIST = \
+	glesv2-symbol-check.sh \
+	glesv2.symbols
