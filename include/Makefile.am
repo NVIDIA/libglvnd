@@ -31,6 +31,7 @@ GLES2_HEADER_FILES = \
 GLES3_HEADER_FILES = \
 	GLES3/gl31.h \
 	GLES3/gl32.h \
+	GLES3/gl3ext.h \
 	GLES3/gl3.h \
 	GLES3/gl3platform.h
 
