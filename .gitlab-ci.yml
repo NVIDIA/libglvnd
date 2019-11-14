@@ -38,8 +38,6 @@ build-distcheck:
 .build-check:
   stage: build
   image: $UBUNTU_CONTAINER_IMAGE
-  script:
-    - bash .gitlab-ci/run_build.sh
   only:
     changes:
       - src/GLdispatch/vnd-glapi/**
@@ -48,33 +46,39 @@ build-distcheck:
       - .gitlab-ci.yml
       - .gitlab-ci/**
 
-build-i386:
+.build-check-at:
   extends:
     - .build-check
+  script:
+    - bash .gitlab-ci/run_build.sh
+
+build-i386:
+  extends:
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --build=i686-pc-linux-gnu CFLAGS=-m32
 
 build-x86-64-tsd:
   extends:
-    - .build-check
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --disable-tls
 
 build-i386-tsd:
   extends:
-    - .build-check
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --build=i686-pc-linux-gnu CFLAGS=-m32 --disable-tls
 
 build-pure-c-tls:
   extends:
-    - .build-check
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --disable-asm
 
 build-pure-c-tsd:
   extends:
-    - .build-check
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --disable-asm --disable-tls
 
