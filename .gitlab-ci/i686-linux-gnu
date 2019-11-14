@@ -1,0 +1,19 @@
+[binaries]
+c = '/usr/bin/gcc'
+cpp = '/usr/bin/g++'
+ar = '/usr/bin/ar'
+strip = '/usr/bin/strip'
+pkgconfig = '/usr/bin/i686-linux-gnu-pkg-config'
+
+[properties]
+c_args = ['-m32']
+c_link_args = ['-m32']
+cpp_args = ['-m32']
+cpp_link_args = ['-m32']
+needs_exe_wrapper = false
+
+[host_machine]
+system = 'linux'
+cpu_family = 'x86'
+cpu = 'i686'
+endian = 'little'
