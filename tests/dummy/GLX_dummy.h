@@ -49,11 +49,6 @@ enum {
     GL_MC_FUNCTION_COUNTS,
 
     /*
-     * Returns a NULL-terminated string describing the name of this vendor.
-     */
-    GL_MC_VENDOR_STRING,
-
-    /*
      * Last request. Always returns NULL.
      */
     GL_MC_LAST_REQ
@@ -67,8 +62,16 @@ enum {
  */
 #define GLX_CONTEX_ATTRIB_DUMMY 0x10000
 
+/**
+ * glXExampleExtensionFunction(): Dummy GLX extension function.
+ *
+ * This function just assigns 1 to *retval. It's used to test dispatching
+ * through a venodr-supplied dispatch function.
+ */
+typedef void (* PFNGLXEXAMPLEEXTENSIONFUNCTION) (Display *dpy, int screen, int *retval);
+
 /*
- * glMakeCurrentTestResults(): perform queries on vendor library state.
+ * glXMakeCurrentTestResults(): perform queries on vendor library state.
  *
  * This explicitly is designed to not return anything, in case a bug causes the
  * API library to dispatch this to a no-op stub. If this function returned a
@@ -85,7 +88,7 @@ enum {
  * set to NULL if there was an error, or a pointer to request-specific data
  * otherwise. The pointer may be passed into free(3).
  */
-typedef void (*PFNGLMAKECURRENTTESTRESULTSPROC)(
+typedef void (*PFNGLXMAKECURRENTTESTRESULTSPROC)(
     GLint req,
     GLboolean *saw,
     void **ret
