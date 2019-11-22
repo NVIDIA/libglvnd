@@ -115,7 +115,10 @@ extern char glx_entrypoint_end[];
 #endif
 
 #define STUB_ASM(slot) \
+    ".globl glx_entrypoint_stub_" slot "\n" \
+    ".hidden glx_entrypoint_stub_" slot "\n" \
     ".balign " U_STRINGIFY(STUB_SIZE) "\n" \
+    "glx_entrypoint_stub_" slot ":\n" \
     STUB_ASM_ARCH(slot)
 
 __asm__(".globl glx_entrypoint_start\n"
