@@ -26,6 +26,7 @@
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
 noinst_HEADERS = \
+	glvnd_genentry.h \
 	libglxabipriv.h \
 	libglxcurrent.h \
 	libglxmapping.h \
@@ -57,17 +58,28 @@ libGLX_la_LIBADD += $(XEXT_LIBS)
 libGLX_la_LIBADD += $(GL_DISPATCH_DIR)/libGLdispatch.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libtrace.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_pthread.la
-libGLX_la_LIBADD += $(UTIL_DIR)/libglvnd_genentry.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libutils_misc.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libapp_error_check.la
 libGLX_la_LIBADD += $(UTIL_DIR)/libwinsys_dispatch.la
 
 libGLX_la_LDFLAGS = -shared -Wl,-Bsymbolic -version-info 0 $(LINKER_FLAG_NO_UNDEFINED)
 
+GENERATE_DISPATCH_STUBS_SCRIPT = $(top_srcdir)/src/GLX/gen_glx_stubs.py
+EXTRA_DIST = $(GENERATE_DISPATCH_STUBS_SCRIPT)
+
+if HAVE_PYTHON
+g_glx_dispatch_stub_list.h: $(GENERATE_DISPATCH_STUBS_SCRIPT)
+	$(AM_V_GEN)$(PYTHON) $(GENERATE_DISPATCH_STUBS_SCRIPT) > $@
+BUILT_SOURCES = g_glx_dispatch_stub_list.h
+CLEANFILES = $(BUILT_SOURCES)
+endif
+
 libGLX_la_SOURCES = \
 	libglx.c \
 	libglxmapping.c \
-	libglxproto.c
+	libglxproto.c \
+	glvnd_genentry.c \
+	g_glx_dispatch_stub_list.h
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = glx.pc
