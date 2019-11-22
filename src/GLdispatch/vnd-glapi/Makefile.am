@@ -27,7 +27,6 @@ noinst_HEADERS = \
 	table.h \
 	u_compiler.h \
 	u_current.h \
-	u_execmem.h \
 	u_macros.h
 
 noinst_LTLIBRARIES = libglapi.la
@@ -36,8 +35,7 @@ libglapi_la_SOURCES = \
 	$(MAPI_GLDISPATCH_ENTRY_FILES) \
 	mapi_glapi.c \
 	stub.c \
-	table.c \
-	u_execmem.c
+	table.c
 
 # Select the appropriate file for looking up the current dispatch table.
 if GLDISPATCH_USE_TLS

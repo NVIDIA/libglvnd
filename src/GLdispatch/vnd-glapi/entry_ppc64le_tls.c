@@ -137,18 +137,17 @@ static const uint32_t ENTRY_TEMPLATE[] =
 static const int TEMPLATE_OFFSET_TLS_ADDR = sizeof(ENTRY_TEMPLATE) - 16;
 static const int TEMPLATE_OFFSET_SLOT = sizeof(ENTRY_TEMPLATE) - 8;
 
-void entry_generate_default_code(char *entry, int slot)
+void entry_generate_default_code(int index, int slot)
 {
-    char *writeEntry = u_execmem_get_writable(entry);
-
+    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
     STATIC_ASSERT(ENTRY_STUB_ALIGN >= sizeof(ENTRY_TEMPLATE));
 
     assert(slot >= 0);
 
-    memcpy(writeEntry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
+    memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
 
-    *((uint64_t *) (writeEntry + TEMPLATE_OFFSET_TLS_ADDR)) = (uintptr_t) ppc64le_current_tls();
-    *((uint64_t *) (writeEntry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
+    *((uint64_t *) (entry + TEMPLATE_OFFSET_TLS_ADDR)) = (uintptr_t) ppc64le_current_tls();
+    *((uint64_t *) (entry + TEMPLATE_OFFSET_SLOT)) = slot * sizeof(mapi_func);
 
     // This sequence is from the PowerISA Version 2.07B book.
     // It may be a bigger hammer than we need, but it works;
@@ -159,7 +158,7 @@ void entry_generate_default_code(char *entry, int slot)
                          "  sync\n\t"
                          "  icbi 0, %0\n\t"
                          "  isync\n"
-                         : : "r" (writeEntry)
+                         : : "r" (entry)
                      );
 }
 

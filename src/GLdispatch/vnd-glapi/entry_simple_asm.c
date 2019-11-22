@@ -59,23 +59,3 @@ mapi_func entry_get_public(int index)
 {
     return (mapi_func)(public_entry_start + (index * entry_stub_size));
 }
-
-void entry_get_patch_addresses(mapi_func entry, void **writePtr, const void **execPtr)
-{
-    *execPtr = (const void *) entry;
-    *writePtr = u_execmem_get_writable(entry);
-}
-
-#if !defined(STATIC_DISPATCH_ONLY)
-mapi_func entry_generate(int slot)
-{
-    void *code = u_execmem_alloc(entry_stub_size);
-    if (!code) {
-        return NULL;
-    }
-
-    entry_generate_default_code(code, slot);
-
-    return (mapi_func) code;
-}
-#endif // !defined(STATIC_DISPATCH_ONLY)
