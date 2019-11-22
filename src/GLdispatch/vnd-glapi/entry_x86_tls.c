@@ -38,7 +38,7 @@
 #include "glapi.h"
 #include "glvnd/GLdispatchABI.h"
 
-#define ENTRY_STUB_ALIGN 16
+#define ENTRY_STUB_ALIGN 32
 #if !defined(GLDISPATCH_PAGE_SIZE)
 #define GLDISPATCH_PAGE_SIZE 4096
 #endif
@@ -55,9 +55,13 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n" \
     func ":\n"
 
-#define STUB_ASM_CODE(slot)      \
-    "call x86_current_tls\n\t"    \
-    "movl %gs:(%eax), %eax\n\t"   \
+#define STUB_ASM_CODE(slot)                             \
+    "call 1f\n\t"                                       \
+    "1:\n\t"                                            \
+    "popl %eax\n\t"                                     \
+    "addl $_GLOBAL_OFFSET_TABLE_+[.-1b], %eax\n\t"      \
+    "movl _glapi_tls_Current@GOTNTPOFF(%eax), %eax\n\t" \
+    "movl %gs:(%eax), %eax\n\t"                         \
     "jmp *(4 * " slot ")(%eax)"
 
 #define MAPI_TMP_STUB_ASM_GCC
