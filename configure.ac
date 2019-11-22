@@ -366,6 +366,10 @@ AS_IF([test "x$GLDISPATCH_PAGE_SIZE" != "x"],
       [AC_DEFINE_UNQUOTED([GLDISPATCH_PAGE_SIZE], [$GLDISPATCH_PAGE_SIZE],
       [Page size to align static dispatch stubs.])])
 
+# Set EGL_NO_X11 unconditionally. Libglvnd doesn't make any assumptions about
+# native display or drawable types, so we don't need X11-specific typedefs for
+# them.
+DEFINES="$DEFINES -DEGL_NO_X11"
 
 dnl default CFLAGS
 CFLAGS="$CFLAGS -Wall -Werror -include config.h -fvisibility=hidden $DEFINES"
