@@ -60,6 +60,7 @@ void _fini(void)
 #endif
 {
     // Unregister the GLdispatch entrypoints
+    stub_cleanup();
     __glDispatchUnregisterStubCallbacks(patchStubId);
     __glDispatchFini();
 }

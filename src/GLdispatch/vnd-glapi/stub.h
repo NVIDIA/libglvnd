@@ -31,15 +31,14 @@
 #include "entry.h"
 #include "glapi.h"
 
-#if !defined(STATIC_DISPATCH_ONLY)
-
 /**
- * Frees any memory that was allocated for any dynamic stub functions.
+ * Frees any memory that was allocated for the stub functions.
  *
- * This should only be called when the library is unloaded, since any generated
- * functions won't work after this.
+ * This should only be called when the library is unloaded.
  */
-void stub_cleanup_dynamic(void);
+void stub_cleanup(void);
+
+#if !defined(STATIC_DISPATCH_ONLY)
 
 int
 stub_find_public(const char *name);

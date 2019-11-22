@@ -99,37 +99,6 @@
     "3:\n\t"                                          \
     ".xword " slot " * 8\n\t" /* size of (void *) */
 
-/*
- * Bytecode for STUB_ASM_CODE()
- */
-static const uint32_t ENTRY_TEMPLATE[] =
-{
-    0xa9bf03e1, // <ENTRY>:	stp	x1, x0, [sp,#-16]!
-    0x58000240, // <ENTRY+4>:	ldr	x0, <ENTRY+76>
-    0xf9400000, // <ENTRY+8>:	ldr	x0, [x0]
-    0xb40000a0, // <ENTRY+12>:	cbz	x0, <ENTRY+32>
-    0x58000261, // <ENTRY+16>:	ldr	x1, <ENTRY+92>
-    0xf8616810, // <ENTRY+20>:	ldr	x16, [x0,x1]
-    0xa8c103e1, // <ENTRY+24>:	ldp	x1, x0, [sp],#16
-    0xd61f0200, // <ENTRY+28>:	br	x16
-    0xf81f0ffe, // <ENTRY+32>:	str	x30, [sp,#-16]!
-    0xa9bf1be7, // <ENTRY+36>:	stp	x7, x6, [sp,#-16]!
-    0xa9bf13e5, // <ENTRY+40>:	stp	x5, x4, [sp,#-16]!
-    0xa9bf0be3, // <ENTRY+44>:	stp	x3, x2, [sp,#-16]!
-    0x58000120, // <ENTRY+48>:	ldr	x0, <ENTRY+84>
-    0xd63f0000, // <ENTRY+52>:	blr	x0
-    0xa8c10be3, // <ENTRY+56>:	ldp	x3, x2, [sp],#16
-    0xa8c113e5, // <ENTRY+60>:	ldp	x5, x4, [sp],#16
-    0xa8c11be7, // <ENTRY+64>:	ldp	x7, x6, [sp],#16
-    0xf84107fe, // <ENTRY+68>:	ldr	x30, [sp],#16
-    0x17fffff2, // <ENTRY+72>:	b	<ENTRY+16>
-
-    // Offsets that need to be patched
-    0x00000000, 0x00000000, // <ENTRY+76>: _glapi_Current
-    0x00000000, 0x00000000, // <ENTRY+84>: _glapi_get_current
-    0x00000000, 0x00000000, // <ENTRY+92>: slot * sizeof(void*)
-};
-
 __asm__(".section wtext,\"ax\"\n"
         ".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
        ".globl public_entry_start\n"
@@ -148,23 +117,3 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
 const int entry_type = __GLDISPATCH_STUB_AARCH64;
 const int entry_stub_size = ENTRY_STUB_ALIGN;
 
-// The offsets in ENTRY_TEMPLATE that need to be patched.
-static const int TEMPLATE_OFFSET_CURRENT_TABLE     = sizeof(ENTRY_TEMPLATE) - 3*8;
-static const int TEMPLATE_OFFSET_CURRENT_TABLE_GET = sizeof(ENTRY_TEMPLATE) - 2*8;
-static const int TEMPLATE_OFFSET_SLOT              = sizeof(ENTRY_TEMPLATE) - 8;
-
-void entry_generate_default_code(int index, int slot)
-{
-    char *entry = (char *) (public_entry_start + (index * entry_stub_size));
-    memcpy(entry, ENTRY_TEMPLATE, sizeof(ENTRY_TEMPLATE));
-
-    // Patch the slot number and whatever addresses need to be patched.
-    *((uint64_t *)(entry + TEMPLATE_OFFSET_SLOT)) = (uint64_t)(slot * sizeof(mapi_func));
-    *((uint64_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE)) =
-        (uint64_t)_glapi_Current;
-    *((uint64_t *)(entry + TEMPLATE_OFFSET_CURRENT_TABLE_GET)) =
-        (uint64_t)_glapi_get_current;
-
-    // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
-    __builtin___clear_cache(entry, entry + sizeof(ENTRY_TEMPLATE));
-}

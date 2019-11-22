@@ -48,7 +48,7 @@ void
 _glapi_destroy(void)
 {
    u_current_destroy();
-   stub_cleanup_dynamic();
+   stub_cleanup();
 }
 
 void

@@ -78,3 +78,59 @@ void *entry_get_patch_address(int index)
 {
     return (void *) (public_entry_start + (index * entry_stub_size));
 }
+
+void *entry_save_entrypoints(void)
+{
+    size_t size = ((uintptr_t) public_entry_end) - ((uintptr_t) public_entry_start);
+    void *buf = malloc(size);
+    if (buf != NULL) {
+        memcpy(buf, public_entry_start, size);
+    }
+    return buf;
+}
+
+#if defined(USE_ARMV7_ASM) || defined(USE_AARCH64_ASM)
+static void InvalidateCache(void)
+{
+    // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
+    __builtin___clear_cache(public_entry_start, public_entry_end);
+}
+#elif defined(USE_PPC64LE_ASM)
+static void InvalidateCache(void)
+{
+    // Note: We might be able to get away with only invalidating each cache
+    // block, instead of every single 32-bit increment. If that works, we'd
+    // need to query the AT_DCACHEBSIZE and AT_ICACHEBSIZE values at runtime
+    // with getauxval(3).
+    size_t dataBlockSize = 4;
+    size_t instructionBlockSize = 4;
+    char *ptr;
+
+    for (ptr = public_entry_start;
+            (uintptr_t) ptr < (uintptr_t) public_entry_end;
+            ptr += dataBlockSize) {
+        __asm__ __volatile__("dcbst 0, %0" : : "r" (ptr));
+    }
+    __asm__ __volatile__("sync");
+
+    for (ptr = public_entry_start;
+            (uintptr_t) ptr < (uintptr_t) public_entry_end;
+            ptr += instructionBlockSize) {
+        __asm__ __volatile__("icbi 0, %0" : : "r" (ptr));
+    }
+    __asm__ __volatile__("isync");
+}
+#else
+static void InvalidateCache(void)
+{
+    // Nothing to do here.
+}
+#endif
+
+void entry_restore_entrypoints(void *saved)
+{
+    size_t size = ((uintptr_t) public_entry_end) - ((uintptr_t) public_entry_start);
+    memcpy(public_entry_start, saved, size);
+    InvalidateCache();
+}
+

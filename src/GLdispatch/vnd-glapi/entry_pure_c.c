@@ -58,11 +58,6 @@ entry_init_public(void)
 {
 }
 
-void entry_generate_default_code(int index, int slot)
-{
-    assert(0);
-}
-
 mapi_func
 entry_get_public(int index)
 {
@@ -90,4 +85,15 @@ void *entry_get_patch_address(int index)
 {
     assert(!"This should never be called");
     return NULL;
+}
+
+void *entry_save_entrypoints(void)
+{
+    assert(!"This should never be called");
+    return NULL;
+}
+
+void entry_restore_entrypoints(void *saved)
+{
+    assert(!"This should never be called");
 }
