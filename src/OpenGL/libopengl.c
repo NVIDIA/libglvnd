@@ -43,9 +43,6 @@ void __attribute__((constructor)) __libGLInit(void)
 void _init(void)
 #endif
 {
-    // Fix up the static GL entrypoints, if necessary
-    entry_init_public();
-
     __glDispatchInit();
 
     // Register these entrypoints with GLdispatch so they can be

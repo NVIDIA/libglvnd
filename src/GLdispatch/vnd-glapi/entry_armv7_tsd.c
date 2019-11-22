@@ -146,11 +146,6 @@ __asm__(".arm\n\t");
 const int entry_type = __GLDISPATCH_STUB_ARMV7_THUMB;
 const int entry_stub_size = ENTRY_STUB_ALIGN;
 
-void
-entry_init_public(void)
-{
-}
-
 // Note: The rest of these functions could also be used for ARMv7 TLS stubs,
 // once those are implemented.
 

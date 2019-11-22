@@ -51,10 +51,6 @@
  * each entrypoint to force switching to Thumb mode.
  */
 
-void entry_init_public(void)
-{
-}
-
 mapi_func entry_get_public(int index)
 {
     return (mapi_func)(public_entry_start + (index * entry_stub_size));

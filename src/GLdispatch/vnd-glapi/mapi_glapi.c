@@ -41,7 +41,6 @@ void
 _glapi_init(void)
 {
     u_current_init();
-    entry_init_public();
 }
 
 void

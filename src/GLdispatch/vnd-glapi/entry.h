@@ -35,9 +35,6 @@ typedef void (*mapi_func)(void);
 extern const int entry_type;
 extern const int entry_stub_size;
 
-void
-entry_init_public(void);
-
 /**
  * Returns the address of an entrypoint.
  *

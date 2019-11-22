@@ -53,11 +53,6 @@ entry_current_get(void)
 const int entry_type = __GLDISPATCH_STUB_UNKNOWN;
 const int entry_stub_size = 0;
 
-void
-entry_init_public(void)
-{
-}
-
 mapi_func
 entry_get_public(int index)
 {
