@@ -56,18 +56,19 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     func ":\n"
 
 #define STUB_ASM_CODE(slot)         \
-    "push %ebx\n" \
     "call 1f\n" \
     "1:\n" \
-    "popl %ebx\n" \
-    "addl $_GLOBAL_OFFSET_TABLE_+[.-1b], %ebx\n" \
-    "movl _glapi_Current@GOT(%ebx), %eax\n" \
+    "popl %ecx\n" \
+    "addl $_GLOBAL_OFFSET_TABLE_+[.-1b], %ecx\n" \
+    "movl _glapi_Current@GOT(%ecx), %eax\n" \
     "mov (%eax), %eax\n" \
     "testl %eax, %eax\n" \
     "jne 1f\n" \
+    "push %ebx\n" \
+    "movl %ecx, %ebx\n" \
     "call _glapi_get_current@PLT\n" \
+    "popl %ebx\n" \
     "1:\n" \
-    "pop %ebx\n" \
     "jmp *(4 * " slot ")(%eax)\n"
 
 #define MAPI_TMP_STUB_ASM_GCC
