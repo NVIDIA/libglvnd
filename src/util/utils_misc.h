@@ -68,28 +68,6 @@ int glvnd_asprintf(char **strp, const char *fmt, ...);
  */
 int glvnd_vasprintf(char **strp, const char *fmt, va_list args);
 
-/**
- * Allocates executable memory.
- *
- * To avoid having the same page be both writable and executable, this function
- * returns two pointers to the same mapping, one read/write and one
- * read/execute.
- *
- * Depending on the system, \p writePtr and \p execPtr may return the same
- * pointer, mapped as read/write/execute.
- *
- * \param size The number of bytes to allocate.
- * \param[out] writePtr Returns a pointer to the read/write mapping.
- * \param[out] execPtr Returns a pointer to the read/exec mapping.
- * \return Zero on success, non-zero on error.
- */
-int AllocExecPages(size_t size, void **writePtr, void **execPtr);
-
-/**
- * Frees the pages allocated from \p allocExecMem.
- */
-void FreeExecPages(size_t size, void *writePtr, void *execPtr);
-
 /*!
  * Swaps the bytes of an array.
  *
