@@ -107,13 +107,14 @@ static GLboolean enableStaticTest = GL_FALSE;
 static GLboolean enableGeneratedTest = GL_FALSE;
 static GLboolean enablePatching = GL_FALSE;
 static GLboolean forceMultiThreaded = GL_FALSE;
+static GLboolean useLastGenerated = GL_FALSE;
 
 int main(int argc, char **argv)
 {
     int i;
 
     while (1) {
-        int opt = getopt(argc, argv, "sgpt");
+        int opt = getopt(argc, argv, "sgptl");
         if (opt == -1) {
             break;
         }
@@ -129,6 +130,9 @@ int main(int argc, char **argv)
             break;
         case 't':
             forceMultiThreaded = GL_TRUE;
+            break;
+        case 'l':
+            useLastGenerated = GL_TRUE;
             break;
         default:
             return 1;
@@ -163,9 +167,34 @@ int main(int argc, char **argv)
     }
 
     if (enableGeneratedTest) {
+        if (useLastGenerated) {
+            // Get enough dispatch stubs so that the one we test is at the very
+            // end of the dispatch table. On some architectures, loading from a
+            // high index can be more complicated than a low index, so make
+            // sure we got it right.
+            for (i=0; i<4095; i++) {
+                char name[32];
+                snprintf(name, sizeof(name), "glDummyTestPaddingGLVND_%d", i);
+                __GLdispatchProc proc = __glDispatchGetProcAddress(name);
+                if (proc == NULL) {
+                    printf("Can't find padding dispatch function for %d\n", i);
+                    return 1;
+                }
+            }
+        }
         ptr_glDummyTestProc = (pfn_glVertex3fv) __glDispatchGetProcAddress(GENERATED_FUNCTION_NAME);
         if (ptr_glDummyTestProc == NULL) {
             printf("Can't find dispatch function for %s\n", GENERATED_FUNCTION_NAME);
+            return 1;
+        }
+        if (useLastGenerated) {
+            // We should have reached the end of the dispatch table by now, so
+            // another __glDispatchGetProcAddress call should return NULL.
+            __GLdispatchProc proc = __glDispatchGetProcAddress("glDummyTestPaddingGLVND_last");
+            if (proc != NULL) {
+                printf("Got dispatch function past the end of the dispatch table.\n");
+                return 1;
+            }
         }
     }
 
