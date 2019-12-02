@@ -53,12 +53,10 @@ method values:
     Select the vendor that owns the current context.
 """
 
-def _eglFunc(name, method, static=False, public=False, inheader=None, prefix="", extension=None, retval=None):
+def _eglFunc(name, method, inheader, static=False, public=False, prefix="", extension=None, retval=None):
     """
     A convenience function to define an entry in the EGL function list.
     """
-    if (inheader == None):
-        inheader = (not public)
     values = {
         "method" : method,
         "prefix" : prefix,
@@ -71,10 +69,13 @@ def _eglFunc(name, method, static=False, public=False, inheader=None, prefix="",
     return (name, values)
 
 def _eglCore(name, method, **kwargs):
-    return _eglFunc(name, method, public=True, **kwargs)
+    return _eglFunc(name, method, public=True, inheader=False, **kwargs)
 
-def _eglExt(name, method, **kwargs):
-    return _eglFunc(name, method, public=False, **kwargs)
+def _eglExt(name, method, static=None, **kwargs):
+    if (static is None):
+        static = (method != "custom")
+    inheader = not static
+    return _eglFunc(name, method, static=static, inheader=inheader, public=False, **kwargs)
 
 EGL_FUNCTIONS = (
     # EGL_VERSION_1_0

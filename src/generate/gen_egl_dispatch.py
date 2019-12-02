@@ -156,7 +156,7 @@ def generateDispatchFunc(func, eglFunc):
 
     if (eglFunc.get("static")):
         text += "static "
-    else:
+    elif (eglFunc.get("public")):
         text += "PUBLIC "
     text += r"""{f.rt} EGLAPIENTRY {ef[prefix]}{f.name}({f.decArgs})
 {{
