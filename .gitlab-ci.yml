@@ -1,7 +1,7 @@
 # vim: set expandtab shiftwidth=2 tabstop=2 textwidth=0:
 
 variables:
-  UBUNTU_TAG: "2019-10-28-01"
+  UBUNTU_TAG: "2019-12-03-01"
   UBUNTU_VERSION: "18.04"
   UBUNTU_CONTAINER_IMAGE: "$CI_REGISTRY_IMAGE/ubuntu/$UBUNTU_VERSION:$UBUNTU_TAG"
   UBUNTU_EXEC: "bash .gitlab-ci/ubuntu_install.sh"
@@ -9,7 +9,7 @@ variables:
 # Include the templates to create an image to run the tests.
 include:
   - project: 'wayland/ci-templates'
-    ref: 1f7f57c64ff4ebbf7292e3b7a13600518b8cb24c
+    ref: b4b098a707c8f39d18f1a98d4bcbe65372ff9e17
     file: '/templates/ubuntu.yml'
 
 stages:
