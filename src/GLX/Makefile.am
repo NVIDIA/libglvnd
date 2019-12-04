@@ -83,3 +83,14 @@ libGLX_la_SOURCES = \
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = glx.pc
+
+AM_TESTS_ENVIRONMENT = \
+	TOP_SRCDIR='$(top_srcdir)' \
+	TOP_BUILDDIR='$(top_builddir)' \
+	NM='$(NM)' \
+	PYTHON='$(PYTHON)'
+TESTS = glx-symbol-check.sh
+
+EXTRA_DIST += \
+	glx-symbol-check.sh \
+	glx.symbols

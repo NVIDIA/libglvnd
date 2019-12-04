@@ -28,6 +28,7 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_PROG_MKDIR_P
 PKG_PROG_PKG_CONFIG
+AC_PROG_NM
 
 # The tarball from "make dist" already contains all of the generated files. If
 # we're building from that, then we won't need Python.
