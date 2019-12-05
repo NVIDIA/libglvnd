@@ -1,7 +1,7 @@
 # vim: set expandtab shiftwidth=2 tabstop=2 textwidth=0:
 
 variables:
-  UBUNTU_TAG: "2019-12-03-01"
+  UBUNTU_TAG: "2019-12-05-01"
   UBUNTU_VERSION: "18.04"
   UBUNTU_CONTAINER_IMAGE: "$CI_REGISTRY_IMAGE/ubuntu/$UBUNTU_VERSION:$UBUNTU_TAG"
   UBUNTU_EXEC: "bash .gitlab-ci/ubuntu_install.sh"
@@ -38,8 +38,6 @@ build-distcheck:
 .build-check:
   stage: build
   image: $UBUNTU_CONTAINER_IMAGE
-  script:
-    - bash .gitlab-ci/run_build.sh
   only:
     changes:
       - src/GLdispatch/vnd-glapi/**
@@ -48,33 +46,78 @@ build-distcheck:
       - .gitlab-ci.yml
       - .gitlab-ci/**
 
-build-i386:
+.build-check-at:
   extends:
     - .build-check
+  script:
+    - bash .gitlab-ci/run_build.sh
+
+.build-check-meson:
+  extends:
+    - .build-check
+  script:
+    - bash .gitlab-ci/run_meson.sh
+  artifacts:
+    when: always
+    paths:
+      - build/meson-logs/*.txt
+
+build-i386:
+  extends:
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --build=i686-pc-linux-gnu CFLAGS=-m32
 
+build-i386-meson:
+  extends:
+    - .build-check-meson
+  variables:
+    CONFIGURE_OPTIONS: --cross-file .gitlab-ci/i686-linux-gnu
+
 build-x86-64-tsd:
   extends:
-    - .build-check
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --disable-tls
 
+build-x86_64-tsd-meson:
+  extends:
+    - .build-check-meson
+  variables:
+    CONFIGURE_OPTIONS: -Dtls=disabled
+
 build-i386-tsd:
   extends:
-    - .build-check
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --build=i686-pc-linux-gnu CFLAGS=-m32 --disable-tls
 
+build-i386-tsd-meson:
+  extends:
+    - .build-check-meson
+  variables:
+    CONFIGURE_OPTIONS: -Dtls=disabled --cross-file .gitlab-ci/i686-linux-gnu
+
 build-pure-c-tls:
   extends:
-    - .build-check
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --disable-asm
 
+build-pure-c-tls-meson:
+  extends:
+    - .build-check-meson
+  variables:
+    CONFIGURE_OPTIONS: -Dasm=disabled
+
 build-pure-c-tsd:
   extends:
-    - .build-check
+    - .build-check-at
   variables:
     CONFIGURE_OPTIONS: --disable-asm --disable-tls
 
+build-pure-c-tld-meson:
+  extends:
+    - .build-check-meson
+  variables:
+    CONFIGURE_OPTIONS: -Dasm=disabled -Dtls=disabled

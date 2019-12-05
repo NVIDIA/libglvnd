@@ -30,7 +30,9 @@ EXTRA_DIST = \
 	generate/xml/gl.xml \
 	generate/xml/gl_other.xml \
 	generate/xml/glx.xml \
-	generate/xml/glx_other.xml
+	generate/xml/glx_other.xml \
+	generate/meson.build \
+	meson.build
 
 clean-local:
 	rm -f generate/*.pyc

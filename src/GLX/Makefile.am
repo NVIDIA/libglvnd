@@ -93,4 +93,5 @@ TESTS = glx-symbol-check.sh
 
 EXTRA_DIST += \
 	glx-symbol-check.sh \
-	glx.symbols
+	glx.symbols \
+	meson.build

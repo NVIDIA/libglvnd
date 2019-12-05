@@ -50,4 +50,5 @@ TESTS = glesv2-symbol-check.sh
 
 EXTRA_DIST = \
 	glesv2-symbol-check.sh \
-	glesv2.symbols
+	glesv2.symbols \
+	meson.build

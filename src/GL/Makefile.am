@@ -83,4 +83,5 @@ pkgconfig_DATA = gl.pc
 
 EXTRA_DIST = \
 	gl-symbol-check.sh \
-	gl.symbols
+	gl.symbols \
+	meson.build

@@ -76,3 +76,4 @@ else
 noinst_HEADERS += $(EGL_HEADER_FILES)
 endif
 
+EXTRA_DIST = meson.build

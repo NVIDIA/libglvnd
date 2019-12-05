@@ -120,3 +120,4 @@ g_glapi_mapi_glesv2_tmp.h : $(glapi_gen_mapi_deps)
 endif
 
 CLEANFILES = $(BUILT_SOURCES)
+EXTRA_DIST = meson.build
