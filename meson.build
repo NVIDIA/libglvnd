@@ -46,13 +46,7 @@ if not with_asm.disabled()
   if (host_machine.cpu_family() == 'x86' and
       ['gnu', 'freebsd', 'dragonfly', 'linux',
        'netbsd'].contains(host_machine.system()))
-    add_project_arguments(
-      '-DUSE_X86_ASM',
-      '-DUSE_MMX_ASM',
-      '-DUSE_3DNOW_ASM',
-      '-DUSE_SSE_ASM',
-      language : 'c',
-    )
+    add_project_arguments('-DUSE_X86_ASM', language : 'c')
   elif (host_machine.cpu_family() == 'x86_64' and
         ['freebsd', 'dragonfly', 'linux',
          'netbsd'].contains(host_machine.system()))

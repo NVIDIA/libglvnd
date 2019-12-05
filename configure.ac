@@ -143,7 +143,7 @@ if test "x$enable_asm" = xyes; then
 
     case "$asm_arch" in
     x86)
-        DEFINES="$DEFINES -DUSE_X86_ASM -DUSE_MMX_ASM -DUSE_3DNOW_ASM -DUSE_SSE_ASM"
+        DEFINES="$DEFINES -DUSE_X86_ASM"
         AC_MSG_RESULT([yes, x86])
         ;;
     x86_64)
