@@ -13,6 +13,9 @@ Both GLX and EGL are supported, in any combination with OpenGL and OpenGL ES.
 
 libglvnd was originally described in Andy Ritger's OpenGL ABI proposal [1].
 
+The official repository for libglvnd is hosted on FreeDesktop.org's GitLab:
+https://gitlab.freedesktop.org/glvnd/libglvnd
+
 
 Building the library
 ----------------------
