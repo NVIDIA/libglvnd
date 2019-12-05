@@ -35,6 +35,10 @@
 #include "table.h"
 #include "utils_misc.h"
 
+#if !defined(STATIC_DISPATCH_ONLY)
+static void stub_cleanup_dynamic(void);
+#endif
+
 struct mapi_stub {
     /*!
      * The name of the stub function.
@@ -43,6 +47,8 @@ struct mapi_stub {
 
     int slot;
 };
+
+static void *savedEntrypoints = NULL;
 
 /* define public_stubs */
 #define MAPI_TMP_PUBLIC_STUBS
@@ -82,6 +88,16 @@ stub_find_public(const char *name)
     } else {
         return -1;
     }
+}
+
+void stub_cleanup(void)
+{
+    free(savedEntrypoints);
+    savedEntrypoints = NULL;
+
+#if !defined(STATIC_DISPATCH_ONLY)
+    stub_cleanup_dynamic();
+#endif
 }
 
 #if !defined(STATIC_DISPATCH_ONLY)
@@ -200,11 +216,20 @@ static int stub_allow_override(void)
 
 static GLboolean stubStartPatch(void)
 {
+    assert(savedEntrypoints == NULL);
+
     if (!stub_allow_override()) {
         return GL_FALSE;
     }
 
+    savedEntrypoints = entry_save_entrypoints();
+    if (savedEntrypoints == NULL) {
+        return GL_FALSE;
+    }
+
     if (!entry_patch_start()) {
+        free(savedEntrypoints);
+        savedEntrypoints = NULL;
         return GL_FALSE;
     }
 
@@ -218,20 +243,13 @@ static void stubFinishPatch(void)
 
 static void stubRestoreFuncsInternal(void)
 {
-    int i;
+    assert(savedEntrypoints != NULL);
 
     assert(stub_allow_override());
 
-    for (i = 0; i < ARRAY_LEN(public_stubs); i++) {
-        entry_generate_default_code(i, public_stubs[i].slot);
-    }
-
-#if !defined(STATIC_DISPATCH_ONLY)
-    for (i=0; i<num_dynamic_stubs; i++) {
-        int slot = ARRAY_LEN(public_stubs) + i;
-        entry_generate_default_code(slot, slot);
-    }
-#endif
+    entry_restore_entrypoints(savedEntrypoints);
+    free(savedEntrypoints);
+    savedEntrypoints = NULL;
 }
 
 static GLboolean stubRestoreFuncs(void)

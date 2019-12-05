@@ -41,14 +41,13 @@ void
 _glapi_init(void)
 {
     u_current_init();
-    entry_init_public();
 }
 
 void
 _glapi_destroy(void)
 {
    u_current_destroy();
-   stub_cleanup_dynamic();
+   stub_cleanup();
 }
 
 void

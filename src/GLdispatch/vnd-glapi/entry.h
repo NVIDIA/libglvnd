@@ -35,9 +35,6 @@ typedef void (*mapi_func)(void);
 extern const int entry_type;
 extern const int entry_stub_size;
 
-void
-entry_init_public(void);
-
 /**
  * Returns the address of an entrypoint.
  *
@@ -54,14 +51,14 @@ mapi_func
 entry_get_public(int index);
 
 /**
- * Restores the original code for a dispatch stub. This is used to unpatch the
- * dispatch stubs after a vendor library patched them.
- *
- * \param index The index of the dispatch stub.
- * \param slot The slot in the dispatch table that the stub should call
- *      through.
+ * Saves and returns a copy of all of the entrypoints.
  */
-void entry_generate_default_code(int index, int slot);
+void *entry_save_entrypoints(void);
+
+/**
+ * Restores the entrypoints that were saved with entry_save_entrypoints.
+ */
+void entry_restore_entrypoints(void *saved);
 
 /**
  * Called before starting entrypoint patching.
