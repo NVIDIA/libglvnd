@@ -121,7 +121,6 @@ if use_asm
     gl_dispatch_type = 'ppc64le_@0@'.format(have_tls ? 'tls' : 'tsd')
   endif
 endif
-add_project_arguments('-DGLDISPATCH_TYPE_@0@'.format(gl_dispatch_type.to_upper()), language : ['c'])
 
 if cc.has_function_attribute('constructor')
   add_project_arguments('-DUSE_ATTRIBUTE_CONSTRUCTOR', language : ['c'])
