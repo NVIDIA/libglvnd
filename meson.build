@@ -121,6 +121,7 @@ if use_asm
     gl_dispatch_type = 'ppc64le_@0@'.format(have_tls ? 'tls' : 'tsd')
   endif
 endif
+message('Using dispatch stub type: @0@'.format(gl_dispatch_type))
 
 if cc.has_function_attribute('constructor')
   add_project_arguments('-DUSE_ATTRIBUTE_CONSTRUCTOR', language : ['c'])
