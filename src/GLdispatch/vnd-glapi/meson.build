@@ -39,7 +39,7 @@ if gl_dispatch_type == 'pure_c'
   _entry_files += 'entry_pure_c.c'
 else
   _entry_files += 'entry_common.c'
-  if gl_dispatch_type != 'arm_tsd'
+  if gl_dispatch_type != 'armv7_tsd'
     _entry_files += 'entry_simple_asm.c'
   endif
   if gl_dispatch_type == 'x86_tls'
@@ -50,7 +50,7 @@ else
     _entry_files += 'entry_x86_64_tls.c'
   elif gl_dispatch_type == 'x86_64_tsd'
     _entry_files += 'entry_x86_64_tsd.c'
-  elif gl_dispatch_type == 'arm_tsd'
+  elif gl_dispatch_type == 'armv7_tsd'
     _entry_files += 'entry_armv7_tsd.c'
   elif gl_dispatch_type == 'aarch64_tsd'
     _entry_files += 'entry_aarch64_tsd.c'
