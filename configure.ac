@@ -137,8 +137,15 @@ if test "x$enable_asm" = xyes; then
         asm_arch=aarch64
         ;;
     powerpc64le)
-        asm_arch=ppc64le
+        asm_arch=ppc64
         ;;
+    powerpc64)
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+        #if !defined(_CALL_ELF) || (_CALL_ELF) == 1
+        #  error "ELFv1 ABI"
+        #endif
+        ])],
+        [asm_arch=ppc64],[])
     esac
 
     case "$asm_arch" in
@@ -158,9 +165,9 @@ if test "x$enable_asm" = xyes; then
         DEFINES="$DEFINES -DUSE_AARCH64_ASM"
         AC_MSG_RESULT([yes, aarch64])
         ;;
-    ppc64le)
-        DEFINES="$DEFINES -DUSE_PPC64LE_ASM"
-        AC_MSG_RESULT([yes, ppc64le])
+    ppc64)
+        DEFINES="$DEFINES -DUSE_PPC64_ASM"
+        AC_MSG_RESULT([yes, ppc64])
         ;;
     *)
         AC_MSG_RESULT([no, platform '$host_cpu' not supported])
@@ -240,13 +247,13 @@ xaarch64)
     gldispatch_entry_type=aarch64_tsd
     gldispatch_use_tls=no
     ;;
-xppc64le)
-    # For ppc64le, allow both the TLS and TSD stubs for now.
+xppc64)
+    # For ppc64, allow both the TLS and TSD stubs for now.
     if test "x$HAVE_INIT_TLS" = "xyes" ; then
-        gldispatch_entry_type=ppc64le_tls
+        gldispatch_entry_type=ppc64_tls
         gldispatch_use_tls=yes
     else
-        gldispatch_entry_type=ppc64le_tsd
+        gldispatch_entry_type=ppc64_tsd
         gldispatch_use_tls=no
     fi
     ;;
@@ -266,8 +273,8 @@ AM_CONDITIONAL([GLDISPATCH_TYPE_X86_TLS], [test "x$gldispatch_entry_type" = "xx8
 AM_CONDITIONAL([GLDISPATCH_TYPE_X86_TSD], [test "x$gldispatch_entry_type" = "xx86_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_X86_64_TLS], [test "x$gldispatch_entry_type" = "xx86_64_tls"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_X86_64_TSD], [test "x$gldispatch_entry_type" = "xx86_64_tsd"])
-AM_CONDITIONAL([GLDISPATCH_TYPE_PPC64LE_TLS], [test "x$gldispatch_entry_type" = "xppc64le_tls"])
-AM_CONDITIONAL([GLDISPATCH_TYPE_PPC64LE_TSD], [test "x$gldispatch_entry_type" = "xppc64le_tsd"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_PPC64_TLS], [test "x$gldispatch_entry_type" = "xppc64_tls"])
+AM_CONDITIONAL([GLDISPATCH_TYPE_PPC64_TSD], [test "x$gldispatch_entry_type" = "xppc64_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_ARMV7_TSD], [test "x$gldispatch_entry_type" = "xarmv7_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_AARCH64_TSD], [test "x$gldispatch_entry_type" = "xaarch64_tsd"])
 AM_CONDITIONAL([GLDISPATCH_TYPE_PURE_C], [test "x$gldispatch_entry_type" = "xpure_c"])

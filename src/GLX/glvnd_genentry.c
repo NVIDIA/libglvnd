@@ -97,7 +97,7 @@ extern char glx_entrypoint_end[];
     "ldr x16, [x16, #:lo12:(entrypointFunctions + " slot "*8)]\n" \
     "br x16\n"
 
-#elif defined(USE_PPC64LE_ASM)
+#elif defined(USE_PPC64_ASM) && defined(_CALL_ELF) && (_CALL_ELF == 2)
 
 #define STUB_SIZE 32
 #define STUB_ASM_ARCH(slot) \
