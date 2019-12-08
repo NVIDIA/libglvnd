@@ -54,10 +54,10 @@ else
     _entry_files += 'entry_armv7_tsd.c'
   elif gl_dispatch_type == 'aarch64_tsd'
     _entry_files += 'entry_aarch64_tsd.c'
-  elif gl_dispatch_type == 'ppc64le_tls'
-    _entry_files += 'entry_ppc64le_tls.c'
-  elif gl_dispatch_type == 'ppc64le_tsd'
-    _entry_files += 'entry_ppc64le_tsd.c'
+  elif gl_dispatch_type == 'ppc64_tls'
+    _entry_files += 'entry_ppc64_tls.c'
+  elif gl_dispatch_type == 'ppc64_tsd'
+    _entry_files += 'entry_ppc64_tsd.c'
   else
     error('No matching ASM file for @0@'.format(gl_dispatch_type))
   endif

@@ -95,9 +95,14 @@ enum {
     __GLDISPATCH_STUB_X32,
 
     /*!
-     * Used for stubs on PPC64LE systems.
+     * Used for stubs on PPC64 systems.
      */
-    __GLDISPATCH_STUB_PPC64LE,
+    __GLDISPATCH_STUB_PPC64,
+
+    /*!
+     * Used for stubs on PPC64LE systems. Same as PPC64, for compatibility.
+     */
+    __GLDISPATCH_STUB_PPC64LE = __GLDISPATCH_STUB_PPC64,
 };
 
 /*!

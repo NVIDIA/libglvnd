@@ -34,6 +34,9 @@
 #include "glapi.h"
 #include "glvnd/GLdispatchABI.h"
 
+#if !defined(_CALL_ELF) || (_CALL_ELF == 1)
+#error "ELFv1 ABI is not supported"
+#endif
 
 // NOTE: These must be powers of two:
 #define ENTRY_STUB_ALIGN 256
@@ -115,7 +118,7 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
         "public_entry_end:");
 __asm__(".text\n");
 
-const int entry_type = __GLDISPATCH_STUB_PPC64LE;
+const int entry_type = __GLDISPATCH_STUB_PPC64;
 const int entry_stub_size = ENTRY_STUB_ALIGN;
 
 static const uint32_t ENTRY_TEMPLATE[] =
