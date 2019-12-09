@@ -11,12 +11,5 @@ cd build
 
 make V=1 VERBOSE=1
 
-Xvfb :99 &
+xvfb-run --auto-servernum make check V=1 VERBOSE=1
 
-set +e
-DISPLAY=:99 make check V=1 VERBOSE=1
-RESULT=$?
-set -e
-
-kill %Xvfb
-exit $RESULT
