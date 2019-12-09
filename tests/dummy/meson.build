@@ -39,7 +39,7 @@ if with_glx
     ['GLX_dummy.c'],
     include_directories : [inc_dispatch, inc_glx, inc_include],
     link_with: [libpatchentrypoints],
-    dependencies : [idep_trace, idep_utils_misc],
+    dependencies : [idep_trace, idep_utils_misc, dep_x11],
   )
 
   # The ICD loader expects to load a .so.0, but meson generates the .X.Y.Z
