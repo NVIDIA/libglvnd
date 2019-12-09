@@ -95,7 +95,7 @@ static void InvalidateCache(void)
     // See http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code
     __builtin___clear_cache(public_entry_start, public_entry_end);
 }
-#elif defined(USE_PPC64LE_ASM)
+#elif defined(USE_PPC64_ASM)
 static void InvalidateCache(void)
 {
     // Note: We might be able to get away with only invalidating each cache

@@ -55,8 +55,8 @@ if not with_asm.disabled()
     add_project_arguments('-DUSE_ARMV7_ASM', language : 'c')
   elif host_machine.cpu_family() == 'aarch64'
     add_project_arguments('-DUSE_AARCH64_ASM', language : 'c')
-  elif host_machine.cpu_family() == 'ppc64' and host_machine.endian() == 'little'
-    add_project_arguments('-DUSE_PPC64LE_ASM', language : 'c')
+  elif host_machine.cpu_family() == 'ppc64' and cc.get_define('_CALL_ELF') == '2'
+    add_project_arguments('-DUSE_PPC64_ASM', language : 'c')
   elif with_asm.enabled()
     error('No ASM available for @0@ (@1@ endian)'.format(host_machine.system(), host_machine.endian()))
   else
@@ -117,8 +117,8 @@ if use_asm
     gl_dispatch_type = 'armv7_tsd'
   elif host_machine.cpu_family() == 'aarch64'
     gl_dispatch_type = 'aarch64_tsd'
-  elif host_machine.cpu_family() == 'ppc64' and host_machine.endian() == 'little'
-    gl_dispatch_type = 'ppc64le_@0@'.format(have_tls ? 'tls' : 'tsd')
+  elif host_machine.cpu_family() == 'ppc64'
+    gl_dispatch_type = 'ppc64_@0@'.format(have_tls ? 'tls' : 'tsd')
   endif
 endif
 message('Using dispatch stub type: @0@'.format(gl_dispatch_type))

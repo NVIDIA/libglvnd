@@ -164,7 +164,7 @@ static void patch_aarch64(char *writeEntry, const char *execEntry,
 #endif
 }
 
-static void patch_ppc64le(char *writeEntry, const char *execEntry,
+static void patch_ppc64(char *writeEntry, const char *execEntry,
         int stubSize, void *incrementPtr)
 {
 #if defined(__PPC64__)
@@ -176,9 +176,9 @@ static void patch_ppc64le(char *writeEntry, const char *execEntry,
         // 1000:
         0x7D2903A6,     //  mtctr 9
         0xE96C0020,     //  ld    11, 9000f-1000b(12)
-        0xE92B0000,     //  ld    9, 0(11)
+        0x812B0000,     //  lwz   9, 0(11)
         0x39290001,     //  addi  9, 9, 1
-        0xF92B0000,     //  std   9, 0(11)
+        0x912B0000,     //  stw   9, 0(11)
         0x7D2902A6,     //  mfctr 9
         0x4E800020,     //  blr
         0x60000000,     //  nop
@@ -220,7 +220,7 @@ GLboolean dummyCheckPatchSupported(int type, int stubSize)
         case __GLDISPATCH_STUB_ARMV7_THUMB:
         case __GLDISPATCH_STUB_AARCH64:
         case __GLDISPATCH_STUB_X32:
-        case __GLDISPATCH_STUB_PPC64LE:
+        case __GLDISPATCH_STUB_PPC64:
             return GL_TRUE;
         default:
             return GL_FALSE;
@@ -253,8 +253,8 @@ GLboolean dummyPatchFunction(int type, int stubSize,
             case __GLDISPATCH_STUB_AARCH64:
                 patch_aarch64(writeAddr, execAddr, stubSize, incrementPtr);
                 break;
-            case __GLDISPATCH_STUB_PPC64LE:
-                patch_ppc64le(writeAddr, execAddr, stubSize, incrementPtr);
+            case __GLDISPATCH_STUB_PPC64:
+                patch_ppc64(writeAddr, execAddr, stubSize, incrementPtr);
                 break;
             default:
                 assert(0);
