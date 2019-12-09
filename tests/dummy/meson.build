@@ -34,7 +34,7 @@ libpatchentrypoints = static_library(
 prog_cp = find_program('cp')
 
 if with_glx
-  libGLX_dummy = shared_module(
+  libGLX_dummy = shared_library(
     'GLX_dummy',
     ['GLX_dummy.c'],
     include_directories : [inc_dispatch, inc_glx, inc_include],
@@ -56,7 +56,7 @@ endif
 
 if get_option('egl')
   foreach v : ['0', '1']
-    _lib = shared_module(
+    _lib = shared_library(
       'EGL_dummy' + v,
       ['EGL_dummy.c'],
       c_args : ['-DDUMMY_VENDOR_NAME="dummy@0@"'.format(v)],
