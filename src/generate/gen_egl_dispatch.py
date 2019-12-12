@@ -7,9 +7,9 @@ The list of functions and arguments is read from the Khronos's XML files, with
 additional information defined in the module eglFunctionList.
 """
 
-import sys
 import argparse
 import collections
+import sys
 import textwrap
 
 import eglFunctionList
