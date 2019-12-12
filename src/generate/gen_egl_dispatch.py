@@ -108,6 +108,7 @@ def generateSource(functions):
     text = ""
     text += '#include "egldispatchstubs.h"\n'
     text += '#include "g_egldispatchstubs.h"\n'
+    text += '#include <stddef.h>\n'
     text += "\n"
 
     for (func, eglFunc) in functions:
