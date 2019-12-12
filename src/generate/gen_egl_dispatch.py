@@ -37,9 +37,9 @@ def main():
     # Sort the function list by name.
     functions = sorted(functions, key=lambda f: f[0].name)
 
-    if (target == "header"):
+    if target == "header":
         text = generateHeader(functions)
-    elif (target == "source"):
+    elif target == "source":
         text = generateSource(functions)
     else:
         raise ValueError("Invalid target: %r" % (target,))
@@ -47,21 +47,21 @@ def main():
 
 def fixupEglFunc(func, eglFunc):
     result = dict(eglFunc)
-    if (result.get("prefix") is None):
+    if result.get("prefix") is None:
         result["prefix"] = ""
 
-    if (result.get("extension") is not None):
+    if result.get("extension") is not None:
         text = "defined(" + result["extension"] + ")"
         result["extension"] = text
 
-    if (result["method"] in ("none", "custom")):
+    if result["method"] in ("none", "custom"):
         return result
 
-    if (result["method"] not in ("display", "device", "current")):
+    if result["method"] not in ("display", "device", "current"):
         raise ValueError("Invalid dispatch method %r for function %r" % (result["method"], func.name))
 
-    if (func.hasReturn()):
-        if (result.get("retval") is None):
+    if func.hasReturn():
+        if result.get("retval") is None:
             result["retval"] = getDefaultReturnValue(func.rt)
 
     return result
@@ -90,7 +90,7 @@ extern "C" {
     text += "};\n"
 
     for (func, eglFunc) in functions:
-        if (eglFunc["inheader"]):
+        if eglFunc["inheader"]:
             text += generateGuardBegin(func, eglFunc)
             text += "{f.rt} EGLAPIENTRY {ex[prefix]}{f.name}({f.decArgs});\n".format(f=func, ex=eglFunc)
             text += generateGuardEnd(func, eglFunc)
@@ -111,7 +111,7 @@ def generateSource(functions):
     text += "\n"
 
     for (func, eglFunc) in functions:
-        if (eglFunc["method"] not in ("custom", "none")):
+        if eglFunc["method"] not in ("custom", "none"):
             text += generateGuardBegin(func, eglFunc)
             text += generateDispatchFunc(func, eglFunc)
             text += generateGuardEnd(func, eglFunc)
@@ -128,7 +128,7 @@ def generateSource(functions):
     text += "const __eglMustCastToProperFunctionPointerType __EGL_DISPATCH_FUNCS[__EGL_DISPATCH_COUNT + 1] = {\n"
     for (func, eglFunc) in functions:
         text += generateGuardBegin(func, eglFunc)
-        if (eglFunc["method"] != "none"):
+        if eglFunc["method"] != "none":
             text += "    (__eglMustCastToProperFunctionPointerType) " + eglFunc.get("prefix", "") + func.name + ",\n"
         else:
             text += "    NULL, // " + func.name + "\n"
@@ -140,13 +140,13 @@ def generateSource(functions):
 
 def generateGuardBegin(func, eglFunc):
     ext = eglFunc.get("extension")
-    if (ext is not None):
+    if ext is not None:
         return "#if " + ext + "\n"
     else:
         return ""
 
 def generateGuardEnd(func, eglFunc):
-    if (eglFunc.get("extension") is not None):
+    if eglFunc.get("extension") is not None:
         return "#endif\n"
     else:
         return ""
@@ -154,34 +154,34 @@ def generateGuardEnd(func, eglFunc):
 def generateDispatchFunc(func, eglFunc):
     text = ""
 
-    if (eglFunc.get("static")):
+    if eglFunc.get("static"):
         text += "static "
-    elif (eglFunc.get("public")):
+    elif eglFunc.get("public"):
         text += "PUBLIC "
     text += r"""{f.rt} EGLAPIENTRY {ef[prefix]}{f.name}({f.decArgs})
 {{
     typedef {f.rt} EGLAPIENTRY (* _pfn_{f.name})({f.decArgs});
 """.format(f=func, ef=eglFunc)
 
-    if (func.hasReturn()):
+    if func.hasReturn():
         text += "    {f.rt} _ret = {ef[retval]};\n".format(f=func, ef=eglFunc)
 
     text += "    _pfn_{f.name} _ptr_{f.name} = (_pfn_{f.name}) ".format(f=func)
-    if (eglFunc["method"] == "current"):
+    if eglFunc["method"] == "current":
         text += "__eglDispatchFetchByCurrent(__EGL_DISPATCH_{f.name});\n".format(f=func)
 
-    elif (eglFunc["method"] in ("display", "device")):
-        if (eglFunc["method"] == "display"):
+    elif eglFunc["method"] in ("display", "device"):
+        if eglFunc["method"] == "display":
             lookupFunc = "__eglDispatchFetchByDisplay"
             lookupType = "EGLDisplay"
         else:
-            assert(eglFunc["method"] == "device")
+            assert eglFunc["method"] == "device"
             lookupFunc = "__eglDispatchFetchByDevice"
             lookupType = "EGLDeviceEXT"
 
         lookupArg = None
         for arg in func.args:
-            if (arg.type == lookupType):
+            if arg.type == lookupType:
                 lookupArg = arg.name
                 break
         if lookupArg is None:
@@ -194,30 +194,30 @@ def generateDispatchFunc(func, eglFunc):
 
     text += "    if(_ptr_{f.name} != NULL) {{\n".format(f=func)
     text += "        "
-    if (func.hasReturn()):
+    if func.hasReturn():
         text += "_ret = "
     text += "_ptr_{f.name}({f.callArgs});\n".format(f=func)
     text += "    }\n"
 
-    if (func.hasReturn()):
+    if func.hasReturn():
         text += "    return _ret;\n"
     text += "}\n"
     return text
 
 def getDefaultReturnValue(typename):
-    if (typename.endswith("*")):
+    if typename.endswith("*"):
         return "NULL"
-    elif (typename == "EGLDisplay"):
+    elif typename == "EGLDisplay":
         return "EGL_NO_DISPLAY"
-    elif (typename == "EGLContext"):
+    elif typename == "EGLContext":
         return "EGL_NO_CONTEXT"
-    elif (typename == "EGLSurface"):
+    elif typename == "EGLSurface":
         return "EGL_NO_SURFACE"
-    elif (typename == "EGLBoolean"):
+    elif typename == "EGLBoolean":
         return "EGL_FALSE";
 
     return "0"
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()
 
