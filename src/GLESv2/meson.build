@@ -40,7 +40,7 @@ libGLESv2 = shared_library(
 pkg.generate(
   libGLESv2,
   filebase : 'glesv2',
-  description : 'OpenGL ES  v2/v3 library and headers.',
+  description : 'OpenGL ES v2/v3 library and headers.',
   version : '3.2',
 )
 
