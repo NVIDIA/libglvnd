@@ -10,6 +10,7 @@ additional information defined in the module eglFunctionList.
 import sys
 import collections
 import imp
+import textwrap
 
 import genCommon
 
@@ -67,19 +68,19 @@ def fixupEglFunc(func, eglFunc):
     return result
 
 def generateHeader(functions):
-    text = r"""
-#ifndef G_EGLDISPATCH_STUBS_H
-#define G_EGLDISPATCH_STUBS_H
+    text = textwrap.dedent(r"""
+    #ifndef G_EGLDISPATCH_STUBS_H
+    #define G_EGLDISPATCH_STUBS_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
 
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include "glvnd/libeglabi.h"
+    #include <EGL/egl.h>
+    #include <EGL/eglext.h>
+    #include "glvnd/libeglabi.h"
 
-""".lstrip("\n")
+    """.lstrip("\n"))
 
     text += "enum {\n"
     for (func, eglFunc) in functions:
@@ -95,12 +96,12 @@ extern "C" {
             text += "{f.rt} EGLAPIENTRY {ex[prefix]}{f.name}({f.decArgs});\n".format(f=func, ex=eglFunc)
             text += generateGuardEnd(func, eglFunc)
 
-    text += r"""
-#ifdef __cplusplus
-}
-#endif
-#endif // G_EGLDISPATCH_STUBS_H
-"""
+    text += textwrap.dedent(r"""
+    #ifdef __cplusplus
+    }
+    #endif
+    #endif // G_EGLDISPATCH_STUBS_H
+    """)
     return text
 
 def generateSource(functions):
@@ -158,10 +159,12 @@ def generateDispatchFunc(func, eglFunc):
         text += "static "
     elif eglFunc.get("public"):
         text += "PUBLIC "
-    text += r"""{f.rt} EGLAPIENTRY {ef[prefix]}{f.name}({f.decArgs})
-{{
-    typedef {f.rt} EGLAPIENTRY (* _pfn_{f.name})({f.decArgs});
-""".format(f=func, ef=eglFunc)
+    text += textwrap.dedent(
+    r"""
+    {f.rt} EGLAPIENTRY {ef[prefix]}{f.name}({f.decArgs})
+    {{
+        typedef {f.rt} EGLAPIENTRY (* _pfn_{f.name})({f.decArgs});
+    """).lstrip("\n").format(f=func, ef=eglFunc)
 
     if func.hasReturn():
         text += "    {f.rt} _ret = {ef[retval]};\n".format(f=func, ef=eglFunc)
