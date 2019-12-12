@@ -47,10 +47,10 @@ def main():
 
 def fixupEglFunc(func, eglFunc):
     result = dict(eglFunc)
-    if (result.get("prefix") == None):
+    if (result.get("prefix") is None):
         result["prefix"] = ""
 
-    if (result.get("extension") != None):
+    if (result.get("extension") is not None):
         text = "defined(" + result["extension"] + ")"
         result["extension"] = text
 
@@ -61,7 +61,7 @@ def fixupEglFunc(func, eglFunc):
         raise ValueError("Invalid dispatch method %r for function %r" % (result["method"], func.name))
 
     if (func.hasReturn()):
-        if (result.get("retval") == None):
+        if (result.get("retval") is None):
             result["retval"] = getDefaultReturnValue(func.rt)
 
     return result
@@ -140,13 +140,13 @@ def generateSource(functions):
 
 def generateGuardBegin(func, eglFunc):
     ext = eglFunc.get("extension")
-    if (ext != None):
+    if (ext is not None):
         return "#if " + ext + "\n"
     else:
         return ""
 
 def generateGuardEnd(func, eglFunc):
-    if (eglFunc.get("extension") != None):
+    if (eglFunc.get("extension") is not None):
         return "#endif\n"
     else:
         return ""
@@ -184,7 +184,7 @@ def generateDispatchFunc(func, eglFunc):
             if (arg.type == lookupType):
                 lookupArg = arg.name
                 break
-        if (lookupArg == None):
+        if lookupArg is None:
             raise ValueError("Can't find %s argument for function %s" % (lookupType, func.name,))
 
         text += "{lookupFunc}({lookupArg}, __EGL_DISPATCH_{f.name});\n".format(
