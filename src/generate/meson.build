@@ -51,12 +51,12 @@ foreach target : ['header', 'source']
   ext = target == 'header' ? 'h' : 'c'
   _t = custom_target(
     'g_egldispatchstubs.' + ext,
-    input : ['gen_egl_dispatch.py', 'eglFunctionList.py', 'xml/egl.xml'],
+    input : ['gen_egl_dispatch.py', 'xml/egl.xml'],
     output : ['g_egldispatchstubs.' + ext],
     command : [
-      prog_py, '@INPUT0@', target, '@INPUT1@', '@INPUT2@',
+      prog_py, '@INPUT0@', target, '@INPUT1@',
     ],
-    depend_files : files('genCommon.py'),
+    depend_files : files('genCommon.py', 'eglFunctionList.py'),
     capture : true,
   )
 
