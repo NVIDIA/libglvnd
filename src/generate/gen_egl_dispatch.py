@@ -9,23 +9,18 @@ additional information defined in the module eglFunctionList.
 
 import sys
 import collections
-import imp
 import textwrap
 
+import eglFunctionList
 import genCommon
 
 def main():
-    if (len(sys.argv) < 4):
-        print("Usage: %r source|header <function_list> <xml_file> [xml_file...]" % (sys.argv[0],))
+    if (len(sys.argv) < 3):
+        print("Usage: %r source|header <xml_file> [xml_file...]" % (sys.argv[0],))
         sys.exit(2)
 
     target = sys.argv[1]
-    funcListFile = sys.argv[2]
-    xmlFiles = sys.argv[3:]
-
-    # The function list is a Python module, but it's specified on the command
-    # line.
-    eglFunctionList = imp.load_source("eglFunctionList", funcListFile)
+    xmlFiles = sys.argv[2:]
 
     xmlFunctions = genCommon.getFunctions(xmlFiles)
     xmlByName = dict((f.name, f) for f in xmlFunctions)

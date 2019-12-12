@@ -95,10 +95,10 @@ CLEANFILES = $(BUILT_SOURCES)
 
 GENERATE_DISPATCH_SCRIPT = $(top_srcdir)/src/generate/gen_egl_dispatch.py
 GENERATE_LIST_FILES = \
-	$(top_srcdir)/src/generate/eglFunctionList.py \
 	$(top_srcdir)/src/generate/xml/egl.xml
 
 GENERATE_DEPS = \
+	$(top_srcdir)/src/generate/eglFunctionList.py \
 	$(top_srcdir)/src/generate/genCommon.py \
 	$(GENERATE_DISPATCH_SCRIPT) \
 	$(GENERATE_LIST_FILES)
