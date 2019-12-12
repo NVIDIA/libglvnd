@@ -8,6 +8,7 @@ additional information defined in the module eglFunctionList.
 """
 
 import sys
+import argparse
 import collections
 import textwrap
 
@@ -15,14 +16,15 @@ import eglFunctionList
 import genCommon
 
 def main():
-    if (len(sys.argv) < 3):
-        print("Usage: %r source|header <xml_file> [xml_file...]" % (sys.argv[0],))
-        sys.exit(2)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("target", choices=("header", "source"),
+            help="Whether to build the source or header file.")
+    parser.add_argument("xml_files", nargs="+",
+            help="The XML files with the EGL function lists.")
 
-    target = sys.argv[1]
-    xmlFiles = sys.argv[2:]
+    args = parser.parse_args()
 
-    xmlFunctions = genCommon.getFunctions(xmlFiles)
+    xmlFunctions = genCommon.getFunctions(args.xml_files)
     xmlByName = dict((f.name, f) for f in xmlFunctions)
     functions = []
     for (name, eglFunc) in eglFunctionList.EGL_FUNCTIONS:
@@ -33,12 +35,10 @@ def main():
     # Sort the function list by name.
     functions = sorted(functions, key=lambda f: f[0].name)
 
-    if target == "header":
+    if args.target == "header":
         text = generateHeader(functions)
-    elif target == "source":
+    elif args.target == "source":
         text = generateSource(functions)
-    else:
-        raise ValueError("Invalid target: %r" % (target,))
     sys.stdout.write(text)
 
 def fixupEglFunc(func, eglFunc):
