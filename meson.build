@@ -39,6 +39,9 @@ prog_py = import('python').find_installation()
 files_symbols_check = files('bin/symbols-check.py')
 prog_nm = find_program('nm')
 
+message('Host CPU family: @0@'.format(host_machine.cpu_family()))
+message('Host CPU: @0@'.format(host_machine.cpu()))
+
 with_asm = get_option('asm')
 use_asm = false
 if not with_asm.disabled()
