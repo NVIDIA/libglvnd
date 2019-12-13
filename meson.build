@@ -55,7 +55,28 @@ if not with_asm.disabled()
          'netbsd'].contains(host_machine.system()))
     add_project_arguments('-DUSE_X86_64_ASM', language : 'c')
   elif host_machine.cpu_family() == 'arm'
-    add_project_arguments('-DUSE_ARMV7_ASM', language : 'c')
+    # Try to figure out if we're targeting an ARMv7 or something older like
+    # armel. Note that host_machine.cpu() won't help here -- it might still
+    # return "armv7l" or "armv8l". Instead, try checking for compiler macros.
+    if ['gcc', 'clang'].contains(cc.get_id())
+      is_armv7 = cc.compiles('''
+#if !(defined(__ARM_ARCH_7__) \
+        || defined(__ARM_ARCH_7A__) \
+        || defined(__ARM_ARCH_7R__) \
+        || defined(__ARM_ARCH_7M__) \
+        || defined(__ARM_ARCH_7S__) \
+        || (defined(__ARM_ARCH) && __ARM_ARCH >= 7))
+#error "Not ARM7"
+#endif
+      ''', name : 'ARMv7 macros')
+    else
+      is_armv7 = true
+    endif
+    if is_armv7
+      add_project_arguments('-DUSE_ARMV7_ASM', language : 'c')
+    else
+      use_asm = false
+    endif
   elif host_machine.cpu_family() == 'aarch64'
     add_project_arguments('-DUSE_AARCH64_ASM', language : 'c')
   elif host_machine.cpu_family() == 'ppc64' and cc.get_define('_CALL_ELF') == '2'
