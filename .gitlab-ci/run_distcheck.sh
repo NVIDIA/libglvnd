@@ -9,17 +9,11 @@ mkdir build
 cd build
 ../configure
 
-Xvfb :99 &
-
-set +e
-DISPLAY=:99 make distcheck V=1 VERBOSE=1
-RESULT=$?
-set -e
+xvfb-run --auto-servernum make distcheck V=1 VERBOSE=1
 
 # If make distcheck failed don't even bother with the meson check, the tarball
 # may be invalid and it's just a waste
 if [ $RESULT -ne 0 ]; then
-    kill %Xvfb
     exit $RESULT
 fi
 
@@ -32,11 +26,6 @@ mkdir libglvnd
 tar -xf libglvnd-*.tar.gz -C libglvnd --strip-components 1
 pushd libglvnd
 meson builddir --auto-features=enabled
-set +e
-DISPLAY=:99 ninja -C builddir test
-RESULT=$?
-set -e
+xvfb-run --auto-servernum ninja -C builddir test
 popd
 
-kill %Xvfb
-exit $RESULT

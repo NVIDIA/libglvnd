@@ -11,12 +11,4 @@ set -o xtrace
 meson build --unity=on --auto-features=enabled $CONFIGURE_OPTIONS
 ninja -C build
 
-Xvfb :99 &
-
-set +e
-DISPLAY=:99 ninja -C build test
-RESULT=$?
-set -e
-
-kill %Xvfb
-exit $RESULT
+xvfb-run --auto-servernum ninja -C build test
