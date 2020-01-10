@@ -205,5 +205,12 @@ pkg.generate(
   name : 'libglvnd',
   description : 'Vendor-neutral OpenGL dispatch library vendor interface',
   version : meson.project_version(),
+  variables : [
+    # Drivers can use these to know where to install the JSON files to tell
+    # libglvnd to load them. Meson doesn't have a separate datarootdir option,
+    # so juse use datadir for both of these.
+    'datarootdir=${prefix}/' + get_option('datadir'),
+    'datadir=${prefix}/' + get_option('datadir'),
+  ]
 )
 
