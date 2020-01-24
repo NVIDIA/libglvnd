@@ -33,7 +33,6 @@
 #include <X11/Xlib.h>
 #include <X11/Xlibint.h>
 #include <GL/glx.h>
-#include <GL/glxint.h>
 
 #include "GLX_dummy.h"
 #include "glvnd/libglxabi.h"
