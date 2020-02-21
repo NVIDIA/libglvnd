@@ -58,6 +58,7 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
 #ifdef __ILP32__
 
 #define STUB_ASM_CODE(slot)                              \
+    ENDBR                                               \
     "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
     "movl %fs:(%rax), %r11d\n\t"                          \
     "movl 4*" slot "(%r11d), %r11d\n\t"                   \
@@ -66,6 +67,7 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
 #else // __ILP32__
 
 #define STUB_ASM_CODE(slot)                                 \
+    ENDBR                                               \
     "movq _glapi_tls_Current@GOTTPOFF(%rip), %rax\n\t"  \
     "movq %fs:(%rax), %r11\n\t"                              \
     "jmp *(8 * " slot ")(%r11)"
