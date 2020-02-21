@@ -69,6 +69,7 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
  * assume that they're within 2GB of %rip.
  */
 #define STUB_ASM_CODE(slot) \
+    ENDBR \
     "movq _glapi_Current@GOTPCREL(%rip), %rax\n\t" \
     "movq (%rax), %rax\n" \
     "test %rax, %rax\n\t"           \

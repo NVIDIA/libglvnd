@@ -39,4 +39,14 @@
 extern char public_entry_start[];
 extern char public_entry_end[];
 
+#ifdef __CET__
+#ifdef __x86_64__
+#define ENDBR "endbr64\n\t"
+#else
+#define ENDBR "endbr32\n\t"
+#endif
+#else
+#define ENDBR
+#endif
+
 #endif // ENTRY_COMMON_H

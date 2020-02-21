@@ -56,6 +56,7 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
     func ":\n"
 
 #define STUB_ASM_CODE(slot)                             \
+    ENDBR                                               \
     "call 1f\n\t"                                       \
     "1:\n\t"                                            \
     "popl %eax\n\t"                                     \
