@@ -30,7 +30,7 @@ project(
   'c',
   version : '1.3.0',
   meson_version : '>= 0.48',
-  default_options : ['c_std=gnu99']
+  default_options : ['c_std=gnu99', 'werror=true']
 )
 
 dep_null = dependency('', required : false)
