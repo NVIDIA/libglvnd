@@ -30,7 +30,7 @@ Generates the list of functions that should be exported from libOpenGL.so.
 """
 
 import sys
-import xml.etree.cElementTree as etree
+import xml.etree.ElementTree as etree
 
 import genCommon
 
