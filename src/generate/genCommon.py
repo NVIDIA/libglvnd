@@ -28,7 +28,7 @@
 import sys
 import collections
 import re
-import xml.etree.cElementTree as etree
+import xml.etree.ElementTree as etree
 
 MAPI_TABLE_NUM_DYNAMIC = 4096
 
