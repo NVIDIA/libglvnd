@@ -389,7 +389,7 @@ AS_IF([test "x$GLDISPATCH_PAGE_SIZE" != "x"],
 DEFINES="$DEFINES -DEGL_NO_X11"
 
 dnl default CFLAGS
-CFLAGS="$CFLAGS -Wall -Werror -include config.h -fvisibility=hidden $DEFINES"
+CFLAGS="$CFLAGS -Wall -include config.h -fvisibility=hidden $DEFINES"
 
 AC_CONFIG_FILES([Makefile
                  libglvnd.pc
