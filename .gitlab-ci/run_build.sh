@@ -7,7 +7,7 @@ set -o xtrace
 
 mkdir build
 cd build
-../configure $CONFIGURE_OPTIONS
+../configure --enable-werror $CONFIGURE_OPTIONS
 
 make V=1 VERBOSE=1
 
