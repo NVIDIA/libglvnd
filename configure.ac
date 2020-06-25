@@ -30,6 +30,15 @@ AC_PROG_MKDIR_P
 PKG_PROG_PKG_CONFIG
 AC_PROG_NM
 
+AC_ARG_ENABLE([werror],
+    [AS_HELP_STRING([--enable-werror],
+        [Build with -Werror @<:@default=disabled@:>@])],
+    [enable_werror=$enableval],
+    [enable_werror=no])
+if test "x$enable_werror" = xyes; then
+    CFLAGS="$CFLAGS -Werror"
+fi
+
 # The tarball from "make dist" already contains all of the generated files. If
 # we're building from that, then we won't need Python.
 if test -e "$srcdir/src/GLdispatch/vnd-glapi/g_glapi_mapi_gl_tmp.h" ; then
