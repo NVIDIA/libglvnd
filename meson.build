@@ -132,17 +132,18 @@ endif
 
 gl_dispatch_type = 'pure_c'
 if use_asm
+  thread_type = have_tls ? 'tls' : 'tsd'
   if host_machine.cpu_family().startswith('x86')
     gl_dispatch_type = '@0@_@1@'.format(
       host_machine.cpu_family(),
-      have_tls ? 'tls' : 'tsd',
+      thread_type,
     )
   elif host_machine.cpu_family() == 'arm'
     gl_dispatch_type = 'armv7_tsd'
   elif host_machine.cpu_family() == 'aarch64'
     gl_dispatch_type = 'aarch64_tsd'
   elif host_machine.cpu_family() == 'ppc64'
-    gl_dispatch_type = 'ppc64_@0@'.format(have_tls ? 'tls' : 'tsd')
+    gl_dispatch_type = 'ppc64_@0@'.format(thread_type)
   endif
 endif
 message('Using dispatch stub type: @0@'.format(gl_dispatch_type))
