@@ -201,10 +201,6 @@ if test "x$enable_glx" = "xyes" ; then
     PKG_CHECK_MODULES([GLPROTO], [glproto])
 fi
 
-AS_IF([test "x$gldispatch_use_tls" = "xyes"],
-      [AC_DEFINE([GLDISPATCH_USE_TLS], 1,
-      [Define to 1 if libGLdispatch should use a TLS variable for the dispatch table.])])
-
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_TYPEOF
 
