@@ -276,7 +276,9 @@ static EGLBoolean AddVendorDevices(__EGLvendorInfo *vendor)
     }
 
     if (!vendor->staticDispatch.queryDevicesEXT(0, NULL, &count)) {
-        return EGL_FALSE;
+        // Even if this vendor fails, we can still return the devices from any
+        // other vendors
+        return EGL_TRUE;
     }
     if (count <= 0) {
         return EGL_TRUE;
