@@ -39,20 +39,12 @@
  * GLX_makecurrent vendor library used in the testglxmakecurrent test.
  */
 
-enum {
-
-    /*
-     * Returns an array of 3 GLint values containing, respectively,
-     * the number of times glBegin(), glVertex3fv(), and glEnd() were called
-     * by this thread.
-     */
-    GL_MC_FUNCTION_COUNTS,
-
-    /*
-     * Last request. Always returns NULL.
-     */
-    GL_MC_LAST_REQ
-} GLmakeCurrentTestRequest;
+typedef struct
+{
+    GLint beginCount;
+    GLint vertex3fvCount;
+    GLint endCount;
+} GLContextCounts;
 
 /**
  * This is an attribute to query using glXQueryContext to test dispatching by
@@ -70,29 +62,22 @@ enum {
  */
 typedef void (* PFNGLXEXAMPLEEXTENSIONFUNCTION) (Display *dpy, int screen, int *retval);
 
-/*
+/**
  * glXMakeCurrentTestResults(): perform queries on vendor library state.
  *
  * This explicitly is designed to not return anything, in case a bug causes the
  * API library to dispatch this to a no-op stub. If this function returned a
  * value and dispatched to a no-op, the return value would be bogus and hard to
  * debug.  To detect this issue, clients should initialize *saw to GL_FALSE
- * before passing it to this function. Similarly, *ret should be initialized to
- * NULL prior to passing it to this function.
+ * before passing it to this function.
  *
- * \param [in] req The request to perform. Must be a valid
- * GLmakeCurrentTestRequest enum
  * \param [out] saw Expected to point to a GLboolean initialied to GL_FALSE.
  * *saw is set to GL_TRUE if we dispatched to the vendor function.
- * \param [out] ret Expected to point to a (void*) initialized to NULL. *ret is
- * set to NULL if there was an error, or a pointer to request-specific data
- * otherwise. The pointer may be passed into free(3).
+ * \param [out] counts Should point to a GLContextCounts struct. This returns the
+ *      number of GL calls that the vendor library has seen with the current
+ *      context.
  */
-typedef void (*PFNGLXMAKECURRENTTESTRESULTSPROC)(
-    GLint req,
-    GLboolean *saw,
-    void **ret
-);
+typedef void (*PFNGLXMAKECURRENTTESTRESULTSPROC) (GLboolean *saw, GLContextCounts *counts);
 
 /**
  * glXCreateContextVendorDUMMY(): Dummy extension function to create a context.

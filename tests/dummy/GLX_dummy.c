@@ -48,9 +48,7 @@ static const __GLXapiExports *apiExports = NULL;
  * Dummy context structure.
  */
 typedef struct __GLXcontextRec {
-    GLint beginHit;
-    GLint vertex3fvHit;
-    GLint endHit;
+    GLContextCounts counts;
 } __GLXcontext;
 
 static const int FBCONFIGS_PER_SCREEN = 10;
@@ -66,8 +64,8 @@ static void dummy_glXExampleExtensionFunction(Display *dpy, int screen, int *ret
 static void dispatch_glXExampleExtensionFunction(Display *dpy, int screen, int *retval);
 static void dummy_glXExampleExtensionFunction2(Display *dpy, int screen, int *retval);
 static void dispatch_glXExampleExtensionFunction2(Display *dpy, int screen, int *retval);
-static void dummy_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void **ret);
-static void dispatch_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void **ret);
+static void dummy_glXMakeCurrentTestResults(GLboolean *saw, GLContextCounts *counts);
+static void dispatch_glXMakeCurrentTestResults(GLboolean *saw, GLContextCounts *counts);
 
 enum
 {
@@ -158,10 +156,7 @@ static void          dummy_glXCopyContext           (Display *dpy,
 static GLXContext CommonCreateContext(Display *dpy, int screen)
 {
     if (screen >= 0) {
-        __GLXcontext *context = malloc(sizeof(*context));
-        context->beginHit = 0;
-        context->vertex3fvHit = 0;
-        context->endHit = 0;
+        __GLXcontext *context = calloc(1, sizeof(*context));
         return context;
     } else {
         return NULL;
@@ -506,7 +501,7 @@ static void dummy_glBegin (void)
     GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
-    ctx->beginHit++;
+    ctx->counts.beginCount++;
 }
 
 static void dummy_glVertex3fv(GLfloat *v)
@@ -514,7 +509,7 @@ static void dummy_glVertex3fv(GLfloat *v)
     GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
-    ctx->vertex3fvHit++;
+    ctx->counts.vertex3fvCount++;
 }
 
 static void dummy_glEnd (void)
@@ -522,33 +517,19 @@ static void dummy_glEnd (void)
     GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
-    ctx->endHit++;
+    ctx->counts.endCount++;
 }
 
-static void dummy_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void **ret)
+static void dummy_glXMakeCurrentTestResults(GLboolean *saw, GLContextCounts *counts)
 {
     GLXContext ctx = apiExports->getCurrentContext();
     assert(ctx);
 
     *saw = GL_TRUE;
-    switch (req) {
-    case GL_MC_FUNCTION_COUNTS:
-        {
-            GLint *data = (GLint *)malloc(3 * sizeof(GLint));
-            data[0] = ctx->beginHit;
-            data[1] = ctx->vertex3fvHit;
-            data[2] = ctx->endHit;
-            *ret = (void *)data;
-        }
-        break;
-    case GL_MC_LAST_REQ:
-    default:
-        *ret = NULL;
-        break;
-    }
+    *counts = ctx->counts;
 }
 
-static void dispatch_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void **ret)
+static void dispatch_glXMakeCurrentTestResults(GLboolean *saw, GLContextCounts *counts)
 {
     __GLXvendorInfo *dynDispatch;
     PFNGLXMAKECURRENTTESTRESULTSPROC func;
@@ -562,7 +543,7 @@ static void dispatch_glXMakeCurrentTestResults(GLint req, GLboolean *saw, void *
     func = (PFNGLXMAKECURRENTTESTRESULTSPROC)
         apiExports->fetchDispatchEntry(dynDispatch, index);
     if (func) {
-        func(req, saw, ret);
+        func(saw, counts);
     }
 }
 

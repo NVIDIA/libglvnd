@@ -113,15 +113,11 @@ void *MakeCurrentThread(void *arg)
     PFNGLXMAKECURRENTTESTRESULTSPROC pMakeCurrentTestResults = NULL;
     GLXContext ctx = NULL;
     const GLfloat v[] = { 0, 0, 0 };
-    struct {
-        GLint req;
-        GLboolean saw;
-        void *ret;
-    } makeCurrentTestResultsParams;
+    GLboolean saw;
+    GLContextCounts contextCounts = {};
     GLint BeginCount = 0;
     GLint EndCount = 0;
     GLint Vertex3fvCount = 0;
-    GLint *vendorCounts;
     int i;
     intptr_t ret = GL_FALSE;
     const TestOptions *t = (const TestOptions *)arg;
@@ -174,32 +170,21 @@ void *MakeCurrentThread(void *arg)
         glVertex3fv(v); Vertex3fvCount++;
         glEnd(); EndCount++;
 
-        // Make a call to glXMakeCurrentTestResults() to get the function counts.
-        makeCurrentTestResultsParams.req = GL_MC_FUNCTION_COUNTS;
-        makeCurrentTestResultsParams.saw = GL_FALSE;
-        makeCurrentTestResultsParams.ret = NULL;
+        // Make a call to glXMakeCurrentTestResults() to get the function contextCounts.
+        saw = GL_FALSE;
+        memset(&contextCounts, 0, sizeof(contextCounts));
+        pMakeCurrentTestResults(&saw, &contextCounts);
 
-        pMakeCurrentTestResults(makeCurrentTestResultsParams.req,
-                                &makeCurrentTestResultsParams.saw,
-                                &makeCurrentTestResultsParams.ret);
-
-        if (!makeCurrentTestResultsParams.saw) {
+        if (!saw) {
             printError("Failed to dispatch glXMakeCurrentTestResults()!\n");
             goto fail;
         }
 
-        if (!makeCurrentTestResultsParams.ret) {
-            printError("Internal glXMakeCurrentTestResults() error!\n");
-            goto fail;
-        }
-
-        // Verify we have the right function counts
-        vendorCounts = (GLint *)makeCurrentTestResultsParams.ret;
-
-        if ((vendorCounts[0] != BeginCount) ||
-            (vendorCounts[1] != Vertex3fvCount) ||
-            (vendorCounts[2] != EndCount)) {
-            printError("Mismatch of reported function call counts "
+        // Verify we have the right function contextCounts
+        if ((contextCounts.beginCount != BeginCount) ||
+            (contextCounts.vertex3fvCount != Vertex3fvCount) ||
+            (contextCounts.endCount != EndCount)) {
+            printError("Mismatch of reported function call contextCounts "
                        "between the application and vendor library!\n");
             goto fail;
         }
@@ -217,15 +202,9 @@ void *MakeCurrentThread(void *arg)
 
         // Similarly the call to the dynamic function glXMakeCurrentTestResults()
         // should be a no-op.
-        makeCurrentTestResultsParams.req = GL_MC_FUNCTION_COUNTS;
-        makeCurrentTestResultsParams.saw = GL_FALSE;
-        makeCurrentTestResultsParams.ret = NULL;
-
-        pMakeCurrentTestResults(makeCurrentTestResultsParams.req,
-                                &makeCurrentTestResultsParams.saw,
-                                &makeCurrentTestResultsParams.ret);
-
-        if (makeCurrentTestResultsParams.saw) {
+        saw = GL_FALSE;
+        pMakeCurrentTestResults(&saw, &contextCounts);
+        if (saw) {
             printError("Dynamic function glXMakeCurrentTestResults() dispatched "
                        "to vendor library even though no context was current!\n");
             goto fail;
