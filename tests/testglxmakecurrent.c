@@ -216,10 +216,13 @@ void *MakeCurrentThread(void *arg)
     ret = GL_TRUE;
 
 fail:
-    if (ctx) {
-        glXDestroyContext(dpy, ctx);
+    if (dpy != NULL) {
+        if (ctx) {
+            glXDestroyContext(dpy, ctx);
+        }
+        testUtilsDestroyWindow(dpy, &wi);
+        XCloseDisplay(dpy);
     }
-    testUtilsDestroyWindow(dpy, &wi);
 
     return (void *)ret;
 }
