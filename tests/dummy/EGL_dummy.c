@@ -74,6 +74,7 @@ typedef struct DummyThreadStateRec {
 static const __EGLapiExports *apiExports = NULL;
 static glvnd_key_t threadStateKey;
 static struct glvnd_list displayList;
+static glvnd_mutex_t displayListLock = GLVND_MUTEX_INITIALIZER;
 static EGLint failNextMakeCurrentError = EGL_NONE;
 
 static EGLDEBUGPROCKHR debugCallbackFunc = NULL;
@@ -121,11 +122,15 @@ static void SetLastError(const char *command, EGLLabelKHR label, EGLint error)
 static DummyEGLDisplay *LookupEGLDisplay(EGLDisplay dpy)
 {
     DummyEGLDisplay *disp = NULL;
+
+    __glvndPthreadFuncs.mutex_lock(&displayListLock);
     glvnd_list_for_each_entry(disp, &displayList, entry) {
         if (dpy == (EGLDisplay) disp) {
+            __glvndPthreadFuncs.mutex_unlock(&displayListLock);
             return disp;
         }
     }
+    __glvndPthreadFuncs.mutex_unlock(&displayListLock);
     // Libglvnd should never pass an invalid EGLDisplay handle to a vendor
     // library.
     printf("Invalid EGLDisplay %p\n", dpy);
@@ -203,8 +208,10 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
         return EGL_NO_DISPLAY;
     }
 
+    __glvndPthreadFuncs.mutex_lock(&displayListLock);
     glvnd_list_for_each_entry(disp, &displayList, entry) {
         if (disp->platform == platform && disp->native_display == native_display) {
+            __glvndPthreadFuncs.mutex_unlock(&displayListLock);
             return disp;
         }
     }
@@ -214,6 +221,7 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
     disp->platform = platform;
     disp->native_display = native_display;
     glvnd_list_append(&disp->entry, &displayList);
+    __glvndPthreadFuncs.mutex_unlock(&displayListLock);
     return disp;
 }
 
