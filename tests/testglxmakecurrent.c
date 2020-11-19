@@ -275,6 +275,7 @@ int main(int argc, char **argv)
                 all_ret = 1;
             }
         }
+        free(threads);
     }
     return all_ret;
 }
