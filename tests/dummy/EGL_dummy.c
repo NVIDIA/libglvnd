@@ -73,7 +73,7 @@ typedef struct DummyThreadStateRec {
 
 static const __EGLapiExports *apiExports = NULL;
 static glvnd_key_t threadStateKey;
-static struct glvnd_list displayList;
+static struct glvnd_list displayList = { &displayList, &displayList };
 static glvnd_mutex_t displayListLock = GLVND_MUTEX_INITIALIZER;
 static EGLint failNextMakeCurrentError = EGL_NONE;
 
@@ -816,3 +816,21 @@ __egl_Main(uint32_t version, const __EGLapiExports *exports,
     return EGL_TRUE;
 }
 
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
+void __attribute__ ((destructor)) __eglDummyFini(void)
+#else
+void _fini(void)
+#endif
+{
+    if (apiExports == NULL) {
+        // We were never initialized, so there's nothing to clean up.
+        return;
+    }
+
+    while (!glvnd_list_is_empty(&displayList)) {
+        DummyEGLDisplay *disp = glvnd_list_first_entry(
+                &displayList, DummyEGLDisplay, entry);
+        glvnd_list_del(&disp->entry);
+        free(disp);
+    }
+}
