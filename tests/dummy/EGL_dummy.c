@@ -69,10 +69,16 @@ typedef struct DummyThreadStateRec {
     EGLint lastError;
     EGLContext currentContext;
     EGLLabelKHR label;
+
+    struct glvnd_list entry;
 } DummyThreadState;
 
 static const __EGLapiExports *apiExports = NULL;
+
+static glvnd_mutex_t threadStateLock = GLVND_MUTEX_INITIALIZER;
 static glvnd_key_t threadStateKey;
+static struct glvnd_list threadStateList = { &threadStateList, &threadStateList };
+
 static struct glvnd_list displayList = { &displayList, &displayList };
 static glvnd_mutex_t displayListLock = GLVND_MUTEX_INITIALIZER;
 static EGLint failNextMakeCurrentError = EGL_NONE;
@@ -91,6 +97,9 @@ static DummyThreadState *GetThreadState(void)
             abort();
         }
         thr->lastError = EGL_SUCCESS;
+        __glvndPthreadFuncs.mutex_lock(&threadStateLock);
+        glvnd_list_append(&thr->entry, &threadStateList);
+        __glvndPthreadFuncs.mutex_unlock(&threadStateLock);
         __glvndPthreadFuncs.setspecific(threadStateKey, thr);
     }
     return thr;
@@ -832,5 +841,13 @@ void _fini(void)
                 &displayList, DummyEGLDisplay, entry);
         glvnd_list_del(&disp->entry);
         free(disp);
+    }
+
+    __glvndPthreadFuncs.key_delete(threadStateKey);
+    while (!glvnd_list_is_empty(&threadStateList)) {
+        DummyThreadState *thr = glvnd_list_first_entry(
+                &threadStateList, DummyThreadState, entry);
+        glvnd_list_del(&thr->entry);
+        free(thr);
     }
 }
