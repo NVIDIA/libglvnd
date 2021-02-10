@@ -41,10 +41,12 @@
 
 static glvnd_mutex_t dispatchIndexMutex = GLVND_MUTEX_INITIALIZER;
 
-__EGLdeviceInfo *__eglDeviceList = NULL;
-__EGLdeviceInfo *__eglDeviceHash = NULL;
-int __eglDeviceCount = 0;
-static glvnd_once_t deviceListInitOnce = GLVND_ONCE_INIT;
+typedef struct __EGLdeviceInfoRec {
+    EGLDeviceEXT handle;
+    __EGLvendorInfo *vendor;
+    UT_hash_handle hh;
+} __EGLdeviceInfo;
+static DEFINE_INITIALIZED_LKDHASH(__EGLdeviceInfo, __eglDeviceHash);
 
 /****************************************************************************/
 
@@ -256,111 +258,52 @@ void __eglMappingTeardown(EGLBoolean doReset)
         LKDHASH_TEARDOWN(__EGLdisplayInfoHash,
                          __eglDisplayInfoHash, NULL, NULL, EGL_FALSE);
 
+        LKDHASH_TEARDOWN(__EGLdeviceInfo,
+                         __eglDeviceHash, NULL, NULL, EGL_FALSE);
+
        __glvndWinsysDispatchCleanup();
     }
 }
 
-static EGLBoolean AddVendorDevices(__EGLvendorInfo *vendor)
+EGLBoolean __eglAddDevice(EGLDeviceEXT dev, __EGLvendorInfo *vendor)
 {
-    EGLDeviceEXT *devices = NULL;
-    EGLint count = 0;
-    __EGLdeviceInfo *newDevList;
-    EGLint i, j;
+    __EGLdeviceInfo *devInfo = NULL;
 
-    if (!vendor->supportsDevice) {
+    if (dev == EGL_NO_DEVICE_EXT) {
+        // If the handle is NULL, then just silently ignore it.
         return EGL_TRUE;
     }
 
-    if (!vendor->staticDispatch.queryDevicesEXT(0, NULL, &count)) {
-        // Even if this vendor fails, we can still return the devices from any
-        // other vendors
-        return EGL_TRUE;
-    }
-    if (count <= 0) {
-        return EGL_TRUE;
-    }
-
-    devices = (EGLDeviceEXT *) malloc(count * sizeof(EGLDeviceEXT));
-    if (devices == NULL) {
-        return EGL_FALSE;
-    }
-
-    if (!vendor->staticDispatch.queryDevicesEXT(count, devices, &count)) {
-        free(devices);
-        return EGL_FALSE;
-    }
-
-    newDevList = (__EGLdeviceInfo *) realloc(__eglDeviceList,
-            (__eglDeviceCount + count) * sizeof(__EGLdeviceInfo));
-    if (newDevList == NULL) {
-        free(devices);
-        return EGL_FALSE;
-    }
-    __eglDeviceList = newDevList;
-
-    for (i=0; i<count; i++) {
-        // Make sure we haven't already gotten a device with this handle.
-        EGLBoolean found = EGL_FALSE;
-        for (j=0; j<__eglDeviceCount; j++) {
-            if (__eglDeviceList[j].handle == devices[i]) {
-                found = EGL_TRUE;
-                break;
-            }
+    LKDHASH_WRLOCK(__eglDeviceHash);
+    HASH_FIND_PTR(_LH(__eglDeviceHash), &dev, devInfo);
+    if (devInfo == NULL) {
+        devInfo = malloc(sizeof(__EGLdeviceInfo));
+        if (devInfo == NULL) {
+            LKDHASH_UNLOCK(__eglDeviceHash);
+            return EGL_FALSE;
         }
-
-        if (!found) {
-            __eglDeviceList[__eglDeviceCount].handle = devices[i];
-            __eglDeviceList[__eglDeviceCount].vendor = vendor;
-            __eglDeviceCount++;
-        }
+        devInfo->handle = dev;
+        HASH_ADD_PTR(_LH(__eglDeviceHash), handle, devInfo);
     }
-    free(devices);
-
+    devInfo->vendor = vendor;
+    LKDHASH_UNLOCK(__eglDeviceHash);
     return EGL_TRUE;
-}
-
-void InitDeviceListInternal(void)
-{
-    struct glvnd_list *vendorList = __eglLoadVendors();
-    __EGLvendorInfo *vendor;
-    EGLint i;
-
-    __eglDeviceList = NULL;
-    __eglDeviceHash = NULL;
-    __eglDeviceCount = 0;
-
-    glvnd_list_for_each_entry(vendor, vendorList, entry) {
-        if (!AddVendorDevices(vendor)) {
-            free(__eglDeviceList);
-            __eglDeviceList = NULL;
-            __eglDeviceCount = 0;
-            return;
-        }
-    }
-
-    // Build a hashtable for the devices.
-    for (i=0; i<__eglDeviceCount; i++) {
-        __EGLdeviceInfo *dev = &__eglDeviceList[i];
-        HASH_ADD_PTR(__eglDeviceHash, handle, dev);
-    }
-}
-
-void __eglInitDeviceList(void)
-{
-    __glvndPthreadFuncs.once(&deviceListInitOnce, InitDeviceListInternal);
 }
 
 __EGLvendorInfo *__eglGetVendorFromDevice(EGLDeviceEXT dev)
 {
     __EGLdeviceInfo *devInfo;
+    __EGLvendorInfo *vendor = NULL;
 
-    __eglInitDeviceList();
-
-    HASH_FIND_PTR(__eglDeviceHash, &dev, devInfo);
+    LKDHASH_RDLOCK(__eglDeviceHash);
+    HASH_FIND_PTR(_LH(__eglDeviceHash), &dev, devInfo);
     if (devInfo != NULL) {
-        return devInfo->vendor;
+        vendor = devInfo->vendor;
     } else {
-        return NULL;
+        vendor = NULL;
     }
+    LKDHASH_UNLOCK(__eglDeviceHash);
+
+    return vendor;
 }
 

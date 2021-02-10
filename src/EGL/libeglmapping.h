@@ -44,16 +44,6 @@ typedef struct __EGLdisplayInfoRec {
     __EGLvendorInfo *vendor;
 } __EGLdisplayInfo;
 
-typedef struct __EGLdeviceInfoRec {
-    EGLDeviceEXT handle;
-    __EGLvendorInfo *vendor;
-    UT_hash_handle hh;
-} __EGLdeviceInfo;
-
-extern __EGLdeviceInfo *__eglDeviceList;
-extern __EGLdeviceInfo *__eglDeviceHash;
-extern int __eglDeviceCount;
-
 void __eglThreadInitialize(void);
 
 /*!
@@ -62,20 +52,10 @@ void __eglThreadInitialize(void);
 void __eglMappingInit(void);
 
 /*!
- * Initializes the EGLDeviceEXT list and hashtable.
- *
- * This function must be called before trying to access the \c __eglDeviceList
- * array.
- */
-void __eglInitDeviceList(void);
-
-/*!
  * This handles freeing all mapping state during library teardown
  * or resetting locks on fork recovery.
  */
 void __eglMappingTeardown(EGLBoolean doReset);
-
-const __EGLdeviceInfo *__eglGetDeviceList(EGLint *deviceCount);
 
 /*!
  * Looks up the __EGLdisplayInfo structure for a display. If the display does
@@ -109,6 +89,11 @@ __EGLvendorInfo *__eglGetVendorFromDisplay(EGLDisplay dpy);
 __eglMustCastToProperFunctionPointerType __eglGetEGLDispatchAddress(const char *procName);
 
 __eglMustCastToProperFunctionPointerType __eglFetchDispatchEntry(__EGLvendorInfo *vendor, int index);
+
+/**
+ * Adds an EGLDeviceEXT handle to libglvnd's mapping.
+ */
+EGLBoolean __eglAddDevice(EGLDeviceEXT dev, __EGLvendorInfo *vendor);
 
 __EGLvendorInfo *__eglGetVendorFromDevice(EGLDeviceEXT dev);
 
