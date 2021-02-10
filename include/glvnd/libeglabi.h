@@ -82,7 +82,7 @@ extern "C" {
  * will still work.
  */
 #define EGL_VENDOR_ABI_MAJOR_VERSION ((uint32_t) 0)
-#define EGL_VENDOR_ABI_MINOR_VERSION ((uint32_t) 1)
+#define EGL_VENDOR_ABI_MINOR_VERSION ((uint32_t) 2)
 #define EGL_VENDOR_ABI_VERSION ((EGL_VENDOR_ABI_MAJOR_VERSION << 16) | EGL_VENDOR_ABI_MINOR_VERSION)
 static inline uint32_t EGL_VENDOR_ABI_GET_MAJOR_VERSION(uint32_t version)
 {
@@ -191,6 +191,14 @@ typedef struct __EGLapiExportsRec {
      * Returns the EGL vendor for an EGLDeviceEXT handle.
      */
     __EGLvendorInfo *(*getVendorFromDevice)(EGLDeviceEXT dev);
+
+    /**
+     * Sets the EGL vendor for an EGLDeviceEXT handle. The dispatch stub for
+     * any function that returns an EGLDeviceEXT handle should call this.
+     *
+     * Supported since ABI version 1.2.
+     */
+    EGLBoolean (* setVendorForDevice)(EGLDeviceEXT dev, __EGLvendorInfo *vendor);
 } __EGLapiExports;
 
 /*****************************************************************************

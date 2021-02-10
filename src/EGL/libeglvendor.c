@@ -164,6 +164,7 @@ const __EGLapiExports __eglExportsTable = {
     __eglSetLastVendor, // setLastVendor
     __eglGetVendorFromDisplay, // getVendorFromDisplay
     __eglGetVendorFromDevice, // getVendorFromDevice
+    __eglAddDevice, // setVendorForDevice
 };
 
 void TeardownVendor(__EGLvendorInfo *vendor)
