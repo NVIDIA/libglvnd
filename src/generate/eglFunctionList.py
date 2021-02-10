@@ -139,6 +139,9 @@ EGL_FUNCTIONS = (
     # EGL_EXT_device_enumeration
     _eglExt("eglQueryDevicesEXT",                   "custom"),
 
+    # EGL_EXT_device_query
+    _eglExt("eglQueryDisplayAttribEXT",             "custom"),
+
     # EGL_KHR_debug
     _eglExt("eglDebugMessageControlKHR",            "custom"),
     _eglExt("eglQueryDebugKHR",                     "custom"),

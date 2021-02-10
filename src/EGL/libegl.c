@@ -1042,6 +1042,46 @@ EGLBoolean EGLAPIENTRY eglQueryDevicesEXT(EGLint max_devices,
     return EGL_TRUE;
 }
 
+
+EGLBoolean eglQueryDisplayAttribEXT(EGLDisplay dpy, EGLint attribute, EGLAttrib *value)
+{
+    __EGLvendorInfo *vendor;
+
+    if (value == NULL) {
+        __eglReportError(EGL_BAD_PARAMETER, "eglQueryDisplayAttribEXT", NULL,
+                "Missing value pointer");
+        return EGL_FALSE;
+    }
+
+    vendor = __eglGetVendorFromDisplay(dpy);
+    if (vendor == NULL) {
+        __eglReportError(EGL_BAD_DISPLAY, "eglQueryDisplayAttribEXT", NULL,
+                "Invalid EGLDisplay handle");
+        return EGL_FALSE;
+    }
+
+    if (vendor->staticDispatch.queryDisplayAttribEXT == NULL) {
+        __eglReportError(EGL_BAD_DISPLAY, "eglQueryDisplayAttribEXT", NULL,
+                "Driver does not support eglQueryDisplayAttribEXT");
+        return EGL_FALSE;
+    }
+
+    __eglSetLastVendor(vendor);
+    if (!vendor->staticDispatch.queryDisplayAttribEXT(dpy, attribute, value)) {
+        return EGL_FALSE;
+    }
+
+    if (attribute == EGL_DEVICE_EXT && (EGLDeviceEXT) *value != EGL_NO_DEVICE_EXT) {
+        if (!__eglAddDevice((EGLDeviceEXT) *value, vendor)) {
+            __eglReportCritical(EGL_BAD_ALLOC, "eglQueryDevicesEXT",
+                    __eglGetThreadLabel(), "Out of memory allocating device/vendor map");
+            return EGL_FALSE;
+        }
+    }
+
+    return EGL_TRUE;
+}
+
 // TODO: The function hash is the same as in GLX. It should go into a common
 // file.
 typedef struct {

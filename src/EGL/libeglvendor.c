@@ -242,6 +242,7 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
     LOADENTRYPOINT(createPlatformPixmapSurface,   "eglCreatePlatformPixmapSurface"   );
     LOADENTRYPOINT(waitSync,                      "eglWaitSync"                      );
     LOADENTRYPOINT(queryDevicesEXT,               "eglQueryDevicesEXT"               );
+    LOADENTRYPOINT(queryDisplayAttribEXT,         "eglQueryDisplayAttribEXT"         );
 
     LOADENTRYPOINT(debugMessageControlKHR,        "eglDebugMessageControlKHR"        );
     LOADENTRYPOINT(queryDebugKHR,                 "eglQueryDebugKHR"                 );
