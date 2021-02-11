@@ -215,5 +215,22 @@ if get_option('egl')
       depends : libEGL_dummy,
     )
   endforeach
+
+  exe_egldeviceadd = executable(
+    'egldeviceadd',
+    ['testegldeviceadd.c', 'egl_test_utils.c'],
+    include_directories : [inc_include],
+    link_with : [libEGL],
+    dependencies : [dep_dl],
+  )
+  foreach t : [ 'querydevices', 'returndevice' ]
+    test(
+      'egldeviceadd (@0@)'.format(t),
+      exe_egldeviceadd,
+      args : [t],
+      env : env_egl,
+      suite : ['egl'],
+    )
+  endforeach
 endif
 
