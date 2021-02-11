@@ -200,6 +200,38 @@ EGLBoolean TestReturnDevice(EGLDeviceEXT *oldDevices, EGLint oldDeviceCount)
     return TestNewDevice(newDevice, oldDevices, oldDeviceCount);
 }
 
+EGLBoolean TestQueryDisplay(EGLDeviceEXT *oldDevices, EGLint oldDeviceCount)
+{
+    const EGLAttrib DISPLAY_ATTRIBS[] =
+    {
+        EGL_DEVICE_INDEX, DUMMY_EGL_DEVICE_COUNT, EGL_NONE
+    };
+    EGLDisplay dpy;
+    EGLint major, minor;
+    EGLAttrib newDevice = -1;
+
+    printf("Testing eglQueryDisplayAttribEXT.\n");
+
+    dpy = eglGetPlatformDisplay(EGL_DUMMY_PLATFORM, (EGLNativeDisplayType) DUMMY_VENDOR_NAMES[0], DISPLAY_ATTRIBS);
+    if (dpy == EGL_NO_DISPLAY) {
+        printf("eglGetPlatformDisplay failed with 0x%04x\n", eglGetError());
+        return EGL_FALSE;
+    }
+    if (!eglInitialize(dpy, &major, &minor)) {
+        printf("eglInitialize failed with 0x%04x\n", eglGetError());
+        return EGL_FALSE;
+    }
+
+    if (!ptr_eglQueryDisplayAttribEXT(dpy, EGL_DEVICE_EXT, &newDevice)) {
+        printf("ptr_eglQueryDisplayAttribEXT failed with 0x%04x\n", eglGetError());
+        return EGL_FALSE;
+    }
+    eglTerminate(dpy);
+
+    return TestNewDevice((EGLDeviceEXT) newDevice, oldDevices, oldDeviceCount);
+}
+
+
 int main(int argc, char **argv)
 {
     EGLDeviceEXT devices[DEVICE_ARRAY_SIZE] = {};
@@ -230,6 +262,8 @@ int main(int argc, char **argv)
             success = TestAddQueryDevices(devices, deviceCount);
         } else if (strcmp(argv[i], "returndevice") == 0) {
             success = TestReturnDevice(devices, deviceCount);
+        } else if (strcmp(argv[i], "querydisplay") == 0) {
+            success = TestQueryDisplay(devices, deviceCount);
         } else {
             printf("Invalid test name: %s\n", argv[i]);
         }

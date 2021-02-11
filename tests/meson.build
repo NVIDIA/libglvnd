@@ -223,7 +223,7 @@ if get_option('egl')
     link_with : [libEGL],
     dependencies : [dep_dl],
   )
-  foreach t : [ 'querydevices', 'returndevice' ]
+  foreach t : [ 'querydevices', 'returndevice', 'querydisplay' ]
     test(
       'egldeviceadd (@0@)'.format(t),
       exe_egldeviceadd,

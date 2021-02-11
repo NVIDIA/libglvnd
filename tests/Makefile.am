@@ -174,6 +174,7 @@ TESTS_EGL += testegldisplay.sh
 TESTS_EGL += testegldevice.sh
 TESTS_EGL += testegldeviceadd_querydevices.sh
 TESTS_EGL += testegldeviceadd_returndevice.sh
+TESTS_EGL += testegldeviceadd_querydisplay.sh
 TESTS_EGL += testeglgetprocaddress.sh
 TESTS_EGL += testeglmakecurrent.sh
 TESTS_EGL += testeglerror.sh
