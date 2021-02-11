@@ -85,6 +85,14 @@
  */
 #define EGL_CREATE_CONTEXT_FAIL 0x010001
 
+/**
+ * This attribute is for eglCreatePlatformDisplay. The attribute is the index
+ * of the EGLDeviceEXT handle to associate with the display.
+ *
+ * This is used to test eglQueryDisplayEXT.
+ */
+#define EGL_DEVICE_INDEX 0x010002
+
 enum
 {
     DUMMY_COMMAND_GET_VENDOR_NAME,

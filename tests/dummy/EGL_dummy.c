@@ -39,13 +39,17 @@ enum
     DI_eglTestDispatchDevice,
     DI_eglTestDispatchCurrent,
     DI_eglTestReturnDevice,
+    DI_eglQueryDeviceAttribEXT,
+    DI_eglQueryDeviceStringEXT,    
     DI_COUNT,
 };
 
 static const char *CLIENT_EXTENSIONS =
     "EGL_KHR_client_get_all_proc_addresses"
     " EGL_EXT_client_extensions"
+    " EGL_EXT_device_base"
     " EGL_EXT_device_enumeration"
+    " EGL_EXT_device_query"
     ;
 
 static const char *PLATFORM_EXTENSIONS =
@@ -58,6 +62,7 @@ typedef struct DummyEGLDisplayRec {
     EGLenum platform;
     void *native_display;
     EGLLabelKHR label;
+    EGLDeviceEXT device;
 
     struct glvnd_list entry;
 } DummyEGLDisplay;
@@ -179,6 +184,7 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
 {
     CommonEntrypoint();
     DummyEGLDisplay *disp = NULL;
+    EGLDeviceEXT device = EGL_NO_DEVICE_EXT;
 
     if (platform == EGL_NONE) {
         if (native_display != EGL_DEFAULT_DISPLAY) {
@@ -200,6 +206,20 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
             // Set the native_display pointer to NULL. This makes it simpler to
             // find the same dispaly below.
             native_display = NULL;
+
+            if (attrib_list != NULL) {
+                int i;
+                for (i=0; attrib_list[i] != EGL_NONE; i += 2) {
+                    if (attrib_list[i] == EGL_DEVICE_INDEX) {
+                        EGLint index = (EGLint) attrib_list[i + 1];
+                        assert(index >= 0 && index < deviceCount);
+                        device = GetEGLDevice(index);
+                    } else {
+                        printf("Invalid attribute 0x%04llx\n", (unsigned long long) attrib_list[i]);
+                        abort();
+                    }
+                }
+            }
         }
     } else if (platform == EGL_PLATFORM_DEVICE_EXT) {
         if (native_display == EGL_DEFAULT_DISPLAY) {
@@ -209,6 +229,7 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
                 return EGL_NO_DISPLAY;
             }
         }
+        device = (EGLDeviceEXT) native_display;
     } else {
         // We don't support this platform.
         SetLastError("eglGetPlatformDisplay", NULL, EGL_BAD_PARAMETER);
@@ -217,7 +238,7 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
 
     __glvndPthreadFuncs.mutex_lock(&displayListLock);
     glvnd_list_for_each_entry(disp, &displayList, entry) {
-        if (disp->platform == platform && disp->native_display == native_display) {
+        if (disp->platform == platform && disp->native_display == native_display && disp->device == device) {
             __glvndPthreadFuncs.mutex_unlock(&displayListLock);
             return disp;
         }
@@ -227,6 +248,7 @@ static EGLDisplay dummyGetPlatformDisplay(EGLenum platform, void *native_display
     disp = (DummyEGLDisplay *) calloc(1, sizeof(DummyEGLDisplay));
     disp->platform = platform;
     disp->native_display = native_display;
+    disp->device = device;
     glvnd_list_append(&disp->entry, &displayList);
     __glvndPthreadFuncs.mutex_unlock(&displayListLock);
     return disp;
@@ -521,6 +543,36 @@ static EGLBoolean EGLAPIENTRY dummy_eglQueryDevicesEXT(EGLint max_devices, EGLDe
     return EGL_TRUE;
 }
 
+static EGLBoolean EGLAPIENTRY dummy_eglQueryDisplayAttribEXT(EGLDisplay dpy, EGLint attribute, EGLAttrib *value)
+{
+    DummyEGLDisplay *disp = LookupEGLDisplay(dpy);
+
+    if (attribute == EGL_DEVICE_EXT) {
+        *value = (EGLAttrib) disp->device;
+        return EGL_TRUE;
+    } else {
+        SetLastError("eglQueryDisplayAttribEXT", disp->label, EGL_BAD_ATTRIBUTE);
+        return EGL_FALSE;
+    }
+}
+
+static EGLBoolean EGLAPIENTRY dummy_eglQueryDeviceAttribEXT(EGLDeviceEXT device, EGLint attribute, EGLAttrib *value)
+{
+    // No device attributes are defined here.
+    SetLastError("eglQueryDeviceAttribEXT", NULL, EGL_BAD_ATTRIBUTE);
+    return EGL_FALSE;
+}
+
+static const char *EGLAPIENTRY dummy_eglQueryDeviceStringEXT(EGLDeviceEXT device, EGLint name)
+{
+    if (name == EGL_EXTENSIONS) {
+        return "";
+    } else {
+        SetLastError("eglQueryDeviceStringEXT", NULL, EGL_BAD_ATTRIBUTE);
+        return NULL;
+    }
+}
+
 static EGLint EGLAPIENTRY dummy_eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback, const EGLAttrib *attrib_list)
 {
     CommonEntrypoint();
@@ -624,6 +676,8 @@ static void *dispatch_eglTestDispatchDisplay(EGLDisplay dpy, EGLint command, EGL
 static void *dispatch_eglTestDispatchDevice(EGLDeviceEXT dpy, EGLint command, EGLAttrib param);
 static void *dispatch_eglTestDispatchCurrent(EGLint command, EGLAttrib param);
 static EGLDeviceEXT dispatch_eglTestReturnDevice(EGLDisplay dpy, EGLint index);
+static EGLBoolean EGLAPIENTRY dispatch_eglQueryDeviceAttribEXT(EGLDeviceEXT device, EGLint attribute, EGLAttrib *value);
+static const char *EGLAPIENTRY dispatch_eglQueryDeviceStringEXT(EGLDeviceEXT device, EGLint name);
 
 static struct {
     const char *name;
@@ -636,6 +690,8 @@ static struct {
     PROC_ENTRY(eglTestDispatchDevice),
     PROC_ENTRY(eglTestDispatchCurrent),
     PROC_ENTRY(eglTestReturnDevice),
+    PROC_ENTRY(eglQueryDeviceAttribEXT),
+    PROC_ENTRY(eglQueryDeviceStringEXT),
 #undef PROC_ENTRY
 };
 
@@ -659,6 +715,17 @@ static __eglMustCastToProperFunctionPointerType FetchVendorFunc(__EGLvendorInfo 
         abort();
     }
 
+    return func;
+}
+
+static __eglMustCastToProperFunctionPointerType FetchByDevice(EGLDeviceEXT dev, int index)
+{
+    __EGLvendorInfo *vendor;
+    __eglMustCastToProperFunctionPointerType func;
+
+    apiExports->threadInit();
+    vendor = apiExports->getVendorFromDevice(dev);
+    func = FetchVendorFunc(vendor, index, EGL_BAD_DEVICE_EXT);
     return func;
 }
 
@@ -725,6 +792,27 @@ static EGLDeviceEXT dispatch_eglTestReturnDevice(EGLDisplay dpy, EGLint index)
     return ret;
 }
 
+static EGLBoolean EGLAPIENTRY dispatch_eglQueryDeviceAttribEXT(EGLDeviceEXT device, EGLint attribute, EGLAttrib *value)
+{
+    PFNEGLQUERYDEVICEATTRIBEXTPROC func = (PFNEGLQUERYDEVICEATTRIBEXTPROC)
+        FetchByDevice(device, DI_eglQueryDeviceAttribEXT);
+    if (func != NULL) {
+        return func(device, attribute, value);
+    } else {
+        return EGL_FALSE;
+    }
+}
+
+static const char *EGLAPIENTRY dispatch_eglQueryDeviceStringEXT(EGLDeviceEXT device, EGLint name)
+{
+    PFNEGLQUERYDEVICESTRINGEXTPROC func = (PFNEGLQUERYDEVICESTRINGEXTPROC)
+        FetchByDevice(device, DI_eglQueryDeviceStringEXT);
+    if (func != NULL) {
+        return func(device, name);
+    } else {
+        return EGL_FALSE;
+    }
+}
 
 static const struct {
     const char *name;
@@ -763,6 +851,9 @@ static const struct {
     PROC_ENTRY(eglGetError),
 
     PROC_ENTRY(eglQueryDevicesEXT),
+    PROC_ENTRY(eglQueryDisplayAttribEXT),
+    PROC_ENTRY(eglQueryDeviceAttribEXT),
+    PROC_ENTRY(eglQueryDeviceStringEXT),
     PROC_ENTRY(eglDebugMessageControlKHR),
     PROC_ENTRY(eglQueryDebugKHR),
     PROC_ENTRY(eglLabelObjectKHR),
