@@ -38,6 +38,7 @@ enum
     DI_eglTestDispatchDisplay,
     DI_eglTestDispatchDevice,
     DI_eglTestDispatchCurrent,
+    DI_eglTestReturnDevice,
     DI_COUNT,
 };
 
@@ -81,6 +82,11 @@ static EGLint failNextMakeCurrentError = EGL_NONE;
 
 static EGLDEBUGPROCKHR debugCallbackFunc = NULL;
 static EGLBoolean debugCallbackEnabled = EGL_TRUE;
+
+// The EGLDeviceEXT handle values have to be pointers, so just use the
+// address of an array element for each EGLDeviceEXT handle.
+static const char EGL_DEVICE_HANDLES[DUMMY_EGL_MAX_DEVICE_COUNT];
+static EGLint deviceCount = DUMMY_EGL_DEVICE_COUNT;
 
 static DummyThreadState *GetThreadState(void)
 {
@@ -144,18 +150,14 @@ static DummyEGLDisplay *LookupEGLDisplay(EGLDisplay dpy)
 
 static EGLDeviceEXT GetEGLDevice(EGLint index)
 {
-    // The EGLDeviceEXT handle values have to be pointers, so just use the
-    // address of an array element for each EGLDeviceEXT handle.
-    static const char EGL_DEVICE_HANDLES[DUMMY_EGL_DEVICE_COUNT];
-
-    assert(index >= 0 && index < DUMMY_EGL_DEVICE_COUNT);
+    assert(index >= 0 && index < DUMMY_EGL_MAX_DEVICE_COUNT);
     return (EGLDeviceEXT) (EGL_DEVICE_HANDLES + index);
 }
 
 static EGLBoolean IsEGLDeviceValid(EGLDeviceEXT dev)
 {
     int i;
-    for (i=0; i<DUMMY_EGL_DEVICE_COUNT; i++) {
+    for (i=0; i<deviceCount; i++) {
         if (dev == GetEGLDevice(i)) {
             return EGL_TRUE;
         }
@@ -504,17 +506,17 @@ static EGLBoolean EGLAPIENTRY dummy_eglQueryDevicesEXT(EGLint max_devices, EGLDe
     CommonEntrypoint();
     if (devices != NULL) {
         EGLint i;
-        if (max_devices != DUMMY_EGL_DEVICE_COUNT) {
+        if (max_devices != deviceCount) {
             // libEGL should only every query the full list of devices.
             printf("Wrong max_devices in eglQueryDevicesEXT: %d\n", max_devices);
             abort();
         }
-        *num_devices = DUMMY_EGL_DEVICE_COUNT;
+        *num_devices = deviceCount;
         for (i=0; i<*num_devices; i++) {
             devices[i] = GetEGLDevice(i);
         }
     } else {
-        *num_devices = DUMMY_EGL_DEVICE_COUNT;
+        *num_devices = deviceCount;
     }
     return EGL_TRUE;
 }
@@ -612,9 +614,16 @@ static void *dummy_eglTestDispatchCurrent(EGLint command, EGLAttrib param)
     return CommonTestDispatch("eglTestDispatchCurrent", EGL_NO_DISPLAY, EGL_NO_DEVICE_EXT, command, param);
 }
 
+static EGLDeviceEXT dummy_eglTestReturnDevice(EGLDisplay dpy, EGLint index)
+{
+    assert(index >= 0 && index < deviceCount);
+    return GetEGLDevice(index);
+}
+
 static void *dispatch_eglTestDispatchDisplay(EGLDisplay dpy, EGLint command, EGLAttrib param);
 static void *dispatch_eglTestDispatchDevice(EGLDeviceEXT dpy, EGLint command, EGLAttrib param);
 static void *dispatch_eglTestDispatchCurrent(EGLint command, EGLAttrib param);
+static EGLDeviceEXT dispatch_eglTestReturnDevice(EGLDisplay dpy, EGLint index);
 
 static struct {
     const char *name;
@@ -626,6 +635,7 @@ static struct {
     PROC_ENTRY(eglTestDispatchDisplay),
     PROC_ENTRY(eglTestDispatchDevice),
     PROC_ENTRY(eglTestDispatchCurrent),
+    PROC_ENTRY(eglTestReturnDevice),
 #undef PROC_ENTRY
 };
 
@@ -695,6 +705,24 @@ static void *dispatch_eglTestDispatchCurrent(EGLint command, EGLAttrib param)
     } else {
         return NULL;
     }
+}
+
+static EGLDeviceEXT dispatch_eglTestReturnDevice(EGLDisplay dpy, EGLint index)
+{
+    __EGLvendorInfo *vendor;
+    pfn_eglTestReturnDevice func;
+    EGLDeviceEXT ret;
+
+    apiExports->threadInit();
+    vendor = apiExports->getVendorFromDisplay(dpy);
+    func = (pfn_eglTestReturnDevice) FetchVendorFunc(vendor, DI_eglTestReturnDevice, EGL_BAD_DISPLAY);
+    if (func != NULL) {
+        ret = func(dpy, index);
+    } else {
+        ret = NULL;
+    }
+    apiExports->setVendorForDevice(ret, vendor);
+    return ret;
 }
 
 
@@ -789,6 +817,12 @@ static EGLBoolean dummyGetSupportsAPI(EGLenum api)
     } else {
         return EGL_FALSE;
     }
+}
+
+PUBLIC void DummySetDeviceCount(EGLint count)
+{
+    assert(count >= 0 && count <= DUMMY_EGL_MAX_DEVICE_COUNT);
+    deviceCount = count;
 }
 
 PUBLIC EGLBoolean

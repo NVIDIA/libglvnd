@@ -56,10 +56,19 @@
 #define DUMMY_VENDOR_NAME_1 "dummy1"
 
 /**
- * The number of devices that each dummy vendor library exposes. This is used
- * to figure out which vendor library should be behind each device.
+ * The number of devices that each dummy vendor library exposes by default.
+ * This is used to figure out which vendor library should be behind each
+ * device.
  */
 #define DUMMY_EGL_DEVICE_COUNT 2
+
+/**
+ * The maximum number of devices that each dummy vendor library can expose.
+ *
+ * This is used to test adding a device after the initial eglQueryDevicesEXT
+ * call.
+ */
+#define DUMMY_EGL_MAX_DEVICE_COUNT 3
 
 /**
  * A platform enum to select a vendor library by name.
@@ -110,5 +119,20 @@ typedef void * (* pfn_eglTestDispatchDevice) (EGLDeviceEXT dev, EGLint command, 
  * the current context.
  */
 typedef void * (* pfn_eglTestDispatchCurrent) (EGLint command, EGLAttrib param);
+
+/**
+ * Returns an EGLDeviceEXT handle from the vendor library.
+ *
+ * This is used to test returning a device that wasn't listed in a call to
+ * eglQueryDevicesEXT.
+ */
+typedef EGLDeviceEXT (* pfn_eglTestReturnDevice) (EGLDisplay dpy, EGLint index);
+
+/**
+ * Changes the number of EGLDeviceEXT handles that the dummy library exposes.
+ *
+ * This function has to be looked up using dlsym, not eglGetProcAddress.
+ */
+typedef void (* pfn_DummySetDeviceCount) (EGLint count);
 
 #endif // EGL_DUMMY_H
