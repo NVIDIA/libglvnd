@@ -126,6 +126,10 @@ __asm__(".globl glx_entrypoint_start\n"
         ".balign " U_STRINGIFY(STUB_SIZE) "\n" \
         "glx_entrypoint_start:\n"
 
+#if defined(USE_ARMV7_ASM) && defined(__thumb__)
+        ".arm\n"
+#endif
+
 #define GLX_STUBS_ASM
 #include "g_glx_dispatch_stub_list.h"
 
@@ -133,6 +137,10 @@ __asm__(".globl glx_entrypoint_start\n"
         ".hidden glx_entrypoint_end\n"
         ".balign " U_STRINGIFY(STUB_SIZE) "\n" \
         "glx_entrypoint_end:\n"
+
+#if defined(USE_ARMV7_ASM) && defined(__thumb__)
+        ".thumb\n"
+#endif
 );
 
 static void *DefaultDispatchFunc(void)
