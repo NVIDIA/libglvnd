@@ -208,7 +208,7 @@ if get_option('egl')
         ['test@0@.c'.format(t[0]), 'egl_test_utils.c'],
         include_directories : [inc_include],
         link_with : [libEGL, t[1]],
-        dependencies : [t[2]],
+        dependencies : [dep_dl, t[2]],
       ),
       env : env_egl,
       suite : ['egl'],
