@@ -95,6 +95,7 @@ static DEFINE_INITIALIZED_LKDHASH(__GLXvendorNameHash, __glXVendorNameHash);
 
 typedef struct __GLXdisplayInfoHashRec {
     __GLXdisplayInfo info;
+    Bool inTeardown;
     UT_hash_handle hh;
 } __GLXdisplayInfoHash;
 
@@ -697,15 +698,27 @@ static int OnDisplayClosed(Display *dpy, XExtCodes *codes)
 
     LKDHASH_WRLOCK(__glXDisplayInfoHash);
 
+    // Set the inTeardown flag for this display, but don't remove it from the
+    // hashtable yet. We shouldn't try to look up this display after this, but
+    // just in case something does, we don't want to try to set up a new
+    // __GLXdisplayInfoHash struct for it.
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, pEntry);
     if (pEntry != NULL) {
-        __glXDisplayClosed(&pEntry->info);
-        HASH_DEL(_LH(__glXDisplayInfoHash), pEntry);
+        assert(!pEntry->inTeardown);
+        pEntry->inTeardown = True;
     }
     LKDHASH_UNLOCK(__glXDisplayInfoHash);
 
-    CleanupDisplayInfoEntry(NULL, pEntry);
-    free(pEntry);
+    if (pEntry != NULL) {
+        __glXDisplayClosed(&pEntry->info);
+
+        // Now, we can remove the display from the hashtable and free it.
+        LKDHASH_WRLOCK(__glXDisplayInfoHash);
+        HASH_DEL(_LH(__glXDisplayInfoHash), pEntry);
+        LKDHASH_UNLOCK(__glXDisplayInfoHash);
+        CleanupDisplayInfoEntry(NULL, pEntry);
+        free(pEntry);
+    }
 
     return 0;
 }
@@ -724,6 +737,12 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
     LKDHASH_UNLOCK(__glXDisplayInfoHash);
 
     if (pEntry != NULL) {
+        if (pEntry->inTeardown) {
+            // This shouldn't happen: If we're in the process of tearing down a
+            // display, then we shouldn't be trying to look up the display
+            // again.
+            return NULL;
+        }
         return &pEntry->info;
     }
 
