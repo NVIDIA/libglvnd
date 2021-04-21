@@ -191,6 +191,10 @@ if _p != 0
   add_project_arguments('-DGLDISPATCH_PAGE_SIZE=' + _p, language : ['c'])
 endif
 
+if not get_option('entrypoint-patching').disabled()
+  add_project_arguments('-DGLDISPATCH_ENABLE_PATCHING', language : ['c'])
+endif
+
 # Set EGL_NO_X11 unconditionally, Libglvnd doesn't make any assumptions about
 # native display or drawable types, so we don't need X11-specific typedefs for
 # them

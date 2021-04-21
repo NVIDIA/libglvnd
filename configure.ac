@@ -106,6 +106,16 @@ AM_CONDITIONAL([ENABLE_GLX_HEADERS], [test "x$enable_headers" = "xyes" -a "x$ena
 AM_CONDITIONAL([ENABLE_GLES1_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_gles1" = "xyes"])
 AM_CONDITIONAL([ENABLE_GLES2_HEADERS], [test "x$enable_headers" = "xyes" -a "x$enable_gles2" = "xyes"])
 
+AC_ARG_ENABLE([entrypoint-patching],
+    [AS_HELP_STRING([--disable-entrypoint-patching],
+        [Disable OpenGL entrypoint patching optimization @<:@default=enabled@:>@])],
+    [enable_entrypoint_patching="$enableval"],
+    [enable_entrypoint_patching=yes]
+)
+AS_IF([test "x$enable_entrypoint_patching" = "xyes"],
+      [AC_DEFINE([GLDISPATCH_ENABLE_PATCHING], 1,
+      [Define to 1 to enable entrypoint patching in libGLdispatch.])])
+
 dnl
 dnl Arch/platform-specific settings. Copied from mesa
 dnl
