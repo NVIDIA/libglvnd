@@ -149,6 +149,13 @@ int main(int argc, char **argv)
     }
 #endif
 
+#if !defined(GLDISPATCH_ENABLE_PATCHING)
+    if (enablePatching)
+    {
+        return 77;
+    }
+#endif
+
     __glDispatchInit();
     InitDummyVendors();
 

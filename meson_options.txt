@@ -75,3 +75,8 @@ option(
   value : true,
   description : 'Install headers for enabled APIs.'
 )
+option(
+  'entrypoint-patching',
+  type : 'feature',
+  description : 'Allow vendor libraries to patch OpenGL entrypoint functions.'
+)

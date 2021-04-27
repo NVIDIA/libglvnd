@@ -41,6 +41,7 @@
 
 static int entry_patch_mprotect(int prot)
 {
+#if GLDISPATCH_ENABLE_PATCHING
     size_t size;
     size_t pageSize = (size_t) sysconf(_SC_PAGESIZE);
 
@@ -57,6 +58,9 @@ static int entry_patch_mprotect(int prot)
         return 0;
     }
     return 1;
+#else // GLDISPATCH_ENABLE_PATCHING
+    return 0;
+#endif
 }
 
 int entry_patch_start(void)
