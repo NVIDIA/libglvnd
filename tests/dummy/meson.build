@@ -44,9 +44,11 @@ if with_glx
   )
 endif
 
+libEGL_dummy = []
+
 if get_option('egl')
   foreach v : ['0', '1']
-    shared_library(
+    libEGL_dummy += shared_library(
       'EGL_dummy' + v,
       ['EGL_dummy.c'],
       c_args : ['-DDUMMY_VENDOR_NAME="dummy@0@"'.format(v)],
