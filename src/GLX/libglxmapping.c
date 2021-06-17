@@ -96,6 +96,7 @@ static DEFINE_INITIALIZED_LKDHASH(__GLXvendorNameHash, __glXVendorNameHash);
 typedef struct __GLXdisplayInfoHashRec {
     __GLXdisplayInfo info;
     Bool inTeardown;
+    XExtCodes *extCodes;
     UT_hash_handle hh;
 } __GLXdisplayInfoHash;
 
@@ -688,6 +689,10 @@ static void CleanupDisplayInfoEntry(void *unused, __GLXdisplayInfoHash *pEntry)
         free(pEntry->info.clientStrings[i]);
     }
 
+    if (pEntry->extCodes != NULL) {
+        XESetCloseDisplay(pEntry->info.dpy, pEntry->extCodes->extension, NULL);
+    }
+
     LKDHASH_TEARDOWN(__GLXvendorXIDMappingHash,
                      pEntry->info.xidVendorHash, NULL, NULL, False);
 }
@@ -716,6 +721,8 @@ static int OnDisplayClosed(Display *dpy, XExtCodes *codes)
         LKDHASH_WRLOCK(__glXDisplayInfoHash);
         HASH_DEL(_LH(__glXDisplayInfoHash), pEntry);
         LKDHASH_UNLOCK(__glXDisplayInfoHash);
+
+        pEntry->extCodes = NULL;
         CleanupDisplayInfoEntry(NULL, pEntry);
         free(pEntry);
     }
@@ -757,15 +764,15 @@ __GLXdisplayInfo *__glXLookupDisplay(Display *dpy)
     LKDHASH_WRLOCK(__glXDisplayInfoHash);
     HASH_FIND_PTR(_LH(__glXDisplayInfoHash), &dpy, foundEntry);
     if (foundEntry == NULL) {
-        XExtCodes *extCodes = XAddExtension(dpy);
-        if (extCodes == NULL) {
+        pEntry->extCodes = XAddExtension(dpy);
+        if (pEntry->extCodes == NULL) {
             CleanupDisplayInfoEntry(NULL, pEntry);
             free(pEntry);
             LKDHASH_UNLOCK(__glXDisplayInfoHash);
             return NULL;
         }
 
-        XESetCloseDisplay(dpy, extCodes->extension, OnDisplayClosed);
+        XESetCloseDisplay(dpy, pEntry->extCodes->extension, OnDisplayClosed);
         HASH_ADD_PTR(_LH(__glXDisplayInfoHash), info.dpy, pEntry);
     } else {
         // Another thread already created the hashtable entry.
