@@ -1,27 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <registry>
     <!--
-    Copyright (c) 2013-2017 The Khronos Group Inc.
-
-    Permission is hereby granted, free of charge, to any person obtaining a
-    copy of this software and/or associated documentation files (the
-    "Materials"), to deal in the Materials without restriction, including
-    without limitation the rights to use, copy, modify, merge, publish,
-    distribute, sublicense, and/or sell copies of the Materials, and to
-    permit persons to whom the Materials are furnished to do so, subject to
-    the following conditions:
-
-    The above copyright notice and this permission notice shall be included
-    in all copies or substantial portions of the Materials.
-
-    THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-    MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
-    -->
+    Copyright 2013-2020 The Khronos Group Inc.
+    SPDX-License-Identifier: Apache-2.0
+     -->
     <!--
     This file, egl.xml, is the EGL API Registry. The older ".spec" file
     format has been retired and will no longer be updated with new
@@ -590,9 +572,10 @@
         <enum value="0x31D7" name="EGL_PLATFORM_GBM_MESA" alias="EGL_PLATFORM_GBM_KHR"/>
         <enum value="0x31D8" name="EGL_PLATFORM_WAYLAND_KHR"/>
         <enum value="0x31D8" name="EGL_PLATFORM_WAYLAND_EXT" alias="EGL_PLATFORM_WAYLAND_KHR"/>
-            <unused start="0x31DC" end="0x31DC"/>
+        <enum value="0x31DC" name="EGL_PLATFORM_XCB_EXT"/>
         <enum value="0x31DD" name="EGL_PLATFORM_SURFACELESS_MESA"/>
-            <unused start="0x31DE" end="0x31DF"/>
+        <enum value="0x31DE" name="EGL_PLATFORM_XCB_SCREEN_EXT"/>
+            <unused start="0x31DF" end="0x31DF"/>
     </enums>
 
     <!-- Due to an oversight in development, these enums alias the above MESA
@@ -870,7 +853,11 @@
         <enum value="0x3352" name="EGL_TRACK_REFERENCES_KHR"/>
             <unused start="0x3353" end="0x3356"/>
         <enum value="0x3357" name="EGL_CONTEXT_PRIORITY_REALTIME_NV"/>
-            <unused start="0x3358" end="0x335F"/>
+            <unused start="0x3358" end="0x335B"/>
+        <enum value="0x335C" name="EGL_DEVICE_UUID_EXT"/>
+        <enum value="0x335D" name="EGL_DRIVER_UUID_EXT"/>
+        <enum value="0x335E" name="EGL_DRIVER_NAME_EXT"/>
+        <enum value="0x335F" name="EGL_RENDERER_EXT"/>
         <enum value="0x3360" name="EGL_CTA861_3_MAX_CONTENT_LIGHT_LEVEL_EXT"/>
         <enum value="0x3361" name="EGL_CTA861_3_MAX_FRAME_AVERAGE_LEVEL_EXT"/>
         <enum value="0x3362" name="EGL_GL_COLORSPACE_DISPLAY_P3_LINEAR_EXT"/>
@@ -890,7 +877,12 @@
         <enum value="0x3370" name="EGL_Y_AXIS_NV"/>
         <enum value="0x3371" name="EGL_STREAM_DMA_NV"/>
         <enum value="0x3372" name="EGL_STREAM_DMA_SERVER_NV"/>
-            <unused start="0x3373" end="0x339F"/>
+        <enum value="0x3373" name="EGL_STREAM_CONSUMER_IMAGE_NV"/>
+        <enum value="0x3374" name="EGL_STREAM_IMAGE_ADD_NV"/>
+        <enum value="0x3375" name="EGL_STREAM_IMAGE_REMOVE_NV"/>
+        <enum value="0x3376" name="EGL_STREAM_IMAGE_AVAILABLE_NV"/>
+        <enum value="0x3377" name="EGL_DRM_RENDER_NODE_FILE_EXT"/>
+            <unused start="0x3378" end="0x339F"/>
     </enums>
 
     <enums namespace="EGL" start="0x33A0" end="0x33AF" vendor="ANGLE" comment="Reserved for Shannon Woods (Bug 13175)">
@@ -1037,6 +1029,10 @@
         <unused start="0x34B0" end="0x34BF"/>
     </enums>
 
+    <enums namespace="EGL" start="0x34C0" end="0x34CF" vendor="EXT" comment="Reserved for Robert Mader (PR 124)">
+        <unused start="0x34C0" end="0x34CF"/>
+    </enums>
+
 <!-- Please remember that new enumerant allocations must be obtained by
      request to the Khronos API registrar (see comments at the top of this
      file) File requests in the Khronos Bugzilla, EGL project, Registry
@@ -1046,8 +1042,8 @@
 
 <!-- Reservable for future use. To generate a new range, allocate multiples
      of 16 starting at the lowest available point in this block. -->
-    <enums namespace="EGL" start="0x34C0" end="0x3FFF" vendor="KHR" comment="Reserved for future use">
-            <unused start="0x34C0" end="0x3FFF"/>
+    <enums namespace="EGL" start="0x34D0" end="0x3FFF" vendor="KHR" comment="Reserved for future use">
+            <unused start="0x34D0" end="0x3FFF"/>
     </enums>
 
     <enums namespace="EGL" start="0x8F70" end="0x8F7F" vendor="HI" comment="For Mark Callow, Khronos bug 4055. Shared with GL.">
@@ -1376,6 +1372,13 @@
         </command>
         <command>
             <proto><ptype>EGLint</ptype> <name>eglGetError</name></proto>
+        </command>
+        <command>
+            <proto><ptype>EGLBoolean</ptype> <name>eglGetMscRateANGLE</name></proto>
+            <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+            <param><ptype>EGLSurface</ptype> <name>surface</name></param>
+            <param><ptype>EGLint</ptype> *<name>numerator</name></param>
+            <param><ptype>EGLint</ptype> *<name>denominator</name></param>
         </command>
         <command>
             <proto><ptype>EGLClientBuffer</ptype> <name>eglGetNativeClientBufferANDROID</name></proto>
@@ -1956,6 +1959,44 @@
             <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
             <param><ptype>EGLImageKHR</ptype> <name>image</name></param>
         </command>
+        <command>
+             <proto><ptype>EGLBoolean</ptype> <name>eglStreamImageConsumerConnectNV</name></proto>
+             <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+             <param><ptype>EGLStreamKHR</ptype> <name>stream</name></param>
+             <param><ptype>EGLint</ptype> <name>num_modifiers</name></param>
+             <param><ptype>EGLuint64KHR</ptype> *<name>modifiers</name></param>
+             <param><ptype>EGLAttrib</ptype> *<name>attrib_list</name></param>
+        </command>
+        <command>
+             <proto><ptype>EGLint</ptype> <name>eglQueryStreamConsumerEventNV</name></proto>
+             <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+             <param><ptype>EGLStreamKHR</ptype> <name>stream</name></param>
+             <param><ptype>EGLTime</ptype> <name>timeout</name></param>
+             <param><ptype>EGLenum</ptype> *<name>event</name></param>
+             <param><ptype>EGLAttrib</ptype> *<name>aux</name></param>
+        </command>
+        <command>
+             <proto><ptype>EGLBoolean</ptype> <name>eglStreamAcquireImageNV</name></proto>
+             <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+             <param><ptype>EGLStreamKHR</ptype> <name>stream</name></param>
+             <param><ptype>EGLImage</ptype> *<name>pImage</name></param>
+             <param><ptype>EGLSync</ptype> <name>sync</name></param>
+        </command>
+        <command>
+             <proto><ptype>EGLBoolean</ptype> <name>eglStreamReleaseImageNV</name></proto>
+             <param><ptype>EGLDisplay</ptype> <name>dpy</name></param>
+             <param><ptype>EGLStreamKHR</ptype> <name>stream</name></param>
+             <param><ptype>EGLImage</ptype> <name>image</name></param>
+             <param><ptype>EGLSync</ptype> <name>sync</name></param>
+        </command>
+        <command>
+             <proto><ptype>EGLBoolean</ptype> <name>eglQueryDeviceBinaryEXT</name></proto>
+             <param><ptype>EGLDeviceEXT</ptype> <name>device</name></param>
+             <param><ptype>EGLint</ptype> <name>name</name></param>
+             <param><ptype>EGLint</ptype> <name>max_size</name></param>
+             <param>void *<name>value</name></param>
+             <param>EGLint *<name>size</name></param>
+        </command>
     </commands>
 
     <!-- SECTION: EGL API interface definitions. -->
@@ -2322,6 +2363,11 @@
                 <enum name="EGL_D3D_TEXTURE_2D_SHARE_HANDLE_ANGLE"/>
             </require>
         </extension>
+        <extension name="EGL_ANGLE_sync_control_rate" supported="egl">
+            <require>
+                <command name="eglGetMscRateANGLE"/>
+            </require>
+        </extension>
         <extension name="EGL_ANGLE_window_fixed_size" supported="egl">
             <require>
                 <enum name="EGL_FIXED_SIZE_ANGLE"/>
@@ -2544,6 +2590,12 @@
             <require>
                 <enum name="EGL_PLATFORM_X11_EXT"/>
                 <enum name="EGL_PLATFORM_X11_SCREEN_EXT"/>
+            </require>
+        </extension>
+        <extension name="EGL_EXT_platform_xcb" supported="egl">
+            <require>
+                <enum name="EGL_PLATFORM_XCB_EXT"/>
+                <enum name="EGL_PLATFORM_XCB_SCREEN_EXT"/>
             </require>
         </extension>
         <extension name="EGL_EXT_protected_content" supported="egl">
@@ -3153,6 +3205,18 @@
                 <enum name="EGL_STREAM_DMA_SERVER_NV"/>
             </require>
         </extension>
+         <extension name="EGL_NV_stream_consumer_eglimage" supported="egl">
+            <require>
+                <enum name="EGL_STREAM_CONSUMER_IMAGE_NV"/>
+                <enum name="EGL_STREAM_IMAGE_ADD_NV"/>
+                <enum name="EGL_STREAM_IMAGE_REMOVE_NV"/>
+                <enum name="EGL_STREAM_IMAGE_AVAILABLE_NV"/>
+                <command name="eglStreamImageConsumerConnectNV"/>
+                <command name="eglQueryStreamConsumerEventNV"/>
+                <command name="eglStreamAcquireImageNV"/>
+                <command name="eglStreamReleaseImageNV"/>
+            </require>
+        </extension>
         <extension name="EGL_NV_stream_fifo_next" supported="egl">
             <require>
                 <enum name="EGL_PENDING_FRAME_NV"/>
@@ -3362,6 +3426,24 @@
             <require>
                 <enum name="EGL_COLOR_COMPONENT_TYPE_UNSIGNED_INTEGER_ARM"/>
                 <enum name="EGL_COLOR_COMPONENT_TYPE_INTEGER_ARM"/>
+            </require>
+        </extension>
+        <extension name="EGL_EXT_device_query_name" supported="egl">
+            <require>
+                <enum name="EGL_RENDERER_EXT"/>
+            </require>
+        </extension>
+        <extension name="EGL_EXT_device_persistent_id" supported="egl">
+            <require>
+                <enum name="EGL_DEVICE_UUID_EXT"/>
+                <enum name="EGL_DRIVER_UUID_EXT"/>
+                <enum name="EGL_DRIVER_NAME_EXT"/>
+                <command name="eglQueryDeviceBinaryEXT"/>
+            </require>
+        </extension>
+        <extension name="EGL_EXT_device_drm_render_node" supported="egl">
+            <require>
+                <enum name="EGL_DRM_RENDER_NODE_FILE_EXT"/>
             </require>
         </extension>
     </extensions>
