@@ -48,7 +48,8 @@ file in a well-known directory, similar to how Vulkan ICDs are loaded.
                 how it searches for a library.
             * If the library path is a relative path containing at least
                 one directory separator, for example `./libEGL_myvendor.so`,
-                the loader's behaviour is currently unspecified.
+                then the loader is expected to treat it as being relative
+                to the directory containing the JSON file.
 
 ## ICD installation
 
