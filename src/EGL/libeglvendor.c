@@ -23,7 +23,7 @@
 
 static void LoadVendors(void);
 static void TeardownVendor(__EGLvendorInfo *vendor);
-static __EGLvendorInfo *LoadVendor(const char *filename);
+static __EGLvendorInfo *LoadVendor(const char *filename, const char *jsonPath);
 
 static void LoadVendorsFromConfigDir(const char *dirName);
 static __EGLvendorInfo *LoadVendorFromConfigFile(const char *filename);
@@ -317,7 +317,7 @@ static __EGLvendorInfo *LoadVendorFromConfigFile(const char *filename)
         goto done;
     }
     libraryPath = node->valuestring;
-    vendor = LoadVendor(libraryPath);
+    vendor = LoadVendor(libraryPath, filename);
 
 done:
     if (root != NULL) {
@@ -437,8 +437,11 @@ static void CheckVendorExtensions(__EGLvendorInfo *vendor)
     }
 }
 
-static __EGLvendorInfo *LoadVendor(const char *filename)
+static __EGLvendorInfo *LoadVendor(const char *filename, const char *jsonPath)
 {
+    char *absolutePath = NULL;
+    char *jsonDir = NULL;
+    const char *dlopenName;
     __PFNEGLMAINPROC eglMainProc;
     __EGLvendorInfo *vendor = NULL;
     __EGLvendorInfo *otherVendor;
@@ -450,7 +453,58 @@ static __EGLvendorInfo *LoadVendor(const char *filename)
         return NULL;
     }
 
-    vendor->dlhandle = dlopen(filename, RTLD_LAZY);
+    if (filename == NULL) {
+        // Clearly not going to work
+        goto fail;
+    }
+    else if (filename[0] == '/') {
+        // filename is an absolute path, no special handling needed
+        // e.g. /usr/lib/libEGL_myvendor.so.0
+        dlopenName = filename;
+    }
+    else if (strchr(filename, '/') == NULL) {
+        // filename is a bare SONAME, no special handling needed
+        // e.g. libEGL_myvendor.so.0
+        dlopenName = filename;
+    }
+    else {
+        char *slash;
+
+        // filename is a relative path; we have to interpret it as
+        // relative to *somewhere*. dlopen() would interpret it as relative
+        // to the current working directory, but that seems unlikely to be
+        // useful. Instead, follow Vulkan by interpreting it as relative
+        // to the directory where we found the ICD.
+        // e.g. it might be ../../../$LIB/libEGL_myvendor.so.0
+
+        // Resolve symlinks and relative components in jsonPath. This assumes
+        // a POSIX.1-2008-compliant realpath(), similar to the implementations
+        // in glibc and musl.
+        jsonDir = realpath(jsonPath, NULL);
+        if (jsonDir == NULL) {
+            goto fail;
+        }
+
+        // Truncate jsonDir at the last slash to get the directory,
+        // e.g. /usr/share/glvnd/egl_vendor.d
+        slash = strrchr(jsonDir, '/');
+        if (slash == NULL) {
+            // Shouldn't happen, because the output of realpath() is absolute;
+            // recover by just not loading it
+            goto fail;
+        }
+        *slash = '\0';
+
+        // Concatenate jsonDir and filename
+        // e.g. /usr/share/glvnd/egl_vendor.d/../../../$LIB/libEGL_myvendor.so.0
+        if (glvnd_asprintf(&absolutePath, "%s/%s", jsonDir, filename) < 0) {
+            goto fail;
+        }
+
+        dlopenName = absolutePath;
+    }
+
+    vendor->dlhandle = dlopen(dlopenName, RTLD_LAZY);
     if (vendor->dlhandle == NULL) {
         goto fail;
     }
@@ -526,12 +580,16 @@ static __EGLvendorInfo *LoadVendor(const char *filename)
                 __EGL_DISPATCH_FUNC_INDICES[i]);
     }
 
+    free(absolutePath);
+    free(jsonDir);
     return vendor;
 
 fail:
     if (vendor != NULL) {
         TeardownVendor(vendor);
     }
+    free(absolutePath);
+    free(jsonDir);
     return NULL;
 }
 
