@@ -30,7 +30,9 @@
 #include "stub.h"
 
 __thread const void *_glapi_tls_Current[GLAPI_NUM_CURRENT_ENTRIES]
+#if defined(__GLIBC__) || defined(__FreeBSD__)
     __attribute__((tls_model("initial-exec")))
+#endif
     = {
         (void *) table_noop_array,
       };

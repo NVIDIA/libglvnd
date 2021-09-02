@@ -88,7 +88,10 @@ enum {
  */
 _GLAPI_EXPORT extern const __thread void *
     _glapi_tls_Current[GLAPI_NUM_CURRENT_ENTRIES]
-    __attribute__((tls_model("initial-exec")));
+#if defined(__GLIBC__) || defined(__FreeBSD__)
+    __attribute__((tls_model("initial-exec")))
+#endif
+    ;
 
 #endif /* defined (GLDISPATCH_USE_TLS) */
 
