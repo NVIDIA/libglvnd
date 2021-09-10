@@ -271,6 +271,36 @@ xaarch64)
 esac
 AC_MSG_RESULT([$gldispatch_entry_type, TLS=$HAVE_TLS])
 
+case "$gldispatch_entry_type" in
+# -mtls-dialect=gnu2 speeds up non-initial-exec TLS significantly but requires
+# full toolchain (including libc) support.
+#
+# tls stubs are incompatible with tlsdesc, but are only compatible with
+# initial-exec which is faster anyways
+*_tls) ;;
+*)
+    case " $CFLAGS" in
+    *' -mtls-dialect='*) ;;
+    *)
+        saved_CFLAGS="$CFLAGS"
+        AC_MSG_CHECKING([for -mtls-dialect=gnu2])
+        # -fpic to force dynamic tls, otherwise TLS relaxation defeats check
+        CFLAGS="$CFLAGS -mtls-dialect=gnu2 -fpic"
+        HAVE_TLSDESC=no
+        # need AC_RUN_IFELSE to check libc support. since this is just an
+        # optimization we skip it when cross-compiling
+        AC_RUN_IFELSE([AC_LANG_SOURCE([__thread int x; int main() { return x; }])],
+        [HAVE_TLSDESC=yes; AC_MSG_RESULT(yes)],
+        [AC_MSG_RESULT(no)],
+        [AC_MSG_WARN([cannot auto-detect -mtls-dialect when cross-compiling, using compiler default])]
+        )
+        CFLAGS="$saved_CFLAGS"
+        if test "$HAVE_TLSDESC" = yes; then
+            CFLAGS="$CFLAGS -mtls-dialect=gnu2"
+        fi
+    esac
+esac
+
 AS_IF([test "x$HAVE_TLS" = "xyes"],
       [AC_DEFINE([GLDISPATCH_USE_TLS], 1,
       [Define to 1 if libGLdispatch should use a TLS variable for the dispatch table.])])
