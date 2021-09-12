@@ -1,27 +1,4 @@
-#!/usr/bin/env python
-# encoding=utf-8
-# Copyright © 2018-2019 Intel Corporation
-
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and/or associated documentation files (the
-# "Materials"), to deal in the Materials without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Materials, and to
-# permit persons to whom the Materials are furnished to do so, subject to
-# the following conditions:
-
-# The above copyright notice and this permission notice shall be included
-# unaltered in all copies or substantial portions of the Materials.
-# Any additions, deletions, or changes to the original source files
-# must be clearly indicated in accompanying documentation.
-
-# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-# MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -30,22 +7,29 @@ import subprocess
 
 # This list contains symbols that _might_ be exported for some platforms
 PLATFORM_SYMBOLS = [
-    '_GLOBAL_OFFSET_TABLE_',
     '__bss_end__',
     '__bss_start__',
     '__bss_start',
+    '__cxa_guard_abort',
+    '__cxa_guard_acquire',
+    '__cxa_guard_release',
     '__end__',
+    '__odr_asan._glapi_Context',
+    '__odr_asan._glapi_Dispatch',
     '_bss_end__',
     '_edata',
     '_end',
     '_fini',
     '_init',
+    '_fbss',
+    '_fdata',
+    '_ftext',
 ]
 
-
-def get_symbols(nm, lib):
+def get_symbols_nm(nm, lib):
     '''
     List all the (non platform-specific) symbols exported by the library
+    using `nm`
     '''
     symbols = []
     platform_name = platform.system()
@@ -63,7 +47,35 @@ def get_symbols(nm, lib):
             assert symbol_name[0] == '_'
             symbol_name = symbol_name[1:]
         symbols.append(symbol_name)
+    return symbols
 
+
+def get_symbols_dumpbin(dumpbin, lib):
+    '''
+    List all the (non platform-specific) symbols exported by the library
+    using `dumpbin`
+    '''
+    symbols = []
+    output = subprocess.check_output([dumpbin, '/exports', lib],
+                                     stderr=open(os.devnull, 'w')).decode("ascii")
+    for line in output.splitlines():
+        fields = line.split()
+        # The lines with the symbols are made of at least 4 columns; see details below
+        if len(fields) < 4:
+            continue
+        try:
+            # Making sure the first 3 columns are a dec counter, a hex counter
+            # and a hex address
+            _ = int(fields[0], 10)
+            _ = int(fields[1], 16)
+            _ = int(fields[2], 16)
+        except ValueError:
+            continue
+        symbol_name = fields[3]
+        # De-mangle symbols
+        if symbol_name[0] == '_':
+            symbol_name = symbol_name[1:].split('@')[0]
+        symbols.append(symbol_name)
     return symbols
 
 
@@ -79,13 +91,24 @@ def main():
                         help='path to library')
     parser.add_argument('--nm',
                         action='store',
-                        type=lambda s: s.split()[0],  # autotools may pass "nm -B", but we just want nm
-                        required=True,
                         help='path to binary (or name in $PATH)')
+    parser.add_argument('--dumpbin',
+                        action='store',
+                        help='path to binary (or name in $PATH)')
+    parser.add_argument('--ignore-symbol',
+                        action='append',
+                        help='do not process this symbol')
     args = parser.parse_args()
 
     try:
-        lib_symbols = get_symbols(args.nm, args.lib)
+        if platform.system() == 'Windows':
+            if not args.dumpbin:
+                parser.error('--dumpbin is mandatory')
+            lib_symbols = get_symbols_dumpbin(args.dumpbin, args.lib)
+        else:
+            if not args.nm:
+                parser.error('--nm is mandatory')
+            lib_symbols = get_symbols_nm(args.nm, args.lib)
     except:
         # We can't run this test, but we haven't technically failed it either
         # Return the GNU "skip" error code
@@ -134,9 +157,13 @@ def main():
             continue
         if symbol in optional_symbols:
             continue
+        if args.ignore_symbol and symbol in args.ignore_symbol:
+            continue
         if symbol[:2] == '_Z':
-            # Ignore random C++ symbols
-            #TODO: figure out if there's any way to avoid exporting them in the first place
+            # As ajax found out, the compiler intentionally exports symbols
+            # that we explicitely asked it not to export, and we can't do
+            # anything about it:
+            # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=36022#c4
             continue
         unknown_symbols.append(symbol)
 
