@@ -136,7 +136,15 @@ if use_asm
   # FreeBSD and glibc). on other platforms we use TSD stubs to allow calling
   # extension functions unknown at compile time.
   # https://gitlab.freedesktop.org/glvnd/libglvnd/-/merge_requests/249
-  thread_type = have_tls and (host_machine.system() == 'freebsd' or cc.has_header_symbol('features.h', '__GLIBC__')) ? 'tls' : 'tsd'
+  thread_type = 'tsd'
+  if get_option('dispatch-tls')
+    if have_tls
+      if host_machine.system() == 'freebsd' or cc.has_header_symbol('features.h', '__GLIBC__')
+        thread_type = 'tls'
+      endif
+    endif
+  endif
+
   if host_machine.cpu_family().startswith('x86')
     gl_dispatch_type = '@0@_@1@'.format(
       host_machine.cpu_family(),
