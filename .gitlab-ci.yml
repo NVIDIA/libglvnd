@@ -86,6 +86,12 @@ build-x86_64-tsd-meson:
   variables:
     CONFIGURE_OPTIONS: -Dtls=false
 
+build-x86_64-tsd-tls-meson:
+  extends:
+    - .build-check-meson
+  variables:
+    CONFIGURE_OPTIONS: -Ddispatch-tls=false
+
 build-i386-tsd:
   extends:
     - .build-check-at
@@ -97,6 +103,12 @@ build-i386-tsd-meson:
     - .build-check-meson
   variables:
     CONFIGURE_OPTIONS: -Dtls=false --cross-file .gitlab-ci/i686-linux-gnu
+
+build-i386-tsd-tls-meson:
+  extends:
+    - .build-check-meson
+  variables:
+    CONFIGURE_OPTIONS: -Ddispatch-tls=false --cross-file .gitlab-ci/i686-linux-gnu
 
 build-pure-c-tls:
   extends:
