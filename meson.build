@@ -88,10 +88,6 @@ if not with_asm.disabled()
   endif
 endif
 
-if use_asm
-  add_project_arguments('-DUSE_DISPATCH_ASM', language : 'c')
-endif
-
 dep_dl = cc.find_library('dl', required : false)
 dep_m = cc.find_library('m', required : false)
 dep_threads = dependency('threads')
@@ -118,12 +114,13 @@ if cc.compiles('typeof(int *);', name : 'typeof')
 endif
 
 with_tls = get_option('tls')
-have_tls = false
-if not with_tls.disabled()
+if with_tls.auto()
   have_tls = cc.compiles(
-    '__thread int foo __attribute__((tls_model("initial-exec")));',
-    name : 'initial-exec TLS',
+    '__thread int foo;',
+    name : '__thread',
   )
+else
+  have_tls = with_tls.enabled()
 endif
 
 if have_tls
@@ -132,7 +129,11 @@ endif
 
 gl_dispatch_type = 'pure_c'
 if use_asm
-  thread_type = have_tls ? 'tls' : 'tsd'
+  # TLS asm requires initial-exec, which is not portable (only supported by
+  # FreeBSD and glibc). on other platforms we use TSD stubs to allow calling
+  # extension functions unknown at compile time.
+  # https://gitlab.freedesktop.org/glvnd/libglvnd/-/merge_requests/249
+  thread_type = have_tls and (host_machine.system() == 'freebsd' or cc.has_header_symbol('features.h', '__GLIBC__')) ? 'tls' : 'tsd'
   if host_machine.cpu_family().startswith('x86')
     gl_dispatch_type = '@0@_@1@'.format(
       host_machine.cpu_family(),
@@ -145,8 +146,37 @@ if use_asm
   elif host_machine.cpu_family() == 'ppc64'
     gl_dispatch_type = 'ppc64_@0@'.format(thread_type)
   endif
+  add_project_arguments('-DUSE_DISPATCH_ASM', language : 'c')
 endif
 message('Using dispatch stub type: @0@'.format(gl_dispatch_type))
+
+# -mtls-dialect=gnu2 speeds up non-initial-exec TLS significantly but requires
+# full toolchain (including libc) support.
+#
+# tls stubs are incompatible with tlsdesc, but are only compatible with
+# initial-exec which is faster anyways
+if not gl_dispatch_type.endswith('_tls')
+  have_mtls_dialect = false
+  foreach c_arg : get_option('c_args')
+    if c_arg.startswith('-mtls-dialect=')
+      have_mtls_dialect = true
+      break
+    endif
+  endforeach
+  if not have_mtls_dialect
+    # need .run to check libc support. meson aborts when calling .run when
+    # cross-compiling, but because this is just an optimization we can skip it
+    if meson.is_cross_build()
+      warning('cannot auto-detect -mtls-dialect when cross-compiling, using compiler default')
+    else
+      # -fpic to force dynamic tls, otherwise TLS relaxation defeats check
+      gnu2_test = cc.run('int __thread x; int main() { return x; }', args: ['-mtls-dialect=gnu2', '-fpic'], name: '-mtls-dialect=gnu2')
+      if gnu2_test.returncode() == 0
+        add_project_arguments('-mtls-dialect=gnu2', language : ['c'])
+      endif
+    endif
+  endif
+endif
 
 if cc.has_function_attribute('constructor')
   add_project_arguments('-DUSE_ATTRIBUTE_CONSTRUCTOR', language : ['c'])
