@@ -114,14 +114,17 @@ if cc.compiles('typeof(int *);', name : 'typeof')
 endif
 
 with_tls = get_option('tls')
-if with_tls.auto()
+if with_tls
+  # Use a __thread variable if possible, even if we can't use the TLS assembly
+  # stubs, because it's still faster than calling pthread_getspecific.
   have_tls = cc.compiles(
     '__thread int foo;',
     name : '__thread',
   )
 else
-  have_tls = with_tls.enabled()
+  have_tls = false
 endif
+message('Using TLS variable for dispatch table: @0@'.format(have_tls))
 
 if have_tls
   add_project_arguments('-DGLDISPATCH_USE_TLS', language : ['c'])
