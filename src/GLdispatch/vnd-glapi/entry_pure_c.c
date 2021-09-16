@@ -56,7 +56,7 @@ const int entry_stub_size = 0;
 mapi_func
 entry_get_public(int index)
 {
-    /* pubic_entries are defined by MAPI_TMP_PUBLIC_ENTRIES */
+    /* public_entries are defined by MAPI_TMP_PUBLIC_ENTRIES */
     if (index >= 0 && index < ARRAY_LEN(public_entries)) {
         return public_entries[index];
     } else {
