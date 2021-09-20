@@ -29,6 +29,7 @@
 
 #include "glvnd_genentry.h"
 #include "utils_misc.h"
+#include "compiler.h"
 
 #include <string.h>
 #include <stdint.h>
@@ -45,7 +46,7 @@
 #define GLX_STUBS_COUNT
 #include "g_glx_dispatch_stub_list.h"
 
-static GLVNDentrypointStub entrypointFunctions[GENERATED_ENTRYPOINT_MAX];
+USED static GLVNDentrypointStub entrypointFunctions[GENERATED_ENTRYPOINT_MAX];
 static char *entrypointNames[GENERATED_ENTRYPOINT_MAX] = {};
 static int entrypointCount = 0;
 
