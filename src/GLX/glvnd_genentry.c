@@ -14,10 +14,6 @@
  * Any additions, deletions, or changes to the original source files
  * must be clearly indicated in accompanying documentation.
  *
- * If only executable code is distributed, then the accompanying
- * documentation must state that "this software is based in part on the
- * work of the Khronos Group."
- *
  * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
