@@ -95,7 +95,7 @@ endif
 
 dep_x11_headers = dep_x11.partial_dependency(compile_args : true, includes : true)
 if dep_x11.found()
-  add_project_arguments('-DUSE_X11', language : ['c'])
+  add_project_arguments('-DENABLE_EGL_X11', language : ['c'])
 endif
 
 dep_xext = dep_null

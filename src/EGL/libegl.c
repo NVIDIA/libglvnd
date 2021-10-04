@@ -32,7 +32,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#if defined(USE_X11)
+#if defined(ENABLE_EGL_X11)
 #include <X11/Xlib.h>
 #endif
 
@@ -176,7 +176,7 @@ static EGLBoolean IsGbmDisplay(void *native_display)
 
 static EGLBoolean IsX11Display(void *dpy)
 {
-#if defined(USE_X11)
+#if defined(ENABLE_EGL_X11)
     void *alloc;
     void *handle;
     void *XAllocID = NULL;
@@ -193,9 +193,9 @@ static EGLBoolean IsX11Display(void *dpy)
     }
 
     return (XAllocID != NULL && XAllocID == alloc);
-#else // defined(USE_X11)
+#else // defined(ENABLE_EGL_X11)
     return EGL_FALSE;
-#endif // defined(USE_X11)
+#endif // defined(ENABLE_EGL_X11)
 }
 
 static EGLBoolean IsWaylandDisplay(void *native_display)
