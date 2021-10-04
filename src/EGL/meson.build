@@ -25,6 +25,7 @@ libegl_dispatch_stubs = static_library(
   'egl_dispatch_stubs',
   ['egldispatchstubs.c', g_egldispatchstubs_c, g_egldispatchstubs_h],
   include_directories : inc_include,
+  dependencies : [dep_x11_headers],
   gnu_symbol_visibility : 'hidden',
 )
 
