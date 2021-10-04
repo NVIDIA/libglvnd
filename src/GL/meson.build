@@ -28,7 +28,7 @@ libGL = shared_library(
   include_directories : [inc_include],
   link_args : '-Wl,-Bsymbolic',
   dependencies : [
-    dep_dl, idep_gldispatch, idep_glapi_gl, idep_glx, idep_utils_misc,
+    dep_dl, idep_gldispatch, idep_glapi_gl, idep_glx, idep_utils_misc, dep_x11_headers
   ],
   version : '1.7.0',
   gnu_symbol_visibility : 'hidden',
