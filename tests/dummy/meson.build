@@ -48,7 +48,7 @@ if get_option('egl')
       c_args : ['-DDUMMY_VENDOR_NAME="dummy@0@"'.format(v)],
       include_directories : [inc_include],
       link_with: [libpatchentrypoints],
-      dependencies : [idep_glvnd_pthread, dep_x11_headers],
+      dependencies : [idep_glvnd_pthread],
       version : '0',
     )
   endforeach
