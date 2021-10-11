@@ -52,6 +52,8 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include "glvnd_list.h"
+
 #define DUMMY_VENDOR_NAME_0 "dummy0"
 #define DUMMY_VENDOR_NAME_1 "dummy1"
 
@@ -106,6 +108,9 @@ enum
  */
 typedef struct DummyEGLContextRec {
     const char *vendorName;
+
+    // Everything after this is used internally by EGL_dummy.c.
+    struct glvnd_list entry;
 } DummyEGLContext;
 
 /**

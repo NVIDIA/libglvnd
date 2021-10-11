@@ -85,6 +85,9 @@ static struct glvnd_list displayList = { &displayList, &displayList };
 static glvnd_mutex_t displayListLock = GLVND_MUTEX_INITIALIZER;
 static EGLint failNextMakeCurrentError = EGL_NONE;
 
+static glvnd_mutex_t contextListLock = GLVND_MUTEX_INITIALIZER;
+static struct glvnd_list contextList = { &contextList, &contextList };
+
 static EGLDEBUGPROCKHR debugCallbackFunc = NULL;
 static EGLBoolean debugCallbackEnabled = EGL_TRUE;
 
@@ -337,6 +340,10 @@ static EGLContext EGLAPIENTRY dummy_eglCreateContext(EGLDisplay dpy,
     dctx = (DummyEGLContext *) calloc(1, sizeof(DummyEGLContext));
     dctx->vendorName = DUMMY_VENDOR_NAME;
 
+    __glvndPthreadFuncs.mutex_lock(&contextListLock);
+    glvnd_list_append(&dctx->entry, &contextList);
+    __glvndPthreadFuncs.mutex_unlock(&contextListLock);
+
     return (EGLContext) dctx;
 }
 
@@ -347,6 +354,9 @@ static EGLBoolean EGLAPIENTRY dummy_eglDestroyContext(EGLDisplay dpy, EGLContext
 
     if (ctx != EGL_NO_CONTEXT) {
         DummyEGLContext *dctx = (DummyEGLContext *) ctx;
+        __glvndPthreadFuncs.mutex_lock(&contextListLock);
+        glvnd_list_del(&dctx->entry);
+        __glvndPthreadFuncs.mutex_unlock(&contextListLock);
         free(dctx);
     }
     return EGL_TRUE;
@@ -967,6 +977,14 @@ void _fini(void)
         // We were never initialized, so there's nothing to clean up.
         return;
     }
+
+    __glvndPthreadFuncs.mutex_lock(&contextListLock);
+    while (!glvnd_list_is_empty(&contextList)) {
+        DummyEGLContext *ctx = glvnd_list_first_entry(&contextList, DummyEGLContext, entry);
+        glvnd_list_del(&ctx->entry);
+        free(ctx);
+    }
+    __glvndPthreadFuncs.mutex_unlock(&contextListLock);
 
     while (!glvnd_list_is_empty(&displayList)) {
         DummyEGLDisplay *disp = glvnd_list_first_entry(
