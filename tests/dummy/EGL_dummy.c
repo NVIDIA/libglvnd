@@ -112,9 +112,20 @@ static DummyThreadState *GetThreadState(void)
     return thr;
 }
 
+void DestroyThreadState(DummyThreadState *thr)
+{
+    if (thr != NULL)
+    {
+        __glvndPthreadFuncs.mutex_lock(&threadStateLock);
+        glvnd_list_del(&thr->entry);
+        __glvndPthreadFuncs.mutex_unlock(&threadStateLock);
+        free(thr);
+    }
+}
+
 static void OnThreadTerminate(void *ptr)
 {
-    free(ptr);
+    DestroyThreadState((DummyThreadState *) ptr);
 }
 
 static void CommonEntrypoint(void)
@@ -504,7 +515,7 @@ static EGLBoolean EGLAPIENTRY dummy_eglReleaseThread(void)
         __glvndPthreadFuncs.getspecific(threadStateKey);
     if (thr != NULL) {
         __glvndPthreadFuncs.setspecific(threadStateKey, NULL);
-        free(thr);
+        DestroyThreadState(thr);
     }
     return EGL_TRUE;
 }
