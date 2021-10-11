@@ -179,6 +179,7 @@ TESTS_EGL += testeglgetprocaddress.sh
 TESTS_EGL += testeglmakecurrent.sh
 TESTS_EGL += testeglerror.sh
 TESTS_EGL += testegldebug.sh
+TESTS_EGL += testeglcurrentcleanup.sh
 
 if ENABLE_EGL
 
@@ -228,6 +229,12 @@ testegldebug_SOURCES = \
 	testegldebug.c \
 	egl_test_utils.c
 testegldebug_LDADD = $(top_builddir)/src/EGL/libEGL.la @LIB_DL@
+
+check_PROGRAMS += testeglcurrentcleanup
+testeglcurrentcleanup_SOURCES = \
+	testeglcurrentcleanup.c
+testeglcurrentcleanup_LDADD = $(top_builddir)/src/EGL/libEGL.la
+testeglcurrentcleanup_LDADD += $(PTHREAD_LIBS)
 
 endif # ENABLE_EGL
 

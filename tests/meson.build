@@ -232,5 +232,19 @@ if get_option('egl')
       suite : ['egl'],
     )
   endforeach
+
+  test(
+    'eglcurrentcleanup',
+    executable(
+      'eglcurrentcleanup',
+      ['testeglcurrentcleanup.c'],
+      include_directories : [inc_include],
+      link_with : [libEGL],
+      dependencies : [dep_threads],
+    ),
+    args : [ '-m', '-t', '-k', '-r' ],
+    env : env_egl,
+    suite : ['egl'],
+  )
 endif
 
