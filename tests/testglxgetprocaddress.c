@@ -91,6 +91,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    XCloseDisplay(dpy);
+    printf("Success\n");
+
     // Success!
     return 0;
 }
