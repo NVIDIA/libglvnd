@@ -79,6 +79,7 @@ if with_glx
     ),
     env : env_glx,
     suite : ['glx'],
+    depends : [libGLX_dummy],
   )
 
   exe_glxmakecurrent = executable(
@@ -102,6 +103,7 @@ if with_glx
       args : t[1],
       env : t[2],
       suite : ['glx'],
+      depends : [libGLX_dummy],
     )
   endforeach
 
@@ -119,6 +121,7 @@ if with_glx
     args : ['-t', '1', '-i', '1'],
     env : env_glx,
     suite : ['glx'],
+    depends : [libGLX_dummy],
   )
 
   exe_glxgetprocaddress = executable(
@@ -133,6 +136,7 @@ if with_glx
     exe_glxgetprocaddress,
     env : env_glx,
     suite : ['glx'],
+    depends : [libGLX_dummy],
   )
 
   test(
@@ -140,6 +144,7 @@ if with_glx
     exe_glxgetprocaddress,
     env : env_glx,
     suite : ['glx'],
+    depends : [libGLX_dummy],
   )
 
   test(
@@ -152,6 +157,7 @@ if with_glx
     ),
     env : env_glx,
     suite : ['glx'],
+    depends : [libGLX_dummy],
   )
 
   test(
@@ -165,6 +171,7 @@ if with_glx
     ),
     env : env_glx,
     suite : ['glx'],
+    depends : [libGLX_dummy],
   )
 
   test(
@@ -178,6 +185,7 @@ if with_glx
     ),
     env : env_glx,
     suite : ['glx'],
+    depends : [libGLX_dummy],
   )
 endif
 
@@ -204,6 +212,7 @@ if get_option('egl')
       ),
       env : env_egl,
       suite : ['egl'],
+      depends : libEGL_dummy,
     )
   endforeach
 endif
