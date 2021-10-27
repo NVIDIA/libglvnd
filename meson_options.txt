@@ -56,8 +56,15 @@ option(
 )
 option(
   'tls',
-  type : 'feature',
-  description : 'Use Thread Local Storage.'
+  type : 'boolean',
+  value : true,
+  description : 'Use Thread Local Storage (if supported).'
+)
+option(
+  'dispatch-tls',
+  type : 'boolean',
+  value : true,
+  description : 'Use TLS-based stubs in libGLdispatch (if supported).'
 )
 option(
   'dispatch-page-size',
