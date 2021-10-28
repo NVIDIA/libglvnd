@@ -203,7 +203,7 @@ AX_PTHREAD()
 
 if test "x$enable_x11" = "xyes" ; then
     PKG_CHECK_MODULES([X11], [x11])
-    AC_DEFINE([USE_X11], 1,
+    AC_DEFINE([ENABLE_EGL_X11], 1,
         [Define to 1 if X11 support is enabled.])
 fi
 if test "x$enable_glx" = "xyes" ; then

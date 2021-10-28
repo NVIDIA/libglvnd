@@ -87,10 +87,15 @@ endif
 dep_dl = cc.find_library('dl', required : false)
 dep_m = cc.find_library('m', required : false)
 dep_threads = dependency('threads')
-dep_x11 = dependency('x11', required : get_option('x11'))
+if get_option('x11').disabled()
+  dep_x11 = dependency('', required : false)
+else
+  dep_x11 = dependency('x11', required : get_option('x11'))
+endif
+
 dep_x11_headers = dep_x11.partial_dependency(compile_args : true, includes : true)
 if dep_x11.found()
-  add_project_arguments('-DUSE_X11', language : ['c'])
+  add_project_arguments('-DENABLE_EGL_X11', language : ['c'])
 endif
 
 dep_xext = dep_null
