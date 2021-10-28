@@ -95,7 +95,7 @@ if with_glx
 
   foreach t : [['basic', ['-t', '1', '-i', '1'], env_glx],
                ['loop', ['-t', '1', '-i', '250'], env_glx],
-               ['threads', ['-t', '5', '-i', '20000'], [env_glx, 'LD_PRELOAD=libpthread.so.0']],
+               ['threads', ['-t', '5', '-i', '20000'], env_glx + ['LD_PRELOAD=libpthread.so.0']],
               ]
     test(
       'glxmakecurrent (@0@)'.format(t[0]),
