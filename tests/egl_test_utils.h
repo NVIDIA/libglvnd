@@ -41,9 +41,21 @@
  */
 #define DUMMY_TOTAL_DEVICE_COUNT (DUMMY_VENDOR_COUNT * DUMMY_EGL_DEVICE_COUNT)
 
+/**
+ * Functions that are exported directly from a vendor library, rather than
+ * being accessed through eglGetProcAddress.
+ */
+typedef struct
+{
+    pfn_DummySetDeviceCount SetDeviceCount;
+} DummyVendorFunctions;
+
 extern const char *DUMMY_VENDOR_NAMES[DUMMY_VENDOR_COUNT];
 
 extern PFNEGLQUERYDEVICESEXTPROC ptr_eglQueryDevicesEXT;
+extern PFNEGLQUERYDEVICEATTRIBEXTPROC ptr_eglQueryDeviceAttribEXT;
+extern PFNEGLQUERYDEVICESTRINGEXTPROC ptr_eglQueryDeviceStringEXT;
+extern PFNEGLQUERYDISPLAYATTRIBEXTPROC ptr_eglQueryDisplayAttribEXT;
 extern PFNEGLDEBUGMESSAGECONTROLKHRPROC ptr_eglDebugMessageControlKHR;
 extern PFNEGLQUERYDEBUGKHRPROC ptr_eglQueryDebugKHR;
 extern PFNEGLLABELOBJECTKHRPROC ptr_eglLabelObjectKHR;
@@ -51,6 +63,9 @@ extern PFNEGLLABELOBJECTKHRPROC ptr_eglLabelObjectKHR;
 extern pfn_eglTestDispatchDisplay ptr_eglTestDispatchDisplay;
 extern pfn_eglTestDispatchDevice ptr_eglTestDispatchDevice;
 extern pfn_eglTestDispatchCurrent ptr_eglTestDispatchCurrent;
+extern pfn_eglTestReturnDevice ptr_eglTestReturnDevice;
+
+extern DummyVendorFunctions dummyFuncs[DUMMY_VENDOR_COUNT];
 
 /**
  * Loads an EGL extension function with eglGetProcAddress. If it fails, then it
@@ -63,5 +78,15 @@ __eglMustCastToProperFunctionPointerType loadEGLFunction(const char *name);
  * supports.
  */
 void loadEGLExtensions(void);
+
+/**
+ * Loads the additional functions exported by the dummy vendor libraries.
+ */
+void loadDummyVendorExtensions(void);
+
+/**
+ * Frees up any memory allocated by loadDummyVendorExtensions.
+ */
+void cleanupDummyVendorExtensions(void);
 
 #endif // EGL_TEST_UTILS_H

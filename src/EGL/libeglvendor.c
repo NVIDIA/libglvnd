@@ -164,6 +164,7 @@ const __EGLapiExports __eglExportsTable = {
     __eglSetLastVendor, // setLastVendor
     __eglGetVendorFromDisplay, // getVendorFromDisplay
     __eglGetVendorFromDevice, // getVendorFromDevice
+    __eglAddDevice, // setVendorForDevice
 };
 
 void TeardownVendor(__EGLvendorInfo *vendor)
@@ -241,6 +242,7 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
     LOADENTRYPOINT(createPlatformPixmapSurface,   "eglCreatePlatformPixmapSurface"   );
     LOADENTRYPOINT(waitSync,                      "eglWaitSync"                      );
     LOADENTRYPOINT(queryDevicesEXT,               "eglQueryDevicesEXT"               );
+    LOADENTRYPOINT(queryDisplayAttribEXT,         "eglQueryDisplayAttribEXT"         );
 
     LOADENTRYPOINT(debugMessageControlKHR,        "eglDebugMessageControlKHR"        );
     LOADENTRYPOINT(queryDebugKHR,                 "eglQueryDebugKHR"                 );

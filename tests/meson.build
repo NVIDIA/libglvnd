@@ -208,11 +208,28 @@ if get_option('egl')
         ['test@0@.c'.format(t[0]), 'egl_test_utils.c'],
         include_directories : [inc_include],
         link_with : [libEGL, t[1]],
-        dependencies : [t[2]],
+        dependencies : [dep_dl, t[2]],
       ),
       env : env_egl,
       suite : ['egl'],
       depends : libEGL_dummy,
+    )
+  endforeach
+
+  exe_egldeviceadd = executable(
+    'egldeviceadd',
+    ['testegldeviceadd.c', 'egl_test_utils.c'],
+    include_directories : [inc_include],
+    link_with : [libEGL],
+    dependencies : [dep_dl],
+  )
+  foreach t : [ 'querydevices', 'returndevice', 'querydisplay' ]
+    test(
+      'egldeviceadd (@0@)'.format(t),
+      exe_egldeviceadd,
+      args : [t],
+      env : env_egl,
+      suite : ['egl'],
     )
   endforeach
 endif

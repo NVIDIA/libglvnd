@@ -955,9 +955,73 @@ PUBLIC const char *EGLAPIENTRY eglQueryString(EGLDisplay dpy, EGLint name)
     }
 }
 
+static EGLBoolean QueryVendorDevices(__EGLvendorInfo *vendor, EGLint max_devices,
+        EGLDeviceEXT *devices, EGLint *num_devices)
+{
+    EGLDeviceEXT *vendorDevices = NULL;
+    EGLint vendorCount = 0;
+    EGLint i;
+
+    if (!vendor->supportsDevice) {
+        return EGL_TRUE;
+    }
+
+    if (!vendor->staticDispatch.queryDevicesEXT(0, NULL, &vendorCount)) {
+        // Even if this vendor fails, we can still return the devices from any
+        // other vendors
+        return EGL_TRUE;
+    }
+    if (vendorCount <= 0) {
+        return EGL_TRUE;
+    }
+
+    if (devices == NULL) {
+        // We're only getting the number of devices.
+        *num_devices += vendorCount;
+        return EGL_TRUE;
+    }
+
+    vendorDevices = malloc(sizeof(EGLDeviceEXT) * vendorCount);
+    if (vendorDevices == NULL)
+    {
+        __eglReportCritical(EGL_BAD_ALLOC, "eglQueryDevicesEXT",
+                __eglGetThreadLabel(), "Out of memory allocating device list");
+        return EGL_FALSE;
+    }
+
+    if (!vendor->staticDispatch.queryDevicesEXT(vendorCount, vendorDevices, &vendorCount)) {
+        free(vendorDevices);
+        return EGL_TRUE;
+    }
+
+    // Add or update our mapping for all of the devices, and fill in the
+    // caller's array.
+    for (i=0; i<vendorCount; i++)
+    {
+        if (!__eglAddDevice(vendorDevices[i], vendor))
+        {
+            __eglReportCritical(EGL_BAD_ALLOC, "eglQueryDevicesEXT",
+                    __eglGetThreadLabel(), "Out of memory allocating device/vendor map");
+            free(vendorDevices);
+            return EGL_FALSE;
+        }
+
+        if (*num_devices < max_devices)
+        {
+            devices[*num_devices] = vendorDevices[i];
+            (*num_devices)++;
+        }
+    }
+    free(vendorDevices);
+    return EGL_TRUE;
+}
+
 EGLBoolean EGLAPIENTRY eglQueryDevicesEXT(EGLint max_devices,
         EGLDeviceEXT *devices, EGLint *num_devices)
 {
+    struct glvnd_list *vendorList;
+    __EGLvendorInfo *vendor;
+
     __eglEntrypointCommon();
 
     if (num_devices == NULL || (max_devices <= 0 && devices != NULL)) {
@@ -966,18 +1030,55 @@ EGLBoolean EGLAPIENTRY eglQueryDevicesEXT(EGLint max_devices,
         return EGL_FALSE;
     }
 
-    __eglInitDeviceList();
+    vendorList = __eglLoadVendors();
 
-    if (devices != NULL) {
-        EGLint i;
-
-        *num_devices = (max_devices < __eglDeviceCount ? max_devices : __eglDeviceCount);
-        for (i = 0; i < *num_devices; i++) {
-            devices[i] = __eglDeviceList[i].handle;
+    // Initialize num_devices. QueryVendorDevices will update it.
+    *num_devices = 0;
+    glvnd_list_for_each_entry(vendor, vendorList, entry) {
+        if (!QueryVendorDevices(vendor, max_devices, devices, num_devices)) {
+            return EGL_FALSE;
         }
-    } else {
-        *num_devices = __eglDeviceCount;
     }
+    return EGL_TRUE;
+}
+
+
+EGLBoolean eglQueryDisplayAttribEXT(EGLDisplay dpy, EGLint attribute, EGLAttrib *value)
+{
+    __EGLvendorInfo *vendor;
+
+    if (value == NULL) {
+        __eglReportError(EGL_BAD_PARAMETER, "eglQueryDisplayAttribEXT", NULL,
+                "Missing value pointer");
+        return EGL_FALSE;
+    }
+
+    vendor = __eglGetVendorFromDisplay(dpy);
+    if (vendor == NULL) {
+        __eglReportError(EGL_BAD_DISPLAY, "eglQueryDisplayAttribEXT", NULL,
+                "Invalid EGLDisplay handle");
+        return EGL_FALSE;
+    }
+
+    if (vendor->staticDispatch.queryDisplayAttribEXT == NULL) {
+        __eglReportError(EGL_BAD_DISPLAY, "eglQueryDisplayAttribEXT", NULL,
+                "Driver does not support eglQueryDisplayAttribEXT");
+        return EGL_FALSE;
+    }
+
+    __eglSetLastVendor(vendor);
+    if (!vendor->staticDispatch.queryDisplayAttribEXT(dpy, attribute, value)) {
+        return EGL_FALSE;
+    }
+
+    if (attribute == EGL_DEVICE_EXT && (EGLDeviceEXT) *value != EGL_NO_DEVICE_EXT) {
+        if (!__eglAddDevice((EGLDeviceEXT) *value, vendor)) {
+            __eglReportCritical(EGL_BAD_ALLOC, "eglQueryDevicesEXT",
+                    __eglGetThreadLabel(), "Out of memory allocating device/vendor map");
+            return EGL_FALSE;
+        }
+    }
+
     return EGL_TRUE;
 }
 

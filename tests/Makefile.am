@@ -172,6 +172,9 @@ endif # ENABLE_GLX
 TESTS_EGL =
 TESTS_EGL += testegldisplay.sh
 TESTS_EGL += testegldevice.sh
+TESTS_EGL += testegldeviceadd_querydevices.sh
+TESTS_EGL += testegldeviceadd_returndevice.sh
+TESTS_EGL += testegldeviceadd_querydisplay.sh
 TESTS_EGL += testeglgetprocaddress.sh
 TESTS_EGL += testeglmakecurrent.sh
 TESTS_EGL += testeglerror.sh
@@ -185,32 +188,38 @@ check_PROGRAMS += testegldisplay
 testegldisplay_SOURCES = \
 	testegldisplay.c \
 	egl_test_utils.c
-testegldisplay_LDADD = $(top_builddir)/src/EGL/libEGL.la
+testegldisplay_LDADD = $(top_builddir)/src/EGL/libEGL.la @LIB_DL@
 
 check_PROGRAMS += testegldevice
 testegldevice_SOURCES = \
 	testegldevice.c \
 	egl_test_utils.c
-testegldevice_LDADD = $(top_builddir)/src/EGL/libEGL.la
+testegldevice_LDADD = $(top_builddir)/src/EGL/libEGL.la @LIB_DL@
+
+check_PROGRAMS += testegldeviceadd
+testegldeviceadd_SOURCES = \
+	testegldeviceadd.c \
+	egl_test_utils.c
+testegldeviceadd_LDADD = $(top_builddir)/src/EGL/libEGL.la @LIB_DL@
 
 check_PROGRAMS += testeglgetprocaddress
 testeglgetprocaddress_SOURCES = \
 	testeglgetprocaddress.c \
 	egl_test_utils.c
-testeglgetprocaddress_LDADD = $(top_builddir)/src/EGL/libEGL.la
+testeglgetprocaddress_LDADD = $(top_builddir)/src/EGL/libEGL.la @LIB_DL@
 
 check_PROGRAMS += testeglmakecurrent
 testeglmakecurrent_SOURCES = \
 	testeglmakecurrent.c \
 	egl_test_utils.c
-testeglmakecurrent_LDADD = $(top_builddir)/src/EGL/libEGL.la
+testeglmakecurrent_LDADD = $(top_builddir)/src/EGL/libEGL.la @LIB_DL@
 testeglmakecurrent_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 
 check_PROGRAMS += testeglerror
 testeglerror_SOURCES = \
 	testeglerror.c \
 	egl_test_utils.c
-testeglerror_LDADD = $(top_builddir)/src/EGL/libEGL.la
+testeglerror_LDADD = $(top_builddir)/src/EGL/libEGL.la @LIB_DL@
 testeglerror_LDADD += $(top_builddir)/src/OpenGL/libOpenGL.la
 
 
@@ -218,7 +227,7 @@ check_PROGRAMS += testegldebug
 testegldebug_SOURCES = \
 	testegldebug.c \
 	egl_test_utils.c
-testegldebug_LDADD = $(top_builddir)/src/EGL/libEGL.la
+testegldebug_LDADD = $(top_builddir)/src/EGL/libEGL.la @LIB_DL@
 
 endif # ENABLE_EGL
 
