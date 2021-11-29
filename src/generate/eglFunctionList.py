@@ -142,6 +142,12 @@ EGL_FUNCTIONS = (
     # EGL_EXT_device_query
     _eglExt("eglQueryDisplayAttribEXT",             "custom"),
 
+    # EGL_KHR_display_reference
+    _eglExt("eglQueryDisplayAttribKHR",             "custom"),
+
+    # EGL_NV_stream_metadata
+    _eglExt("eglQueryDisplayAttribNV",              "custom"),
+
     # EGL_KHR_debug
     _eglExt("eglDebugMessageControlKHR",            "custom"),
     _eglExt("eglQueryDebugKHR",                     "custom"),

@@ -242,12 +242,24 @@ static GLboolean LookupVendorEntrypoints(__EGLvendorInfo *vendor)
     LOADENTRYPOINT(createPlatformPixmapSurface,   "eglCreatePlatformPixmapSurface"   );
     LOADENTRYPOINT(waitSync,                      "eglWaitSync"                      );
     LOADENTRYPOINT(queryDevicesEXT,               "eglQueryDevicesEXT"               );
-    LOADENTRYPOINT(queryDisplayAttribEXT,         "eglQueryDisplayAttribEXT"         );
 
     LOADENTRYPOINT(debugMessageControlKHR,        "eglDebugMessageControlKHR"        );
     LOADENTRYPOINT(queryDebugKHR,                 "eglQueryDebugKHR"                 );
     LOADENTRYPOINT(labelObjectKHR,                "eglLabelObjectKHR"                );
 #undef LOADENTRYPOINT
+
+    // eglQueryDisplayAttrib has KHR, EXT, and NV versions. They're all
+    // interchangeable, but the vendor might not support all of them.
+    vendor->staticDispatch.queryDisplayAttrib =
+        vendor->eglvc.getProcAddress("eglQueryDisplayAttribKHR");
+    if (vendor->staticDispatch.queryDisplayAttrib == NULL) {
+        vendor->staticDispatch.queryDisplayAttrib =
+            vendor->eglvc.getProcAddress("eglQueryDisplayAttribEXT");
+    }
+    if (vendor->staticDispatch.queryDisplayAttrib == NULL) {
+        vendor->staticDispatch.queryDisplayAttrib =
+            vendor->eglvc.getProcAddress("eglQueryDisplayAttribNV");
+    }
 
     return GL_TRUE;
 }
