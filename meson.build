@@ -24,7 +24,7 @@
 project(
   'glvnd',
   'c',
-  version : '1.3.4',
+  version : '1.4.0',
   meson_version : '>= 0.48',
   default_options : ['c_std=gnu99']
 )
