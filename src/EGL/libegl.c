@@ -1043,31 +1043,31 @@ EGLBoolean EGLAPIENTRY eglQueryDevicesEXT(EGLint max_devices,
 }
 
 
-EGLBoolean eglQueryDisplayAttribEXT(EGLDisplay dpy, EGLint attribute, EGLAttrib *value)
+static EGLBoolean CommonQueryDisplayAttrib(const char *name, EGLDisplay dpy, EGLint attribute, EGLAttrib *value)
 {
     __EGLvendorInfo *vendor;
 
     if (value == NULL) {
-        __eglReportError(EGL_BAD_PARAMETER, "eglQueryDisplayAttribEXT", NULL,
+        __eglReportError(EGL_BAD_PARAMETER, name, NULL,
                 "Missing value pointer");
         return EGL_FALSE;
     }
 
     vendor = __eglGetVendorFromDisplay(dpy);
     if (vendor == NULL) {
-        __eglReportError(EGL_BAD_DISPLAY, "eglQueryDisplayAttribEXT", NULL,
+        __eglReportError(EGL_BAD_DISPLAY, name, NULL,
                 "Invalid EGLDisplay handle");
         return EGL_FALSE;
     }
 
-    if (vendor->staticDispatch.queryDisplayAttribEXT == NULL) {
-        __eglReportError(EGL_BAD_DISPLAY, "eglQueryDisplayAttribEXT", NULL,
-                "Driver does not support eglQueryDisplayAttribEXT");
+    if (vendor->staticDispatch.queryDisplayAttrib == NULL) {
+        __eglReportError(EGL_BAD_DISPLAY, name, NULL,
+                "Driver does not support eglQueryDisplayAttrib");
         return EGL_FALSE;
     }
 
     __eglSetLastVendor(vendor);
-    if (!vendor->staticDispatch.queryDisplayAttribEXT(dpy, attribute, value)) {
+    if (!vendor->staticDispatch.queryDisplayAttrib(dpy, attribute, value)) {
         return EGL_FALSE;
     }
 
@@ -1080,6 +1080,19 @@ EGLBoolean eglQueryDisplayAttribEXT(EGLDisplay dpy, EGLint attribute, EGLAttrib 
     }
 
     return EGL_TRUE;
+}
+
+EGLBoolean eglQueryDisplayAttribEXT(EGLDisplay dpy, EGLint attribute, EGLAttrib *value)
+{
+    return CommonQueryDisplayAttrib("eglQueryDisplayAttribEXT", dpy, attribute, value);
+}
+EGLBoolean eglQueryDisplayAttribKHR(EGLDisplay dpy, EGLint attribute, EGLAttrib *value)
+{
+    return CommonQueryDisplayAttrib("eglQueryDisplayAttribKHR", dpy, attribute, value);
+}
+EGLBoolean eglQueryDisplayAttribNV(EGLDisplay dpy, EGLint attribute, EGLAttrib *value)
+{
+    return CommonQueryDisplayAttrib("eglQueryDisplayAttribNV", dpy, attribute, value);
 }
 
 // TODO: The function hash is the same as in GLX. It should go into a common
