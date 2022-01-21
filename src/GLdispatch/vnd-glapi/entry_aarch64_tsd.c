@@ -55,7 +55,8 @@
     ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n\t" \
     ".global " func "\n\t"                          \
     ".type " func ", %function\n\t"                 \
-    func ":\n\t"
+    func ":\n\t"                                    \
+    "hint #34\n\t"
 
 /*
  * Looks up the current dispatch table, finds the stub address at the given slot
@@ -69,6 +70,7 @@
  * table then does a branch without link to the function address.
  */
 #define STUB_ASM_CODE(slot)                           \
+    "hint #34\n\t"                                    \
     "stp x1, x0, [sp, #-16]!\n\t"                     \
     "adrp x0, :got:_glapi_Current\n\t"                \
     "ldr x0, [x0, #:got_lo12:_glapi_Current]\n\t"     \
