@@ -69,6 +69,7 @@
  * table then does a branch without link to the function address.
  */
 #define STUB_ASM_CODE(slot)                           \
+    "hint #34\n\t"                                    \
     "stp x1, x0, [sp, #-16]!\n\t"                     \
     "adrp x0, :got:_glapi_Current\n\t"                \
     "ldr x0, [x0, #:got_lo12:_glapi_Current]\n\t"     \

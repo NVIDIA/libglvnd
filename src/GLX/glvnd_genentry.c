@@ -90,6 +90,7 @@ extern char glx_entrypoint_end[];
 
 #define STUB_SIZE 16
 #define STUB_ASM_ARCH(slot) \
+    "hint #34\n" \
     "adrp x16, entrypointFunctions + " slot "*8\n" \
     "ldr x16, [x16, #:lo12:(entrypointFunctions + " slot "*8)]\n" \
     "br x16\n"
