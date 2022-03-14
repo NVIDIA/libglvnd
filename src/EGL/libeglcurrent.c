@@ -94,7 +94,8 @@ void __eglCurrentTeardown(EGLBoolean doReset)
     while (!glvnd_list_is_empty(&currentThreadStateList)) {
         __EGLThreadAPIState *threadState = glvnd_list_first_entry(
                 &currentThreadStateList, __EGLThreadAPIState, entry);
-        DestroyThreadState(threadState);
+        __glvndPthreadFuncs.setspecific(threadStateKey, NULL);
+	DestroyThreadState(threadState);
     }
 
     if (doReset) {
