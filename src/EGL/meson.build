@@ -29,6 +29,21 @@ libegl_dispatch_stubs = static_library(
   gnu_symbol_visibility : 'hidden',
 )
 
+if host_machine.system() in ['haiku']
+  # A booted Haiku system has a rigid directory structure.
+  # non-packaged prefixes are like local where the user can modify the contents.
+  # Anything missing "non-packaged" is read-only and populated by our software packages.
+  # Anything in system is system installed software, anything in home is user installed
+  egl_vendor_config_dirs =  '/boot/home/config/non-packaged/add-ons/opengl/egl_vendor.d'
+  egl_vendor_config_dirs += ':/boot/home/config/add-ons/opengl/egl_vendor.d'
+  egl_vendor_config_dirs += ':/boot/system/non-packaged/add-ons/opengl/egl_vendor.d'
+  egl_vendor_config_dirs += ':/boot/system/add-ons/opengl/egl_vendor.d'
+else
+  egl_vendor_config_dirs = '@0@/glvnd/egl_vendor.d:@1@/glvnd/egl_vendor.d'.format(
+    join_paths(get_option('prefix'),get_option('sysconfdir')),
+    join_paths(get_option('prefix'),get_option('datadir')))
+endif
+
 libEGL = shared_library(
   'EGL',
   [
@@ -39,9 +54,7 @@ libEGL = shared_library(
     'libeglerror.c',
   ],
   c_args : [
-    '-DDEFAULT_EGL_VENDOR_CONFIG_DIRS="@0@/glvnd/egl_vendor.d:@1@/glvnd/egl_vendor.d"'.format(
-      join_paths(get_option('prefix'), get_option('sysconfdir')),
-      join_paths(get_option('prefix'), get_option('datadir'))),
+    '-DDEFAULT_EGL_VENDOR_CONFIG_DIRS="@0@"'.format(egl_vendor_config_dirs)
   ],
   include_directories : inc_include,
   link_args : '-Wl,-Bsymbolic',

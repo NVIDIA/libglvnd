@@ -1,0 +1,21 @@
+These headers make up the Haiku OpenGL kit.
+
+Headers in this directory preserve some BeOS™ compatibility
+compatibility, so changes should be mentioned to the Haiku
+project mailing list.
+
+Haiku Website:          http://haiku-os.org
+BeOS OpenGL API Docs:   https://www.haiku-os.org/legacy-docs/bebook/TheOpenGLKit_Overview.html
+
+Normal Haiku OpenGL layout:
+
+  * headers/os/OpenGLKit.h
+  * headers/os/opengl/GLView.h
+  * headers/os/opengl/GL/gl.h
+  * headers/os/opengl/GL/glext.h
+  * headers/os/opengl/GL/osmesa.h (needed?)
+
+Extras:
+
+  * headers/os/opengl/GL/glu.h
+  * headers/os/opengl/GL/glut.h
