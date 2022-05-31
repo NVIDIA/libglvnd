@@ -128,6 +128,35 @@ static void patch_armv7_thumb(char *writeEntry, const char *execEntry,
 #endif
 }
 
+static void patch_armv7_arm(char *writeEntry, const char *execEntry,
+        int stubSize, void *incrementPtr)
+{
+#if defined(__arm__)
+    // ARM bytecode
+    static const uint32_t tmpl[] = {
+        0xe59f000c, // ldr r0, 1f
+        0xe5901000, // ldr r1, [r0]
+        0xe2811001, // add r1, r1, #1
+        0xe5801000, // str r1, [r0]
+        0xe12fff1e, // bx lr
+        // 1:
+        0x00000000,
+    };
+
+    static int offsetAddr = sizeof(tmpl) - 4;
+    if (stubSize < sizeof(tmpl)) {
+        return;
+    }
+
+    memcpy(writeEntry, tmpl, sizeof(tmpl));
+    *((uint32_t *)(writeEntry + offsetAddr)) = (uint32_t)incrementPtr;
+
+    __builtin___clear_cache((char *) execEntry, (char *) (execEntry + sizeof(tmpl)));
+#else
+    assert(0); // Should not be calling this
+#endif
+}
+
 static void patch_aarch64(char *writeEntry, const char *execEntry,
         int stubSize, void *incrementPtr)
 {
@@ -216,6 +245,7 @@ GLboolean dummyCheckPatchSupported(int type, int stubSize)
         case __GLDISPATCH_STUB_X86_64:
         case __GLDISPATCH_STUB_X86:
         case __GLDISPATCH_STUB_ARMV7_THUMB:
+        case __GLDISPATCH_STUB_ARMV7_ARM:
         case __GLDISPATCH_STUB_AARCH64:
         case __GLDISPATCH_STUB_X32:
         case __GLDISPATCH_STUB_PPC64:
@@ -247,6 +277,9 @@ GLboolean dummyPatchFunction(int type, int stubSize,
                 break;
             case __GLDISPATCH_STUB_ARMV7_THUMB:
                 patch_armv7_thumb(writeAddr, execAddr, stubSize, incrementPtr);
+                break;
+            case __GLDISPATCH_STUB_ARMV7_ARM:
+                patch_armv7_arm(writeAddr, execAddr, stubSize, incrementPtr);
                 break;
             case __GLDISPATCH_STUB_AARCH64:
                 patch_aarch64(writeAddr, execAddr, stubSize, incrementPtr);
