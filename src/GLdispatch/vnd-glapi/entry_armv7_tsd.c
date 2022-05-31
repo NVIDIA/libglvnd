@@ -51,16 +51,16 @@ __asm__(".syntax unified\n\t");
 #endif
 
 /*
- * This runs in Thumb mode.
+ * This runs in ARM mode.
  *
- * libglvnd on armv7 is built with -march=armv7-a, which uses the AAPCS ABI
- * that has ARM/Thumb interworking enabled by default.
+ * On ARMv7, we could use Thumb, with only minor modifications, but using ARM
+ * mode means that this code can compile on ARMv6 as well.
  *
  * See: https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
  */
 #define STUB_ASM_ENTRY(func)                        \
     ".balign " U_STRINGIFY(ENTRY_STUB_ALIGN) "\n\t" \
-    ".thumb_func\n\t"                               \
+    ".arm\n\t"                                      \
     ".global " func "\n\t"                          \
     ".type " func ", %function\n\t"                 \
     func ":\n\t"
@@ -108,10 +108,10 @@ __asm__(".syntax unified\n\t");
     "pop {lr}\n\t"                           \
     "b 11b\n\t"                              \
     "1:\n\t"                                 \
-    ".word _GLOBAL_OFFSET_TABLE_-(12b+4)\n\t"\
+    ".word _GLOBAL_OFFSET_TABLE_-(12b+8)\n\t"\
     ".word _glapi_Current(GOT)\n\t"          \
     "2:\n\t"                                 \
-    ".word _GLOBAL_OFFSET_TABLE_-(13b+4)\n\t"\
+    ".word _GLOBAL_OFFSET_TABLE_-(13b+8)\n\t"\
     ".word _glapi_get_current(GOT)\n\t"      \
     "3:\n\t"                                 \
     ".word " slot "\n\t"
@@ -133,13 +133,13 @@ __asm__(".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"
         ".text\n\t");
 
 /*
- * If built with -marm, let the assembler know that we are done with Thumb
+ * If built with -mthumb, let the assembler know that we are done with ARM
  */
-#if !defined(__thumb__)
-__asm__(".arm\n\t");
+#if defined(__thumb__)
+__asm__(".thumb\n\t");
 #endif
 
-const int entry_type = __GLDISPATCH_STUB_ARMV7_THUMB;
+const int entry_type = __GLDISPATCH_STUB_ARMV7_ARM;
 const int entry_stub_size = ENTRY_STUB_ALIGN;
 
 // Note: The rest of these functions could also be used for ARMv7 TLS stubs,
@@ -148,7 +148,6 @@ const int entry_stub_size = ENTRY_STUB_ALIGN;
 mapi_func
 entry_get_public(int index)
 {
-    // Add 1 to the base address to force Thumb mode when jumping to the stub
-    return (mapi_func)(public_entry_start + (index * entry_stub_size) + 1);
+    return (mapi_func)(public_entry_start + (index * entry_stub_size));
 }
 
