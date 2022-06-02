@@ -61,7 +61,8 @@ if not with_asm.disabled()
         || defined(__ARM_ARCH_7R__) \
         || defined(__ARM_ARCH_7M__) \
         || defined(__ARM_ARCH_7S__) \
-        || (defined(__ARM_ARCH) && __ARM_ARCH >= 7))
+        || defined(__ARM_ARCH_6__) \
+        || (defined(__ARM_ARCH) && __ARM_ARCH >= 6))
 #error "Not ARM7"
 #endif
       ''', name : 'ARMv7 macros')
