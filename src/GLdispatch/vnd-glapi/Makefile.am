@@ -82,8 +82,8 @@ libglapi_gl_la_CPPFLAGS = $(ENTRYPOINT_CPPFLAGS) \
 noinst_HEADERS += g_glapi_mapi_gl_tmp.h
 if HAVE_PYTHON
 BUILT_SOURCES += g_glapi_mapi_gl_tmp.h
-g_glapi_mapi_gl_tmp.h : $(glapi_gen_mapi_deps)
-	$(glapi_gen_mapi) gl $(glapi_gen_gl_xml) > $@
+g_glapi_mapi_gl_tmp.h : $(glapi_gen_mapi_deps) $(top_srcdir)/src/GL/gl.symbols
+	$(glapi_gen_mapi) $(top_srcdir)/src/GL/gl.symbols $(glapi_gen_gl_xml) > $@
 endif
 
 noinst_LTLIBRARIES += libglapi_opengl.la

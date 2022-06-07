@@ -23,7 +23,6 @@
 
 
 foreach t : [['glapi_mapi_tmp.h', 'gldispatch'],
-             ['g_glapi_mapi_gl_tmp.h', 'gl'],
              ['g_glapi_mapi_opengl_tmp.h', 'opengl'],
              ['g_glapi_mapi_glesv1_tmp.h', 'glesv1'],
              ['g_glapi_mapi_glesv2_tmp.h', 'glesv2']]
@@ -42,6 +41,18 @@ foreach t : [['glapi_mapi_tmp.h', 'gldispatch'],
 
   set_variable(var, _t)
 endforeach
+
+# For libGL.so, we read the symbol list from a file instead of generating it
+# from the XML files.
+_t = custom_target(
+  'g_glapi_mapi_gl_tmp.h',
+  input : ['gen_gldispatch_mapi.py', '../GL/gl.symbols', 'xml/gl.xml', 'xml/gl_other.xml'],
+  output : 'g_glapi_mapi_gl_tmp.h',
+  command : [prog_py, '@INPUT0@', '@INPUT1@', '@INPUT2@', '@INPUT3@'],
+  depend_files : files('genCommon.py'),
+  capture : true,
+)
+set_variable('g_glapi_mapi_gl_tmp.h'.underscorify(), _t)
 
 foreach target : ['header', 'source']
   ext = target == 'header' ? 'h' : 'c'

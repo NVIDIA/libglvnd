@@ -34,6 +34,7 @@ Generates the glapi_mapi_tmp.h header file from Khronos's XML file.
 
 import sys
 import xml.etree.ElementTree as etree
+import os.path
 
 import genCommon
 
@@ -44,7 +45,15 @@ def _main():
     roots = [ etree.parse(filename).getroot() for filename in xmlFiles ]
     allFunctions = genCommon.getFunctionsFromRoots(roots)
 
-    names = genCommon.getExportNamesFromRoots(target, roots)
+    # Technically, libGL.so is only supposed to export OpenGL 1.2 plus
+    # ARB_multitexture, but in the past, implementations exported everything
+    # and many applications rely on that. Here, we read a list of symbols from
+    # a file instead of exporting everything -- buggy applications won't break,
+    # but libGL.so won't get any *more* symbols added to it.
+    if os.path.isfile(target):
+        names = genCommon.readSymbolsFile(target)
+    else:
+        names = genCommon.getExportNamesFromRoots(target, roots)
     functions = [f for f in allFunctions if(f.name in names)]
 
     if (target in ("gl", "gldispatch")):

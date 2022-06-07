@@ -34,7 +34,6 @@ MAPI_TABLE_NUM_DYNAMIC = 4096
 
 _LIBRARY_FEATURE_NAMES = {
     # libGL and libGLdiapatch both include every function.
-    "gl" : None,
     "gldispatch" : None,
     "opengl" : frozenset(( "GL_VERSION_1_0", "GL_VERSION_1_1",
         "GL_VERSION_1_2", "GL_VERSION_1_3", "GL_VERSION_1_4", "GL_VERSION_1_5",
@@ -75,6 +74,47 @@ def getFunctionsFromRoots(roots):
         functions[i] = functions[i]._replace(slot=i)
 
     return functions
+
+def readSymbolsFile(symbols_file):
+    """
+    Returns the set of function names based on a list of symbols in a text
+    file.
+    """
+    symbols = set()
+    with open(symbols_file) as f:
+        qualifier_optional = '(optional)'
+        for line in f.readlines():
+
+            # Strip comments
+            line = line.split('#')[0]
+            line = line.strip()
+            if not line:
+                continue
+
+            # Line format:
+            # [qualifier] symbol
+            qualifier = None
+            symbol = None
+
+            fields = line.split()
+            if len(fields) == 1:
+                symbol = fields[0]
+            elif len(fields) == 2:
+                qualifier = fields[0]
+                symbol = fields[1]
+            else:
+                raise ValueError(symbols_file + ': invalid format: ' + line)
+
+            # The only supported qualifier is 'optional', which means the
+            # symbol doesn't have to be exported by the library
+            if qualifier and not qualifier == qualifier_optional:
+                raise ValueError(symbols_file + ': invalid qualifier: ' + qualifier)
+
+            # For our purposes here, we expect generated functions to be
+            # mandatory symbols.
+            if qualifier != qualifier_optional:
+                symbols.add(symbol)
+    return symbols
 
 def getExportNamesFromRoots(target, roots):
     """
