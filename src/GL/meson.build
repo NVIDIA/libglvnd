@@ -42,6 +42,15 @@ pkg.generate(
   version : '1.2',
 )
 
+dep_gl = declare_dependency(
+  link_with : libGL,
+  include_directories : inc_include,
+)
+
+if meson.version().version_compare('>= 0.54')
+  meson.override_dependency('gl', dep_gl)
+endif
+
 test(
   'GL symbols check',
   prog_py,

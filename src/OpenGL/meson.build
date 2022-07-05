@@ -44,6 +44,15 @@ pkg.generate(
   version : '4.5',
 )
 
+dep_opengl = declare_dependency(
+  link_with : libOpenGL,
+  include_directories : inc_include,
+)
+
+if meson.version().version_compare('>= 0.54')
+  meson.override_dependency('opengl', dep_opengl)
+endif
+
 test(
   'OpenGL symbols check',
   prog_py,
