@@ -53,13 +53,13 @@ libGLX = shared_library(
 
 inc_glx = include_directories('.')
 
-idep_glx = declare_dependency(
+dep_glx = declare_dependency(
   link_with : libGLX,
   include_directories : [inc_include, inc_glx],
 )
 
 if meson.version().version_compare('>= 0.54')
-  meson.override_dependency('glx', idep_glx)
+  meson.override_dependency('glx', dep_glx)
 endif
 
 pkg.generate(
