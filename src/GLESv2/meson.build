@@ -40,6 +40,15 @@ pkg.generate(
   version : '3.2',
 )
 
+dep_glesv2 = declare_dependency(
+  link_with : libGLESv2,
+  include_directories : inc_include,
+)
+
+if meson.version().version_compare('>= 0.54')
+  meson.override_dependency('glesv2', dep_glesv2)
+endif
+
 test(
   'GLESv2 symbols check',
   prog_py,

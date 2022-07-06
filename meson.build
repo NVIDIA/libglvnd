@@ -105,7 +105,6 @@ elif not get_option('glx').disabled() and dep_x11.found()
   dep_glproto = dependency('glproto', required : get_option('glx'))
   with_glx = true
 endif
-dep_glx = [dep_xext, dep_glproto]
 
 if cc.compiles('typeof(int *);', name : 'typeof')
   add_project_arguments('-DHAVE_TYPEOF', language : ['c'])

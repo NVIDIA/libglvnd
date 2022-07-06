@@ -41,7 +41,8 @@ libGLX = shared_library(
   include_directories : [inc_include],
   link_args : '-Wl,-Bsymbolic',
   dependencies : [
-    dep_dl, dep_x11, dep_glx, idep_gldispatch, idep_trace,
+    dep_dl, dep_x11, dep_xext, dep_glproto,
+    idep_gldispatch, idep_trace,
     idep_glvnd_pthread, idep_utils_misc,
     idep_app_error_check, idep_winsys_dispatch,
   ],
@@ -52,10 +53,14 @@ libGLX = shared_library(
 
 inc_glx = include_directories('.')
 
-idep_glx = declare_dependency(
+dep_glx = declare_dependency(
   link_with : libGLX,
-  include_directories : inc_glx,
+  include_directories : [inc_include, inc_glx],
 )
+
+if meson.version().version_compare('>= 0.54')
+  meson.override_dependency('glx', dep_glx)
+endif
 
 pkg.generate(
   libGLX,

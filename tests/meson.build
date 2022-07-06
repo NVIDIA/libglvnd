@@ -75,7 +75,7 @@ if with_glx
       ['testglxcreatecontext.c', 'test_utils.c'],
       include_directories : [inc_include],
       link_with : libOpenGL,
-      dependencies : [idep_glx, dep_x11],
+      dependencies : [dep_glx, dep_x11],
     ),
     env : env_glx,
     suite : ['glx'],
@@ -89,7 +89,7 @@ if with_glx
     link_with : [libOpenGL],
     dependencies : [
       dep_dl, dep_x11, idep_glvnd_pthread, idep_trace, idep_utils_misc,
-      idep_glx,
+      dep_glx,
     ],
   )
 
@@ -128,7 +128,7 @@ if with_glx
     'glxgetprocaddress',
     ['testglxgetprocaddress.c'],
     include_directories : [inc_include],
-    dependencies : [dep_x11, idep_glx, idep_gldispatch],
+    dependencies : [dep_x11, dep_glx, idep_gldispatch],
   )
 
   test(
@@ -153,7 +153,7 @@ if with_glx
       'testglxgetprocaddress_genentry',
       ['testglxgetprocaddress_genentry.c'],
       include_directories : [inc_include],
-      dependencies : [dep_x11, idep_glx],
+      dependencies : [dep_x11, dep_glx],
     ),
     env : env_glx,
     suite : ['glx'],
@@ -167,7 +167,7 @@ if with_glx
       ['testglxgetclientstr.c'],
       include_directories : [inc_include],
       link_with : libOpenGL,
-      dependencies : [dep_x11, idep_glx, idep_trace, idep_utils_misc],
+      dependencies : [dep_x11, dep_glx, idep_trace, idep_utils_misc],
     ),
     env : env_glx,
     suite : ['glx'],
@@ -181,7 +181,7 @@ if with_glx
       ['testglxqueryversion.c'],
       include_directories : [inc_include],
       link_with : libOpenGL,
-      dependencies : [dep_x11, idep_glx],
+      dependencies : [dep_x11, dep_glx],
     ),
     env : env_glx,
     suite : ['glx'],

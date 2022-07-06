@@ -62,6 +62,15 @@ pkg.generate(
   version : '1.5',
 )
 
+dep_egl = declare_dependency(
+  link_with : libEGL,
+  include_directories : inc_include,
+)
+
+if meson.version().version_compare('>= 0.54')
+  meson.override_dependency('egl', dep_egl)
+endif
+
 test(
   'EGL symbols check',
   prog_py,

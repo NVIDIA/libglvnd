@@ -39,6 +39,15 @@ pkg.generate(
   version : '1.0',
 )
 
+dep_glesv1 = declare_dependency(
+  link_with : libGLESv1,
+  include_directories : inc_include,
+)
+
+if meson.version().version_compare('>= 0.54')
+  meson.override_dependency('glesv1_cm', dep_glesv1)
+endif
+
 test(
   'GLESv1 symbols check',
   prog_py,
