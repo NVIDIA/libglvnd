@@ -6,35 +6,16 @@ extern "C" {
 #endif
 
 /*
-** Copyright (c) 2013-2018 The Khronos Group Inc.
+** Copyright 2013-2020 The Khronos Group Inc.
+** SPDX-License-Identifier: MIT
 **
-** Permission is hereby granted, free of charge, to any person obtaining a
-** copy of this software and/or associated documentation files (the
-** "Materials"), to deal in the Materials without restriction, including
-** without limitation the rights to use, copy, modify, merge, publish,
-** distribute, sublicense, and/or sell copies of the Materials, and to
-** permit persons to whom the Materials are furnished to do so, subject to
-** the following conditions:
-**
-** The above copyright notice and this permission notice shall be included
-** in all copies or substantial portions of the Materials.
-**
-** THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-** IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-** CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
-*/
-/*
 ** This header is generated from the Khronos OpenGL / OpenGL ES XML
 ** API Registry. The current version of the Registry, generator scripts
 ** used to make the header, and the header can be found at
 **   https://github.com/KhronosGroup/OpenGL-Registry
 */
 
-#define GLX_GLXEXT_VERSION 20190728
+#define GLX_GLXEXT_VERSION 20220530
 
 /* Generated C header for:
  * API: glx
@@ -309,6 +290,10 @@ void glXBlitContextFramebufferAMD (GLXContext dstCtx, GLint srcX0, GLint srcY0, 
 #define GLX_FRAMEBUFFER_SRGB_CAPABLE_EXT  0x20B2
 #endif /* GLX_EXT_framebuffer_sRGB */
 
+#ifndef GLX_EXT_get_drawable_type
+#define GLX_EXT_get_drawable_type 1
+#endif /* GLX_EXT_get_drawable_type */
+
 #ifndef GLX_EXT_import_context
 #define GLX_EXT_import_context 1
 #define GLX_SHARE_CONTEXT_EXT             0x800A
@@ -554,6 +539,15 @@ Bool glXDelayBeforeSwapNV (Display *dpy, GLXDrawable drawable, GLfloat seconds);
 #define GLX_NV_float_buffer 1
 #define GLX_FLOAT_COMPONENTS_NV           0x20B0
 #endif /* GLX_NV_float_buffer */
+
+#ifndef GLX_NV_multigpu_context
+#define GLX_NV_multigpu_context 1
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_NV    0x20AA
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_SINGLE_NV 0x20AB
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_AFR_NV 0x20AC
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_MULTICAST_NV 0x20AD
+#define GLX_CONTEXT_MULTIGPU_ATTRIB_MULTI_DISPLAY_MULTICAST_NV 0x20AE
+#endif /* GLX_NV_multigpu_context */
 
 #ifndef GLX_NV_multisample_coverage
 #define GLX_NV_multisample_coverage 1
