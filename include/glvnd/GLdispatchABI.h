@@ -99,6 +99,11 @@ enum {
      * Used for stubs on PPC64LE systems. Same as PPC64, for compatibility.
      */
     __GLDISPATCH_STUB_PPC64LE = __GLDISPATCH_STUB_PPC64,
+    
+    /*!
+     * Used for stubs on LOONGARCH/loongarch64.
+     */
+    __GLDISPATCH_STUB_LOONGARCH64,
 };
 
 /*!
