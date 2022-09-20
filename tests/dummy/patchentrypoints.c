@@ -238,6 +238,36 @@ static void patch_ppc64(char *writeEntry, const char *execEntry,
 #endif
 }
 
+static void patch_loongarch64(char *writeEntry, const char *execEntry,
+        int stubSize, void *incrementPtr)
+{
+#if defined(__loongarch64)
+    const uint32_t tmpl[] = {
+	0x1c000004,	   // pcaddu12i $r4,0
+	0x02c07084,	   // addi.d	$r4,$r4,28(0x1c)
+	0x28c00084,	   // ld.d	$r4,$r4,0
+	0x28c00085,	   // ld.d	$r5,$r4,0
+	0x02c004a5,	   // addi.d	$r5,$r5,1(0x1)
+	0x29c00085,	   // st.d	$r5,$r4,0
+	0x4c000020,	   // jirl	$r0,$r1,0
+	// 1:
+	0x00000000,0x00000000,
+    };
+
+    static const int offsetAddr = sizeof(tmpl) - 8;
+
+    if (stubSize < sizeof(tmpl)) {
+        return;
+    }
+
+    memcpy(writeEntry, tmpl, sizeof(tmpl));
+    *((uint64_t *)(writeEntry + offsetAddr)) = (uint64_t) incrementPtr;
+
+    __builtin___clear_cache((char *) execEntry, (char *) (execEntry + sizeof(tmpl)));
+#else
+    assert(0); // Should not be calling this
+#endif
+}
 
 GLboolean dummyCheckPatchSupported(int type, int stubSize)
 {
@@ -249,6 +279,7 @@ GLboolean dummyCheckPatchSupported(int type, int stubSize)
         case __GLDISPATCH_STUB_AARCH64:
         case __GLDISPATCH_STUB_X32:
         case __GLDISPATCH_STUB_PPC64:
+        case __GLDISPATCH_STUB_LOONGARCH64:
             return GL_TRUE;
         default:
             return GL_FALSE;
@@ -286,6 +317,9 @@ GLboolean dummyPatchFunction(int type, int stubSize,
                 break;
             case __GLDISPATCH_STUB_PPC64:
                 patch_ppc64(writeAddr, execAddr, stubSize, incrementPtr);
+                break;
+            case __GLDISPATCH_STUB_LOONGARCH64:
+                patch_loongarch64(writeAddr, execAddr, stubSize, incrementPtr);
                 break;
             default:
                 assert(0);

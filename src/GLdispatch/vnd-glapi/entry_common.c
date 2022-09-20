@@ -124,6 +124,11 @@ static void InvalidateCache(void)
     }
     __asm__ __volatile__("isync");
 }
+#elif defined(USE_LOONGARCH64_ASM)
+static void InvalidateCache(void)
+{
+    __builtin___clear_cache(public_entry_start, public_entry_end);
+}
 #else
 static void InvalidateCache(void)
 {

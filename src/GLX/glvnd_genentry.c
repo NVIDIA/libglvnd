@@ -108,6 +108,16 @@ extern char glx_entrypoint_end[];
     "mtctr 12\n" \
     "bctr\n"
 
+#elif defined(USE_LOONGARCH64_ASM)
+
+#define STUB_SIZE 32
+#define STUB_ASM_ARCH(slot) \
+    "la.global $t0,entrypointFunctions\n" \
+    "li.d $t1," slot "*8\r\n" \
+    "add.d $t0, $t0,$t1\r\n" \
+    "ld.d $t0, $t0,0\n" \
+    "jirl $r0, $t0,0\n"
+
 #else
 #error "Can't happen -- not implemented"
 #endif
