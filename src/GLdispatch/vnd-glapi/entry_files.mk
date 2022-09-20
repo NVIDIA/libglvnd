@@ -50,6 +50,12 @@ MAPI_GLDISPATCH_ENTRY_FILES += entry_simple_asm.c
 MAPI_GLDISPATCH_ENTRY_FILES += entry_common.c
 endif
 
+if GLDISPATCH_TYPE_LOONGARCH64_TSD
+MAPI_GLDISPATCH_ENTRY_FILES = entry_loongarch64_tsd.c
+MAPI_GLDISPATCH_ENTRY_FILES += entry_simple_asm.c
+MAPI_GLDISPATCH_ENTRY_FILES += entry_common.c
+endif
+
 if GLDISPATCH_TYPE_PURE_C
 MAPI_GLDISPATCH_ENTRY_FILES = entry_pure_c.c
 endif
