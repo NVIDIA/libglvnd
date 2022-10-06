@@ -65,9 +65,16 @@ extern char glx_entrypoint_end[];
 #elif defined(USE_X86_64_ASM)
 
 #define STUB_SIZE 16
+
+#if defined(__ILP32__)
+#define STUB_ASM_ARCH(slot) \
+    "movl (4 * " slot ")+entrypointFunctions(%rip), %eax\n" \
+    "jmp *%rax\n"
+#else // defined(__ILP32__)
 #define STUB_ASM_ARCH(slot) \
     "movq entrypointFunctions@GOTPCREL(%rip), %rax\n\t" \
     "jmp *(8 * " slot ")(%rax)\n"
+#endif // defined(__ILP32__)
 
 #elif defined(USE_ARMV7_ASM)
 
