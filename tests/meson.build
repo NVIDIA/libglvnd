@@ -88,14 +88,13 @@ if with_glx
     include_directories : [inc_include],
     link_with : [libOpenGL],
     dependencies : [
-      dep_dl, dep_x11, idep_glvnd_pthread, idep_trace, idep_utils_misc,
+      dep_x11, idep_trace, idep_utils_misc,
       dep_glx,
     ],
   )
 
   foreach t : [['basic', ['-t', '1', '-i', '1'], env_glx],
                ['loop', ['-t', '1', '-i', '250'], env_glx],
-               ['threads', ['-t', '5', '-i', '20000'], env_glx + ['LD_PRELOAD=libpthread.so.0']],
               ]
     test(
       'glxmakecurrent (@0@)'.format(t[0]),
@@ -107,6 +106,26 @@ if with_glx
     )
   endforeach
 
+  exe_glxmakecurrent_mt = executable(
+    'glxmakecurrent_mt',
+    ['testglxmakecurrent.c', 'test_utils.c'],
+    include_directories : [inc_include],
+    c_args : ['-DUSE_PTHREADS=1'],
+    link_with : [libOpenGL],
+    dependencies : [
+      dep_x11, idep_trace, idep_utils_misc,
+      dep_glx, dep_threads,
+    ],
+  )
+  test(
+    'glxmakecurrent_mt',
+    exe_glxmakecurrent_mt,
+    args : ['-t', '5', '-i', '20000'],
+    env : env_glx,
+    suite : ['glx'],
+    depends : [libGLX_dummy],
+  )
+
   test(
     'glxmakecurrent (oldlink)',
     executable(
@@ -115,7 +134,7 @@ if with_glx
       include_directories : [inc_include],
       link_with : [libGL],
       dependencies : [
-        dep_dl, dep_x11, idep_glvnd_pthread, idep_trace, idep_utils_misc,
+        dep_x11, idep_trace, idep_utils_misc,
       ],
     ),
     args : ['-t', '1', '-i', '1'],
