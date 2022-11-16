@@ -175,6 +175,15 @@ void _init(void)
     glvndAppErrorCheckInit();
 }
 
+#if defined(USE_ATTRIBUTE_CONSTRUCTOR)
+void __attribute__ ((destructor)) __GLDispatchOnCloseFini(void)
+#else
+void _fini(void)
+#endif
+{
+    glvndCleanupPthreads();
+}
+
 void __glDispatchInit(void)
 {
     LockDispatch();

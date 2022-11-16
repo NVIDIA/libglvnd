@@ -154,6 +154,8 @@ extern GLVNDPthreadFuncs __glvndPthreadFuncs;
  */
 void glvndSetupPthreads(void);
 
+void glvndCleanupPthreads(void);
+
 
 
 #endif // __GLVND_PTHREAD_H__
