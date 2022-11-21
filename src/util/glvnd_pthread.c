@@ -37,6 +37,7 @@
 GLVNDPthreadFuncs __glvndPthreadFuncs = {};
 
 const glvnd_thread_t GLVND_THREAD_NULL = GLVND_THREAD_NULL_INIT;
+static void *dlhandle = NULL;
 
 /* The real function pointers */
 typedef struct GLVNDPthreadRealFuncsRec {
@@ -429,10 +430,22 @@ static void *mt_getspecific(glvnd_key_t key)
 void glvndSetupPthreads(void)
 {
     char *force_st = getenv("__GL_SINGLETHREADED");
-    void *dlhandle = RTLD_DEFAULT;
     GLVNDPthreadFuncs *funcs = &__glvndPthreadFuncs;
 
     if (force_st && atoi(force_st)) {
+        goto fail;
+    }
+
+#if defined(__FreeBSD__)
+    // On FreeBSD, we can't just check for pthreads symbols with RTLD_DEFAULT
+    // or similar, because libc itself has stub functions for pthreads that
+    // just fail with ENOSYS. Instead, look for libthr.so.3, but only if it's
+    // loaded.
+    dlhandle = dlopen("libthr.so.3", RTLD_LAZY | RTLD_LOCAL | RTLD_NOLOAD);
+#else
+    dlhandle = dlopen(NULL, RTLD_LAZY);
+#endif
+    if (dlhandle == NULL) {
         goto fail;
     }
 
@@ -505,4 +518,11 @@ fail:
 
     // Single-threaded
     funcs->is_singlethreaded = 1;
+}
+
+void glvndCleanupPthreads(void)
+{
+    if (dlhandle != NULL) {
+        dlclose(dlhandle);
+    }
 }

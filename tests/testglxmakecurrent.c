@@ -35,9 +35,12 @@
 #include <errno.h>
 #include <assert.h>
 
+#if defined(USE_PTHREADS)
+#include <pthread.h>
+#endif // defined(USE_PTHREADS)
+
 #include "utils_misc.h"
 #include "test_utils.h"
-#include "glvnd_pthread.h"
 
 // For glMakeCurrentTestResults()
 #include "dummy/GLX_dummy.h"
@@ -230,20 +233,12 @@ int main(int argc, char **argv)
      * while the context is current.
      */
     TestOptions t;
-    int i;
     void *ret;
     int all_ret = 0;
 
     init_options(argc, argv, &t);
 
     if (t.threads > 1) {
-        XInitThreads();
-
-        glvndSetupPthreads();
-
-        if (__glvndPthreadFuncs.is_singlethreaded) {
-            exit(1);
-        }
     }
 
     if (t.threads == 1) {
@@ -252,10 +247,14 @@ int main(int argc, char **argv)
             all_ret = 1;
         }
     } else {
-        glvnd_thread_t *threads = malloc(t.threads * sizeof(glvnd_thread_t));
+#if defined(USE_PTHREADS)
+        pthread_t *threads = malloc(t.threads * sizeof(pthread_t));
+        int i;
+
+        XInitThreads();
 
         for (i = 0; i < t.threads; i++) {
-            if (__glvndPthreadFuncs.create(&threads[i], NULL, MakeCurrentThread, (void *)&t)
+            if (pthread_create(&threads[i], NULL, MakeCurrentThread, (void *)&t)
                 != 0) {
                 printError("Error in pthread_create(): %s\n", strerror(errno));
                 exit(1);
@@ -263,7 +262,7 @@ int main(int argc, char **argv)
         }
 
         for (i = 0; i < t.threads; i++) {
-            if (__glvndPthreadFuncs.join(threads[i], &ret) != 0) {
+            if (pthread_join(threads[i], &ret) != 0) {
                 printError("Error in pthread_join(): %s\n", strerror(errno));
                 exit(1);
             }
@@ -272,6 +271,12 @@ int main(int argc, char **argv)
             }
         }
         free(threads);
+#else // defined(USE_PTHREADS)
+        // This shouldn't happen. If it does, then something is messed up in
+        // the test script.
+        printError("Using threads with non-thread test\n");
+        exit(1);
+#endif // defined(USE_PTHREADS)
     }
     return all_ret;
 }

@@ -1000,4 +1000,6 @@ void _fini(void)
         glvnd_list_del(&thr->entry);
         free(thr);
     }
+
+    glvndCleanupPthreads();
 }

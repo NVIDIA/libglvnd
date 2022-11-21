@@ -1396,5 +1396,7 @@ void _fini(void)
 
     /* Tear down GLdispatch if necessary */
     __glDispatchFini();
+
+    glvndCleanupPthreads();
 }
 
