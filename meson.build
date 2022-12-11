@@ -29,6 +29,10 @@ project(
   default_options : ['c_std=gnu99']
 )
 
+if host_machine.system() in ['darwin', 'windows']
+  error('Host OS: @0@ is unsupported.'.format(host_machine.system()))
+endif
+
 dep_null = dependency('', required : false)
 cc = meson.get_compiler('c')
 prog_py = import('python').find_installation()
