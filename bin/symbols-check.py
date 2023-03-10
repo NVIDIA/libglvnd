@@ -13,6 +13,34 @@ PLATFORM_SYMBOLS = [
     '__cxa_guard_abort',
     '__cxa_guard_acquire',
     '__cxa_guard_release',
+    '__cxa_allocate_dependent_exception',
+    '__cxa_allocate_exception',
+    '__cxa_begin_catch',
+    '__cxa_call_unexpected',
+    '__cxa_current_exception_type',
+    '__cxa_current_primary_exception',
+    '__cxa_decrement_exception_refcount',
+    '__cxa_deleted_virtual',
+    '__cxa_demangle',
+    '__cxa_end_catch',
+    '__cxa_free_dependent_exception',
+    '__cxa_free_exception',
+    '__cxa_get_exception_ptr',
+    '__cxa_get_globals',
+    '__cxa_get_globals_fast',
+    '__cxa_increment_exception_refcount',
+    '__cxa_new_handler',
+    '__cxa_pure_virtual',
+    '__cxa_rethrow',
+    '__cxa_rethrow_primary_exception',
+    '__cxa_terminate_handler',
+    '__cxa_throw',
+    '__cxa_uncaught_exception',
+    '__cxa_uncaught_exceptions',
+    '__cxa_unexpected_handler',
+    '__dynamic_cast',
+    '__emutls_get_address',
+    '__gxx_personality_v0',
     '__end__',
     '__odr_asan._glapi_Context',
     '__odr_asan._glapi_Dispatch',
@@ -40,7 +68,7 @@ def get_symbols_nm(nm, lib):
         if len(fields) == 2 or fields[1] == 'U':
             continue
         symbol_name = fields[0]
-        if platform_name == 'Linux':
+        if platform_name == 'Linux' or platform_name == 'GNU' or platform_name.startswith('GNU/'):
             if symbol_name in PLATFORM_SYMBOLS:
                 continue
         elif platform_name == 'Darwin':
@@ -73,7 +101,7 @@ def get_symbols_dumpbin(dumpbin, lib):
             continue
         symbol_name = fields[3]
         # De-mangle symbols
-        if symbol_name[0] == '_':
+        if symbol_name[0] == '_' and '@' in symbol_name:
             symbol_name = symbol_name[1:].split('@')[0]
         symbols.append(symbol_name)
     return symbols
