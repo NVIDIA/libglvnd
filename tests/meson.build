@@ -60,7 +60,11 @@ test(
   suite : ['gldispatch'],
 )
 
-_env_ld = 'LD_LIBRARY_PATH=@0@/'.format(dummy_build_dir)
+if host_machine.system() in ['haiku']
+    _env_ld = 'LIBRARY_PATH=@0@:/boot/system/lib'.format(dummy_build_dir)
+else
+    _env_ld = 'LD_LIBRARY_PATH=@0@'.format(dummy_build_dir)
+endif
 
 if with_glx
   env_glx = [
