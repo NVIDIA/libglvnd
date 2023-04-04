@@ -110,6 +110,12 @@ elif not get_option('glx').disabled() and dep_x11.found()
   with_glx = true
 endif
 
+with_hgl = false
+if get_option('hgl') and host_machine.system() in ['haiku']
+  add_languages('cpp')
+  with_hgl = true
+endif
+
 if cc.compiles('typeof(int *);', name : 'typeof')
   add_project_arguments('-DHAVE_TYPEOF', language : ['c'])
 endif

@@ -44,6 +44,10 @@ EGL_HEADER_FILES = \
 	EGL/eglext.h \
 	EGL/eglplatform.h
 
+HGL_HEADER_FILES = \
+	HGL/OpenGLKit.h \
+	HGL/opengl/GLView.h
+
 if ENABLE_GL_HEADERS
 nobase_include_HEADERS += $(GL_HEADER_FILES)
 else
@@ -76,4 +80,4 @@ else
 noinst_HEADERS += $(EGL_HEADER_FILES)
 endif
 
-EXTRA_DIST = meson.build
+EXTRA_DIST = meson.build $(HGL_HEADER_FILES)

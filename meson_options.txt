@@ -43,6 +43,12 @@ option(
   description : 'Support the GLX platform.'
 )
 option(
+  'hgl',
+  type : 'boolean',
+  value : true,
+  description : 'Support the Haiku GL platform.'
+)
+option(
   'gles1',
   type : 'boolean',
   value : true,

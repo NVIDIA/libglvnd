@@ -1,3 +1,4 @@
+
 # Copyright © 2019 Intel Corporation
 
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -21,28 +22,32 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-subdir('util')
-subdir('generate')
-subdir('GLdispatch')
-subdir('OpenGL')
+dep_be = cc.find_library('be')
 
-if get_option('egl')
-  subdir('EGL')
-endif
+libGL = shared_library(
+  'GL',
+  [
+    'libgl.c',
+    'GLView.cpp',
+  ],
+  include_directories : [
+    inc_include,
+    inc_include_hgl,
+    '/boot/system/develop/headers/private/shared'
+  ],
+  link_args : '-Wl,-Bsymbolic',
+  dependencies : [
+    dep_dl, idep_gldispatch, idep_glapi_gl, idep_utils_misc,
+    dep_be
+  ],
+  version : '1.0.0',
+  gnu_symbol_visibility : 'hidden',
+  install : true,
+)
 
-if with_glx
-  subdir('GLX')
-  subdir('GL')
-endif
-
-if with_hgl
-  subdir('HGL')
-endif
-
-if get_option('gles1')
-  subdir('GLESv1')
-endif
-if get_option('gles2')
-  subdir('GLESv2')
-endif
-
+pkg.generate(
+  libGL,
+  filebase : 'gl',
+  description : 'Legacy OpenGL and HGL library and headers.',
+  version : '1.2',
+)
