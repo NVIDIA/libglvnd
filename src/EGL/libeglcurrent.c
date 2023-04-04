@@ -100,6 +100,8 @@ void __eglCurrentTeardown(EGLBoolean doReset)
 
     if (doReset) {
         __glvndPthreadFuncs.mutex_init(&currentStateListMutex, NULL);
+    } else {
+        __glvndPthreadFuncs.key_delete(threadStateKey);
     }
 }
 
