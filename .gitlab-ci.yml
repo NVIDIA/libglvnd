@@ -1,5 +1,10 @@
 # vim: set expandtab shiftwidth=2 tabstop=2 textwidth=0:
 
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
+
 variables:
   UBUNTU_TAG: "2019-12-05-01"
   UBUNTU_VERSION: "18.04"
