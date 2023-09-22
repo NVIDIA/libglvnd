@@ -296,6 +296,7 @@ static EGLDisplay GetPlatformDisplayCommon(EGLenum platform,
             return EGL_NO_DISPLAY;
         }
 
+        __eglSetLastVendor(vendor);
         dpy = vendor->eglvc.getPlatformDisplay(platform, native_display, attrib_list);
         if (dpy == EGL_NO_DISPLAY) {
             return EGL_NO_DISPLAY;
