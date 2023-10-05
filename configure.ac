@@ -195,6 +195,9 @@ if test "x$enable_asm" = xyes; then
     loongarch64)
         DEFINES="$DEFINES -DUSE_LOONGARCH64_ASM"
         AC_MSG_RESULT([yes, loongarch64])
+        # See if the compiler supports -mno-relax flag
+        AX_CHECK_COMPILE_FLAG([-mno-relax],
+            [CFLAGS="$CFLAGS -mno-relax"])
         ;;
     *)
         AC_MSG_RESULT([no, platform '$host_cpu' not supported])
