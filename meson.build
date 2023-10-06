@@ -82,6 +82,8 @@ if not with_asm.disabled()
     add_project_arguments('-DUSE_AARCH64_ASM', language : 'c')
   elif host_machine.cpu_family() == 'ppc64' and cc.get_define('_CALL_ELF') == '2'
     add_project_arguments('-DUSE_PPC64_ASM', language : 'c')
+  elif host_machine.cpu_family() == 'loongarch64'
+    add_project_arguments('-DUSE_LOONGARCH64_ASM', language : 'c')
   elif with_asm.enabled()
     error('No ASM available for @0@ (@1@ endian)'.format(host_machine.system(), host_machine.endian()))
   else
@@ -163,6 +165,8 @@ if use_asm
     gl_dispatch_type = 'aarch64_tsd'
   elif host_machine.cpu_family() == 'ppc64'
     gl_dispatch_type = 'ppc64_@0@'.format(thread_type)
+  elif host_machine.cpu_family() == 'loongarch64'
+    gl_dispatch_type = 'loongarch64_tsd'
   endif
   add_project_arguments('-DUSE_DISPATCH_ASM', language : 'c')
 endif
