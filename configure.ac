@@ -13,6 +13,7 @@ AC_CANONICAL_SYSTEM
 dnl Add an --enable-debug option
 AX_CHECK_ENABLE_DEBUG(no, DEBUG)
 
+AC_SYS_LARGEFILE
 AC_USE_SYSTEM_EXTENSIONS
 
 AM_INIT_AUTOMAKE([1.11 foreign silent-rules])
