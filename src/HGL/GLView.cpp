@@ -328,7 +328,8 @@ void
 BGLView::LockGL()
 {
     fDisplayLock.Lock();
-    if (fDisplayLock.CountLocks() == 1) {
+
+    if (fRenderer != NULL && fDisplayLock.CountLocks() == 1) {
         fRenderer->display->eglMakeCurrent(fRenderer->display->eglDpy, fRenderer->eglSurf,
             fRenderer->eglSurf, fRenderer->eglCtx);
     }
@@ -345,7 +346,7 @@ BGLView::UnlockGL()
             (int)lockerThread, (int)callerThread);
     }
 
-    if (fDisplayLock.CountLocks() == 1) {
+    if (fRenderer != NULL && fDisplayLock.CountLocks() == 1) {
         fRenderer->display->eglMakeCurrent(fRenderer->display->eglDpy, EGL_NO_SURFACE,
             EGL_NO_SURFACE, EGL_NO_CONTEXT);
     }
@@ -362,7 +363,8 @@ void
 BGLView::SwapBuffers(bool vSync)
 {
     _LockDraw();
-    fRenderer->SwapBuffers();
+    if (fRenderer != NULL)
+        fRenderer->SwapBuffers();
     _UnlockDraw();
 }
 
@@ -376,7 +378,9 @@ BGLView::EmbeddedView()
 void*
 BGLView::GetGLProcAddress(const char* procName)
 {
-    return (void*)fRenderer->display->eglGetProcAddress(procName);
+    if (fRenderer != NULL)
+        return (void*)fRenderer->display->eglGetProcAddress(procName);
+    return NULL;
 }
 
 status_t
@@ -415,12 +419,17 @@ void
 BGLView::Draw(BRect updateRect)
 {
     BRegion region(updateRect);
-    PthreadMutexLocker lock(&fRenderer->fLock);
-    if (fRenderer->fBitmap.IsSet()) {
+    if (fRenderer != NULL && fRenderer->fBitmap.IsSet()) {
+        PthreadMutexLocker lock(&fRenderer->fLock);
         DrawBitmap(fRenderer->fBitmap.Get(), B_ORIGIN);
         region.Exclude(fRenderer->fBitmap->Bounds());
     }
     FillRegion(&region, B_SOLID_LOW);
+
+	if (fRenderer == NULL) {
+		MovePenTo(8, 32);
+		DrawString("No EGL renderer available!");
+	}
 }
 
 void
@@ -428,7 +437,7 @@ BGLView::AttachedToWindow()
 {
     BView::AttachedToWindow();
 
-    {
+    if (fRenderer != NULL) {
         PthreadMutexLocker lock(&fRenderer->fLock);
         fRenderer->width = Bounds().IntegerWidth() + 1;
         fRenderer->height = Bounds().IntegerHeight() + 1;
@@ -462,9 +471,12 @@ BGLView::EnableDirectMode(bool enabled)
 void BGLView::FrameResized(float width, float height)
 {
     BView::FrameResized(width, height);
-    PthreadMutexLocker lock(&fRenderer->fLock);
-    fRenderer->width = (uint32_t)width + 1;
-    fRenderer->height = (uint32_t)height + 1;
+
+    if (fRenderer != NULL) {
+        PthreadMutexLocker lock(&fRenderer->fLock);
+        fRenderer->width = (uint32_t)width + 1;
+        fRenderer->height = (uint32_t)height + 1;
+    }
 }
 
 
